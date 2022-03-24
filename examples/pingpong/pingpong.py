@@ -1,74 +1,83 @@
+"""Simple example of two SST components playing pingpong with messages."""
+
 import os
 import sys
 
 from PyDL import *
 
 
-# Ping Device
-# Has a Name and a Model type
 @sstlib("pingpong.Ping")
 @port("inout", Port.Single)
 class Ping(Device):
-	def __init__(self, name, size, **kwargs):
-		# size parameter is stored as the model attribute of a device
-		super().__init__(name, size, kwargs)
+    """Ping Device: has a Name and a Model type."""
 
-# Pong Device
+    def __init__(self, name, size, **kwargs):
+        """Size parameter is stored as the model attribute of a device."""
+        super().__init__(name, size, kwargs)
+
+
 @sstlib("pingpong.Pong")
 @port("inout", Port.Single)
 class Pong(Device):
-	def __init__(self, name, **kwargs):
-		super().__init__(name, "Default", kwargs)
+    """Pong Device."""
+
+    def __init__(self, name, **kwargs):
+        """No model for Pong so just put in Default."""
+        super().__init__(name, "Default", kwargs)
 
 
-# Overall architecture layout
 @assembly
 class pingpong(Device):
-	# size parameter is stored as the model attribute of a device
-	def __init__(self, name, size = 10, **kwargs):
-		super().__init__(name, size, kwargs)
+    """Overall architecture layout."""
 
-	def expand(self):
-		graph = DeviceGraph() # initialize a Device Graph
-		graph.add(self) # add myself to the graph, useful if the assembly has ports
+    def __init__(self, name, size=10, **kwargs):
+        """Size parameter is stored as the model attribute of a device."""
+        super().__init__(name, size, kwargs)
 
-		ping = Ping("Ping", self.attr['model']) # create a Ping Device
-		pong = Pong("Pong") # create a Pong Device
+    def expand(self):
+        """Expand the overall architecture into its components."""
+        graph = DeviceGraph()  # initialize a Device Graph
+        # add myself to the graph, useful if the assembly has ports
+        graph.add(self)
 
-		# add ping and pong to the graph
-		graph.add(ping)
-		graph.add(pong)
+        ping = Ping("Ping", self.attr["model"])  # create a Ping Device
+        pong = Pong("Pong")  # create a Pong Device
 
-		# link ping and pong
-		graph.link(ping.inout, pong.inout)
+        # add ping and pong to the graph
+        graph.add(ping)
+        graph.add(pong)
 
-		return graph
+        # link ping and pong
+        graph.link(ping.inout, pong.inout)
+
+        return graph
 
 
-#
-# If we are running as a script (either via Python or from SST), then
-# proceed.  Check if we are running with SST or from Python.
-#
 if __name__ == "__main__":
-	try:
-		import sst
-		SST = True
-	except:
-		SST = False
+    """
+    If we are running as a script (either via Python or from SST), then
+    proceed.  Check if we are running with SST or from Python.
+    """
+    try:
+        import sst
 
-	# Construct a DeviceGraph and put pingpong into it, then flatten the graph
-	# and make sure the connections are valid
-	graph = DeviceGraph()
-	graph.add(pingpong("PingPong", 5))
-	graph = graph.flatten()
-	graph.verify_links()
+        SST = True
+    except ImportError:
+        SST = False
 
-	builder = BuildSST()
+    # Construct a DeviceGraph and put pingpong into it, then flatten the graph
+    # and make sure the connections are valid
+    graph = DeviceGraph()
+    graph.add(pingpong("PingPong", 5))
+    graph = graph.flatten()
+    graph.verify_links()
 
-	if SST:
-		# If running within SST, generate the SST graph
-		builder.build(graph)
-	else:
-		# generate a graphviz dot file and json output for demonstration
-		graph.write_dot_file("pingpong.gv", title="Ping Pong")
-		builder.write(graph, "pingpong.json")
+    builder = BuildSST()
+
+    if SST:
+        # If running within SST, generate the SST graph
+        builder.build(graph)
+    else:
+        # generate a graphviz dot file and json output for demonstration
+        graph.write_dot_file("pingpong.gv", title="Ping Pong")
+        builder.write(graph, "pingpong.json")

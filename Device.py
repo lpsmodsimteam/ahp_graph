@@ -1,12 +1,12 @@
 """
-This module represents a Device which can be thought of as an SST component
+This module represents a Device which can be thought of as an SST component.
 
-There are decorators for annotating which SST library the device can be found in
-along with port labels
+There are decorators for annotating which SST library the device can be found
+in along with port labels.
 
 The most important feature is that a Device can be an assembly, meaning is is
 constructed of other Devices. This combined with the DeviceGraph allows for
-hierarchical representations of a graph
+hierarchical representations of a graph.
 """
 
 import collections
@@ -14,245 +14,261 @@ import types
 
 # The Port namespace defines constants used to describe ports.
 Port = types.SimpleNamespace(
-	# Port cardinality: single, multi, or bounded(N).
-	Single  = -1,
-	Multi   = 0,
-	Bounded = lambda x : x,
-
-	# Whether the port is optional or required.
-	Optional = False,
-	Required = True,
-
-	# Define common port types for checking port compatibility.
-	# Each of these ends in an implicit message in SST.
-	Analog  = "Analog",
-	Digital = "Digital"
+    # Port cardinality: single, multi, or bounded(N).
+    Single=-1,
+    Multi=0,
+    Bounded=lambda x: x,
+    # Whether the port is optional or required.
+    Optional=False,
+    Required=True,
+    # Define common port types for checking port compatibility.
+    # Each of these ends in an implicit message in SST.
+    Analog="Analog",
+    Digital="Digital",
 )
 
 
 def sstlib(name):
-	"""
-	Decorator syntactic suger to define the SST component associated
-	with a device.  This makes the device definitions look a little
-	prettier.  Note that a node may have an SST attribute and also
-	be an assembly (e.g., a multi-resolution model of a component).
-	"""
-	def wrapper(cls):
-		cls.sstlib = name
-		return cls
-	return wrapper
+    """
+    Python decorator to define the SST component associated with this Device.
+
+    Note that a node may have an SST attribute and also
+    be an assembly (e.g., a multi-resolution model of a component).
+    """
+
+    def wrapper(cls):
+        cls.sstlib = name
+        return cls
+
+    return wrapper
 
 
 def assembly(cls):
-	"""
-	Decorator syntactic sugar to indicate that a device is an assembly.
-	Verify that there is an expand method.
-	"""
-	if not hasattr(cls, "expand"):
-		raise RuntimeError(f"Assemblies must define expand(): {cls.__name__}")
-	cls.assembly = True
-	return cls
+    """
+    Python decorator to indicate that a device is an assembly.
+
+    Verify that there is an expand method.
+    """
+    if not hasattr(cls, "expand"):
+        raise RuntimeError(f"Assemblies must define expand(): {cls.__name__}")
+    cls.assembly = True
+    return cls
 
 
 def port(name, card, ptype=None, need=Port.Optional):
-	"""
-	Decorator syntactic sugar to define the ports for a particular device.
-	A port is defined by a name, cardinality (single, multiple, or bounded),
-	a port type (a string or None), and whether it is required.
-	"""
-	def wrapper(cls):
-		if not hasattr(cls, "_portlist"):
-			cls._portlist = list()
-			cls._porttype = dict()
-			cls._portcard = dict()
-			cls._portneed = dict()
-		cls._portlist.insert(0, (name, card, ptype, need))
-		cls._portcard[name] = card
-		cls._porttype[name] = ptype
-		cls._portneed[name] = need
-		return cls
-	return wrapper
+    """
+    Python decorator to define the ports for a particular device.
+
+    A port is defined by a name, cardinality (single, multiple, or bounded),
+    a port type (a string or None), and whether it is required.
+    """
+
+    def wrapper(cls):
+        if not hasattr(cls, "_portlist"):
+            cls._portlist = list()
+            cls._porttype = dict()
+            cls._portcard = dict()
+            cls._portneed = dict()
+        cls._portlist.insert(0, (name, card, ptype, need))
+        cls._portcard[name] = card
+        cls._porttype[name] = ptype
+        cls._portneed[name] = need
+        return cls
+
+    return wrapper
 
 
 class DevicePort:
-	"""
-	A DevicePort object contains a device reference, a port name, and an
-	optional port number.
-	"""
-	def __init__(self, device, name, number=None):
-		self.device = device
-		self.name   = name
-		self.number = number
+    """
+    A DevicePort represents a port on a Device.
 
-	def is_single(self):
-		return self.number is None
+    DevicePort contains a device reference, a port name, and an
+    optional port number.
+    """
 
-	def __repr__(self):
-		if self.number is None:
-			return f"{self.device.name}.{self.name}"
-		else:
-			return f"{self.device.name}.{self.name}.{self.number}"
+    def __init__(self, device, name, number=None):
+        """Initialize the device, name, and port number."""
+        self.device = device
+        self.name = name
+        self.number = number
 
-	def __lt__(self, other):
-		n0 = -1 if self.number is None else self.number
-		n1 = -1 if other.number is None else other.number
-		p0 = (self.device.name,  self.name,  n0)
-		p1 = (other.device.name, other.name, n1)
-		return p0 < p1
+    def is_single(self):
+        """Return whether this is a single port or not."""
+        return self.number is None
+
+    def __repr__(self):
+        """Return a string representation of this DevicePort."""
+        if self.number is None:
+            return f"{self.device.name}.{self.name}"
+        else:
+            return f"{self.device.name}.{self.name}.{self.number}"
+
+    def __lt__(self, other):
+        """Compare this DevicePort to another."""
+        n0 = -1 if self.number is None else self.number
+        n1 = -1 if other.number is None else other.number
+        p0 = (self.device.name, self.name, n0)
+        p1 = (other.device.name, other.name, n1)
+        return p0 < p1
 
 
 class ExternalPort:
-	"""	An ExternalPort object contains an sst.Component and a port name. """
-	def __init__(self, comp, portName):
-		self.comp = comp
-		self.portName = portName
+    """An ExternalPort object contains an sst.Component and a port name."""
 
-	def __repr__(self):
-		return f"{self.comp.getFullName()}.{self.portName}"
+    def __init__(self, comp, portName):
+        """Initialize the component and portName."""
+        self.comp = comp
+        self.portName = portName
 
-	def comp_name(self):
-		return self.comp.getFullName()
+    def __repr__(self):
+        """Return a string representation of this ExternalPort."""
+        return f"{self.comp.getFullName()}.{self.portName}"
 
-	def port_name(self):
-		return self.portName
+    def comp_name(self):
+        """Return the component name."""
+        return self.comp.getFullName()
+
+    def port_name(self):
+        """Return the port name."""
+        return self.portName
 
 
 class Device:
-	"""
-	Device is the base class for a node in the AHP graph.  This object
-	is immutable.  Each device exports several ports.  A device may be
-	represented by an SST component, may be an assembly of other devices,
-	or both.  If an assembly, then the device must define an expand()
-	method that returns a device graph that implements the device.
+    """
+    Device is the base class for a node in the AHP graph.
 
-	Note that successive calls to port() will return the same DevicePort
-	object so they can be used in sets and comparisons.
+    This object is immutable. Each device exports several ports.
+    A device may be represented by an SST component, may be an assembly
+    of other devices, or both. If an assembly, then the device must define
+    an expand() method that returns a device graph that implements the device.
 
-	Each device must have a unique name and model.
-	"""
-	sstlib   = None
-	assembly = False
+    Note that successive calls to port() will return the same DevicePort
+    object so they can be used in sets and comparisons.
 
-	def __init__(self, name, model, attr=None):
-		"""
-		Initialize the device with the unique name, model, and optional
-		dictionary of attributes (typically from kwargs).
-		"""
-		self.name      = name
-		self.attr      = dict(attr) if attr is not None else dict()
-		self._ports    = collections.defaultdict(dict)
-		self._nport    = collections.defaultdict(int)
-		self._sub      = list()
-		self._issub    = False
-		self._subOwner = None
+    Each device must have a unique name and model.
+    """
 
-		self._rank   = None
-		self._thread = None
+    sstlib = None
+    assembly = False
 
-		self.attr['model'] = model
-		self.attr['type']  = self.__class__.__name__
+    def __init__(self, name, model, attr=None):
+        """
+        Initialize the device.
 
+        Initialize with the unique name, model, and optional
+        dictionary of attributes (typically from kwargs).
+        """
+        self.name = name
+        self.attr = dict(attr) if attr is not None else dict()
+        self._ports = collections.defaultdict(dict)
+        self._nport = collections.defaultdict(int)
+        self._sub = list()
+        self._issub = False
+        self._subOwner = None
 
-	def set_partition(self, rank, thread=0):
-		"""	Assign a rank and optional thread to this device. """
-		self._rank = rank
-		self._thread = thread
+        self._rank = None
+        self._thread = None
 
+        self.attr["model"] = model
+        self.attr["type"] = self.__class__.__name__
 
-	def add_subcomponent(self, device, name, slot):
-		"""
-		Add a subcomponent to this component.  Both the subcomponent and
-		this component must be SST classes.  Note that all subcomponents
-		must be added to the device before the device is added to the graph.
-		"""
-		if self.sstlib is None:
-			raise RuntimeError(f"Parent of sub-component must be an SST class")
-		if device.sstlib is None:
-			raise RuntimeError(f"A sub-component must be an SST class")
-		device._issub = True
-		device._subOwner = self
-		self._sub.append((device, name, slot))
+    def set_partition(self, rank, thread=0):
+        """Assign a rank and optional thread to this device."""
+        self._rank = rank
+        self._thread = thread
 
+    def add_subcomponent(self, device, name, slot):
+        """
+        Add a subcomponent to this component.
 
-	def is_subcomponent(self):
-		"""	Return whether this component is a subcomponent. """
-		return self._issub
+        Both the subcomponent and this component must be SST classes.
+        Note that all subcomponents must be added to the device before
+        the device is added to the graph.
+        """
+        if self.sstlib is None:
+            raise RuntimeError(f"Parent of sub-component must be an SST class")
+        if device.sstlib is None:
+            raise RuntimeError(f"A sub-component must be an SST class")
+        device._issub = True
+        device._subOwner = self
+        self._sub.append((device, name, slot))
 
+    def is_subcomponent(self):
+        """Return whether this component is a subcomponent."""
+        return self._issub
 
-	def get_subcomponents(self):
-		"""	Return the list of (device,slot) sub-component pairs. """
-		return self._sub
+    def get_subcomponents(self):
+        """Return the list of (device,slot) sub-component pairs."""
+        return self._sub
 
+    def __getattr__(self, port):
+        """
+        Enable ports to be treated as variables.
 
-	def __getattr__(self, port):
-		"""
-		As a convenience, we allow ports to be named as an attribute on the
-		class (e.g., Device.Input instead of Device.port("Input").
-		If the port is not defined, then we thrown an exception.
-		"""
-		card = self._portcard.get(port)
+        As a convenience, we allow ports to be named as an attribute on the
+        class (e.g., Device.Input instead of Device.port("Input").
+        If the port is not defined, then we thrown an exception.
+        """
+        card = self._portcard.get(port)
 
-		if card is None:
-			raise RuntimeError(f"Unknown port in {self.name}: {port}")
-		elif card == Port.Single:
-			return self.port(port)
-		else:
-			return lambda x : self.port(port, x)
+        if card is None:
+            raise RuntimeError(f"Unknown port in {self.name}: {port}")
+        elif card == Port.Single:
+            return self.port(port)
+        else:
+            return lambda x: self.port(port, x)
 
+    def port(self, port, number=None):
+        """
+        Return a Port object representing the port on this device.
 
-	def port(self, port, number=None):
-		"""
-		Return a Port object representing the port on this device.
+        If a Single port, then make sure we do not have a port number.
+        If the port has not already been defined, then add it.
 
-		If a Single port, then make sure we do not have a port number.
-		If the port has not already been defined, then add it.
+        If a Bounded or Multi port, determine the port number.  If
+        number is None, then create a new port at the end of the current
+        list.  Make sure we do not create too many connections if Bounded.
+        Finally, if the port has not already been defined, then create it.
+        """
+        portcard = self._portcard.get(port)
 
-		If a Bounded or Multi port, determine the port number.  If
-		number is None, then create a new port at the end of the current
-		list.  Make sure we do not create too many connections if Bounded.
-		Finally, if the port has not already been defined, then create it.
-		"""
-		portcard = self._portcard.get(port)
+        if portcard is None:
+            raise RuntimeError(f"Unknown port in {self.name}: {port}")
 
-		if portcard is None:
-			raise RuntimeError(f"Unknown port in {self.name}: {port}")
+        elif portcard == Port.Single:
+            if number is not None:
+                raise RuntimeError(f"Port supports one connection: {port}")
+            if port not in self._ports:
+                self._ports[port] = DevicePort(self, port)
+            return self._ports[port]
 
-		elif portcard == Port.Single:
-			if number is not None:
-				raise RuntimeError(f"Port supports one connection: {port}")
-			if port not in self._ports:
-				self._ports[port] = DevicePort(self, port)
-			return self._ports[port]
+        else:
+            if number is None:
+                number = self._nport[port]
+                self._nport[port] += 1
+            else:
+                self._nport[port] = number + 1
+            if portcard != Port.Multi and number >= portcard:
+                raise RuntimeError(f"Too many connections: {port}")
+            if number not in self._ports[port]:
+                self._ports[port][number] = DevicePort(self, port, number)
+            return self._ports[port][number]
 
-		else:
-			if number is None:
-				number = self._nport[port]
-				self._nport[port] += 1
-			else:
-				self._nport[port] = number + 1
-			if portcard != Port.Multi and number >= portcard:
-				raise RuntimeError(f"Too many connections: {port}")
-			if number not in self._ports[port]:
-				self._ports[port][number] = DevicePort(self, port, number)
-			return self._ports[port][number]
+    def reset_port_count(self):
+        """Reset the port count for multiports."""
+        for port in self._nport:
+            self._nport[port] = 0
 
+    def __repr__(self):
+        """Return a description of the Device."""
+        lines = list()
+        lines.append(f"Device={self.__class__.__name__}")
+        lines.append(f"    name={self.name}")
+        lines.append(f"    is-assembly={self.assembly}")
 
-	def reset_port_count(self):
-		"""	Reset the port count for multiports. """
-		for port in self._nport:
-			self._nport[port] = 0
+        if self.sstlib is not None:
+            lines.append(f"    sstlib={self.sstlib}")
 
-
-	def __repr__(self):
-		"""	Return a description of the Device. """
-		lines = list()
-		lines.append(f"Device={self.__class__.__name__}")
-		lines.append(f"    name={self.name}")
-		lines.append(f"    is-assembly={self.assembly}")
-
-		if self.sstlib is not None:
-			lines.append(f"    sstlib={self.sstlib}")
-
-		for key in sorted(self.attr):
-			lines.append(f"    {key}={self.attr[key]}")
-		return "\n".join(lines)
+        for key in sorted(self.attr):
+            lines.append(f"    {key}={self.attr[key]}")
+        return "\n".join(lines)
