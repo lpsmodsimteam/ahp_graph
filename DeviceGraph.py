@@ -9,6 +9,7 @@ All links are unidirectional.
 
 import collections
 import io
+import pygraphviz
 from .Device import *
 
 
@@ -461,7 +462,5 @@ class DeviceGraph:
                 else:
                     # single link between components
                     print(f"  {key};", file=gvfile)
-
-            print("}", file=gvfile)
 
             print("}", file=gvfile)
