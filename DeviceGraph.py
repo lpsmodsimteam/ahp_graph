@@ -1,10 +1,10 @@
-#
-# This module implements support for AHP (attributed hierarchical port)
-# graphs of devices and their port-based connections.  This class of graphs
-# support attributes on the nodes (devices), links that are connected to
-# named ports on the nodes, and the non-simple nodes that may be represented
-# by a hierarchical graph (aka an assembly).  All links are unidirectional.
-#
+"""
+This module implements support for AHP (attributed hierarchical port)
+graphs of devices and their port-based connections.  This class of graphs
+support attributes on the nodes (devices), links that are connected to
+named ports on the nodes, and the non-simple nodes that may be represented
+by a hierarchical graph (aka an assembly).  All links are unidirectional.
+"""
 
 import collections
 import io

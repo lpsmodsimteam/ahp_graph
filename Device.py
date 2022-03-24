@@ -1,13 +1,18 @@
-#
-# This module a 'Device' with ports
-#
+"""
+This module represents a Device which can be thought of as an SST component
+
+There are decorators for annotating which SST library the device can be found in
+along with port labels
+
+The most important feature is that a Device can be an assembly, meaning is is
+constructed of other Devices. This combined with the DeviceGraph allows for
+hierarchical representations of a graph
+"""
 
 import collections
 import types
 
-#
 # The Port namespace defines constants used to describe ports.
-#
 Port = types.SimpleNamespace(
 	# Port cardinality: single, multi, or bounded(N).
 	Single  = -1,

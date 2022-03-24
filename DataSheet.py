@@ -1,7 +1,7 @@
-#
-# This module defines simple methods for reading and merging datasheets.
-# A datasheet is represented as a JSON-compatible Python structure.
-#
+"""
+This module defines simple methods for reading and merging datasheets.
+A datasheet is represented as a JSON-compatible Python structure.
+"""
 
 import collections
 import copy

@@ -1,8 +1,8 @@
-#
-# This module defines portions of the Component and Link classes
-# in the SST Python interface so we can generate PyDL models outside
-# of SST.  This module is only loaded if the standard SST import fails.
-#
+"""
+This module defines portions of the Component and Link classes
+in the SST Python interface so we can generate PyDL models outside
+of SST.  This module is only loaded if the standard SST import fails.
+"""
 
 class Component(object):
 	""" An SST component. """

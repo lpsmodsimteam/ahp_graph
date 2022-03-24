@@ -1,7 +1,7 @@
-#
-# This module creates an SST graph from the device graph.  We
-# can do it live (build) or write a JSON file (write).
-#
+"""
+This module creates an SST graph from the device graph.  We
+can do it live (build) or write a JSON file (write).
+"""
 
 import io
 import os

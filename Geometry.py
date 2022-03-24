@@ -1,17 +1,17 @@
-#
-# This module defines the geometry object describing Devices
-# A geometry contains the following information:
-#   * plane:  one of the z plotting planes
-#   * shape:  either LineShape or PolygonShape
-#   * color:  color understood by matplotlib
-#   * offset: (x,y) offset
-#   * scale:  (x,y) scale factors
-#   * rot:    shape rotation in degrees
-#
-# The shape is rotated, scaled, and then offset.  If either
-# the shape or color is not provided, then it is taken from
-# the default datasheet.
-#
+"""
+This module defines the geometry object describing Devices
+A geometry contains the following information:
+  * plane:  one of the z plotting planes
+  * shape:  either LineShape or PolygonShape
+  * color:  color understood by matplotlib
+  * offset: (x,y) offset
+  * scale:  (x,y) scale factors
+  * rot:    shape rotation in degrees
+
+The shape is rotated, scaled, and then offset.  If either
+the shape or color is not provided, then it is taken from
+the default datasheet.
+"""
 
 import io
 import math
