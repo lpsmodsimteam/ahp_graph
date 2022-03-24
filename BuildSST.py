@@ -4,9 +4,10 @@
 #
 
 import io
-import orjson
 import os
 import gc
+
+import orjson
 
 try:
 	import sst
@@ -55,7 +56,8 @@ class BuildSST(object):
 				params[key] = val.__to_json__()
 			else:
 				try:
-					params[key] = json.dumps(val)
+					# serialize the value to json bytes, then deserialize into a python dict
+					params[key] = orjson.loads(orjson.dumps(val, option=orjson.OPT_INDENT_2))
 				except:
 					pass
 

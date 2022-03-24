@@ -6,9 +6,10 @@
 import collections
 import copy
 import io
-import json
-import numexpr # type: ignore[import]
 import re
+
+import orjson
+import numexpr # type: ignore[import]
 
 __all__ = [ "load", "merge" ]
 
@@ -19,7 +20,7 @@ def load(filename):
 	"""
 	with io.open(filename, 'r') as dfile:
 		lines = [re.sub('//.*', '', line) for line in dfile]
-	datasheet = json.loads(" ".join(lines))
+	datasheet = orjson.loads(" ".join(lines))
 	__recurse_math_expr(datasheet)
 	return datasheet
 

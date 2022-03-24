@@ -14,7 +14,7 @@ Ping::Ping(SST::ComponentId_t id, SST::Params& params) : SST::Component(id) {
 	// get our parameter
 	maxRepeats = params.find<uint64_t>("model", 10);
 	repeats = 0;
-	output.output(CALL_INFO, "Maximum Repeats: %llu\n", maxRepeats);
+	output.output(CALL_INFO, "Maximum Repeats: %lu\n", maxRepeats);
 
 	// configure the port we will use to send and receive messages
 	port = configureLink("inoutPort", new SST::Event::Handler<Ping>(this, &Ping::handleEvent));
@@ -43,7 +43,7 @@ void Ping::handleEvent(SST::Event *ev) {
 	// Checking to see if we have repeated the ping pong the requested number of times
 	// If so, tell SST it is OK to stop the simulation now
 	repeats++;
-	output.output(CALL_INFO, "Repeats: %llu\n", repeats);
+	output.output(CALL_INFO, "Repeats: %lu\n", repeats);
 	if (repeats >= maxRepeats) {
 		primaryComponentOKToEndSim();
 		return;

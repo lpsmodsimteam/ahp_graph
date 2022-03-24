@@ -14,11 +14,12 @@
 #
 
 import io
-import json
 import math
-import matplotlib # type: ignore[import]
 import os
 import re
+
+import orjson
+import matplotlib # type: ignore[import]
 
 if 'DISPLAY' not in os.environ:
 	matplotlib.use("Agg")
@@ -209,8 +210,8 @@ class Geometry:
 					"color"  : geom.color
 				}
 
-		with io.open(filename, 'w') as jfile:
-			json.dump(config, jfile, indent=2, sort_keys=True)
+		with io.open(filename, 'wb') as jfile:
+			jfile.write(orjson.dumps(config, option=orjson.OPT_INDENT_2))
 
 	#
 	# Plot the JSON file.
@@ -222,7 +223,7 @@ class Geometry:
 		# Pull in the device plotting information from the JSON file.
 		#
 		with io.open(jsonfile, 'r') as jfile:
-			devices = json.load(jfile)
+			devices = orjson.loads(jfile)
 
 		#
 		# Use matplotlib to create the figure and axes.  We place the

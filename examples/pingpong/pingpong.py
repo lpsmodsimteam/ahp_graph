@@ -1,12 +1,7 @@
 import os
 import sys
 
-# Setup environment
-if __name__ == "__main__":
-	PyDL_path = os.getenv("PyDL")
-	assert PyDL_path, "Set PyDL path in your environment"
-	sys.path.append(PyDL_path)
-	from PyDL import *
+from PyDL import *
 
 
 # Ping Device
