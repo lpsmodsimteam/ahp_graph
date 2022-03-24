@@ -3,9 +3,8 @@ that the files can be located
 
 put something like the following in your ~/.bashrc or ~/.bash_profile:
  export PYTHONPATH=$PYTHONPATH:<path to where you downloaded PyDL>
-
 don't include /PyDL at the end, so that you can in Python do
- import PyDL
+ from PyDL import *
 
 Packages you need to install for this to work:
 Ubuntu apt packages:
@@ -13,3 +12,6 @@ Ubuntu apt packages:
 
 Python3 packages:
  python3 -m pip install pygraphviz orjson numexpr matplotlib
+
+
+tests folder includes some tests to verify functionality of PyDL

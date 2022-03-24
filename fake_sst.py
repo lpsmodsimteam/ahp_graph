@@ -4,12 +4,8 @@
 # of SST.  This module is only loaded if the standard SST import fails.
 #
 
-__all__ = [ "Component", "Link" ]
-
-#
-# An SST component.
-#
 class Component(object):
+	""" An SST component. """
 	def __init__(self, name, objref):
 		self._name   = name
 		self._objref = objref
@@ -20,10 +16,9 @@ class Component(object):
 		for (key,val) in self.params.items():
 			print(f"    {self._name}:{key} = '{val}'")
 
-#
-# A link between two SST components.
-#
+
 class Link(object):
+	""" A link between two SST components. """
 	def __init__(self, name):
 		self._name = name
 

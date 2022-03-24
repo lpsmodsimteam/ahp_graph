@@ -29,42 +29,41 @@ from matplotlib.lines import Line2D # type: ignore[import]
 from matplotlib.patches import PathPatch # type: ignore[import]
 from matplotlib.path import Path # type: ignore[import]
 
-__all__ = [ "Geometry", "LineShape", "PolygonShape" ]
 
-#
-# A LineShape is rendered as a set of points connected by a line.
-#
 class LineShape:
+	""" A LineShape is rendered as a set of points connected by a line. """
 	def __init__(self, points, color=None):
 		self.stype  = "Line"
 		self.points = points
 		self.color  = color
 
-#
-# A PolygonShape is rendered as a closed polygon described by a
-# series of points.  The first and last points must be the same.
-#
+
 class PolygonShape:
+	"""
+	A PolygonShape is rendered as a closed polygon described by a
+	series of points.  The first and last points must be the same.
+	"""
 	def __init__(self, points, color=None):
 		self.stype  = "Polygon"
 		self.points = points
 		self.color  = color
 
-#
-# The geometry class describes the geometry of a single Device.
-# Shape attributes not specified in the constructor are taken
-# from the Device database. The geometry is plotted using matplotlib.
-#
-class Geometry:
 
-	#
-	# Create a geometry object.  The geometry is defined by the plane,
-	# shape, color, offset, scale, and rot.  The offset is required.
-	# If not provided, the plane defaults to zero, the shape defaults
-	# to the datasheet shape, the color defaults to the datasheet color,
-	# the scale defaults to (1,1), and the rotation defaults to zero.
-	#
+class Geometry:
+	"""
+	The geometry class describes the geometry of a single Device.
+	Shape attributes not specified in the constructor are taken
+	from the Device database. The geometry is plotted using matplotlib.
+	"""
+
 	def __init__(self, offset, shape, **kwargs):
+		"""
+		Create a geometry object.  The geometry is defined by the plane,
+		shape, color, offset, scale, and rot.  The offset is required.
+		If not provided, the plane defaults to zero, the shape defaults
+		to the datasheet shape, the color defaults to the datasheet color,
+		the scale defaults to (1,1), and the rotation defaults to zero.
+		"""
 		self.offset = offset
 		self.shape  = shape
 		self.plane  = kwargs.get('plane', 0)
@@ -77,11 +76,9 @@ class Geometry:
 		if isinstance(self.scale, (int,float)):
 			self.scale = (self.scale, self.scale)
 
-		#
 		# Generate the points for this geometry object by applying
 		# the transformation matrix to the shape points in the order
 		# (1) rotation, (2) scaling, and (3) offset.
-		#
 		(dx,dy)  = self.offset
 		(sx,sy)  = self.scale
 		rot      = math.radians(self.rot)
@@ -92,14 +89,16 @@ class Geometry:
 		self.pts = [(A*x+B*y+dx,C*x+D*y+dy) for (x,y) in self.shape.points]
 
 	def __str__(self):
-	  return f'o:{self.offset},s:{self.shape},p:{self.plane},c:{self.color},sc:{self.scale},r:{self.rot}:p:{self.pts}'
+		""" String representation. """
+		return f'o:{self.offset},s:{self.shape},p:{self.plane},c:{self.color},sc:{self.scale},r:{self.rot}:p:{self.pts}'
 
-	#
-	# Lookup shape and color information from the datasheet and
-	# return the appropriate shape.
-	#
+
 	@staticmethod
 	def DataSheetShape(dtype, model, datasheet):
+		"""
+		Lookup shape and color information from the datasheet and
+		return the appropriate shape.
+		"""
 		if dtype not in datasheet:
 			raise RuntimeError(f"Unknown Geometry for device: {dtype}")
 		if model not in datasheet[dtype]:
@@ -120,29 +119,26 @@ class Geometry:
 		else:
 			raise RuntimeError(f"Unknown shape: {stype}")
 
-	#
-	# Plot the devices in the graph using matplotlib.  Show the plot
-	# if show is true.  If figfile is provided, then write the image
-	# to that file.  If figsize is provided, then set the size of the
-	# figure to (w,h) in inches.
-	#
+
 	@staticmethod
 	def plot(graph, title=None, show=True, figfile=None, figsize=None):
+		"""
+		Plot the devices in the graph using matplotlib.  Show the plot
+		if show is true.  If figfile is provided, then write the image
+		to that file.  If figsize is provided, then set the size of the
+		figure to (w,h) in inches.
+		"""
 
-		#
 		# Calculate the number of planes.
-		#
 		planes = 1
 		for device in graph.devices():
 			if 'geometry' in device.attr:
 				planes = max(planes, device.attr['geometry'].plane+1)
 
-		#
 		# Use matplotlib to create the figure and axes.  We place the
 		# two axes next to each other so plot with the same Y values.
 		# Also ensure the X axes are the same to maintain the aspect
 		# ratio.
-		#
 		if planes == 1:
 			fig, ax = pyplot.subplots(figsize=figsize)
 			ax = [ ax ]
@@ -156,9 +152,7 @@ class Geometry:
 				sharey=True
 			)
 
-		#
 		# Now plot the devices on the different planes.
-		#
 		for device in graph.devices():
 			if 'geometry' in device.attr:
 				geom = device.attr['geometry']
@@ -179,9 +173,7 @@ class Geometry:
 				else:
 					raise RuntimeError(f"Unknown shape: {geom.shape.stype}")
 
-		#
 		# Save and/or show the result
-		#
 		fig.suptitle(title if title is not None else "Device Geometry")
 		for a in ax:
 			a.axis('scaled')
@@ -191,11 +183,10 @@ class Geometry:
 		if show:
 			pyplot.show()
 
-	#
-	# Write the device geometry information to the specified JSON file.
-	#
+
 	@staticmethod
 	def write(filename, graph):
+		""" Write the device geometry information to the specified JSON file. """
 		config = dict()
 
 		for device in graph.devices():
@@ -213,24 +204,19 @@ class Geometry:
 		with io.open(filename, 'wb') as jfile:
 			jfile.write(orjson.dumps(config, option=orjson.OPT_INDENT_2))
 
-	#
-	# Plot the JSON file.
-	#
+
 	@staticmethod
 	def plotjson(jsonfile, title=None, show=True, figfile=None, figsize=None):
+		""" Plot the JSON file. """
 
-		#
 		# Pull in the device plotting information from the JSON file.
-		#
 		with io.open(jsonfile, 'r') as jfile:
 			devices = orjson.loads(jfile)
 
-		#
 		# Use matplotlib to create the figure and axes.  We place the
 		# two axes next to each other so plot with the same Y values.
 		# Also ensure the X axes are the same to maintain the aspect
 		# ratio.
-		#
 		planes = max([device['plane']+1 for device in devices.values()])
 		if planes == 1:
 			fig, ax = pyplot.subplots(figsize=figsize)
@@ -244,9 +230,7 @@ class Geometry:
 				sharex=True,
 				sharey=True)
 
-		#
 		# Now plot the devices on the different planes.
-		#
 		for device in devices.values():
 			if device['shape'] == "Line":
 				x = [pt[0] for pt in device['points']],
@@ -262,9 +246,7 @@ class Geometry:
 				poly = PathPatch(path, color=device['color'])
 				ax[device['plane']].add_patch(poly)
 
-		#
 		# Save and/or show the result
-		#
 		fig.suptitle(title if title is not None else jsonfile)
 		for a in ax:
 			a.axis('scaled')

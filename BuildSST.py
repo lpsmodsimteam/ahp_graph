@@ -21,15 +21,11 @@ class BuildSST(object):
 	"""
 
 	def __init__(self):
-		"""
-		Create the SST builder object.  The default time base is 1ps.
-		"""
+		"""	Create the SST builder object.  The default time base is 1ps. """
 		self._TIMEBASE = "1ps"
 
 	def __portname(self, port):
-		"""
-		Return the canonical SST port name for a Device port.
-		"""
+		"""	Return the canonical SST port name for a Device port. """
 		if port.number is None:
 			return f"{port.name}Port"
 		else:
@@ -75,25 +71,19 @@ class BuildSST(object):
 		n2c = dict()
 		deterministic = False # Enable this for deterministic ordering.
 
-		#
 		# Set up global parameters.
-		#
 		global_params = self.__encode(graph.attr)
 		for (key,val) in global_params.items():
 			sst.addGlobalParam(key, key, val)
 
-		#
 		# If we have specified partition information, then
 		# set up the self partitioner.
-		#
 		if any([d0._rank is not None for d0 in graph.devices()]):
 			sst.setProgramOption("partitioner", "sst.self")
 
-		#
 		# First, we instantiate all of the components with
 		# their attributes.  Raise an exception if a particular
 		# device has no SST component implementation.
-		#
 		graphDevices = graph.devices()
 		if deterministic: graphDevices = sorted(graphDevices, key=lambda d : d.name)
 		for d0 in graphDevices:
@@ -120,9 +110,7 @@ class BuildSST(object):
 					for key in global_params:
 						c1.addGlobalParamSet(key)
 
-		#
 		# Second, link the component ports using graph links.
-		#
 		graphLinks = graph.links()
 		if deterministic: graphLinks = sorted(graphLinks)
 		for (p0,p1,t) in graphLinks:
@@ -147,9 +135,7 @@ class BuildSST(object):
 			n1 = (c1, s1, self._TIMEBASE)
 			link.connect(n0, n1)
 
-		#
 		# Return a map of component names to components.
-		#
 		return n2c
 
 	def write(self, graph, filename,
@@ -164,9 +150,7 @@ class BuildSST(object):
 		rank and links followed across ranks but the entire graph will not
 		necessarily be expanded all at once
 		"""
-		#
 		# If this is serial, just dump the whold thing.
-		#
 		if nranks == 1:
 			self.__write_model(
 				graph,
@@ -177,10 +161,8 @@ class BuildSST(object):
 				program_options
 			)
 
-		#
 		# Graph has already been expanded.  Find the partition
 		# information and write out the models.
-		#
 		elif not partialExpand:
 			(base,ext) = os.path.splitext(filename)
 			partition = self.__partition_graph(graph, nranks)
@@ -199,9 +181,7 @@ class BuildSST(object):
 					program_options
 				)
 
-		#
 		# Perform a partial expansion.
-		#
 		else:
 			(base,ext) = os.path.splitext(filename)
 
@@ -267,34 +247,26 @@ class BuildSST(object):
 		"""
 		model = dict()
 
-		#
 		# Write the program options to the model.
-		#
 		if program_options is None:
 			model['program_options'] = dict()
 		else:
 			model['program_options'] = dict(program_options)
 
-		#
 		# If running in parallel, then set up the SST SELF partitioner.
-		#
 		if nranks > 1:
 			model['program_options']['partitioner'] = "sst.self"
 
-		#
 		# Set up global parameters.
-		#
 		global_params = self.__encode(graph.attr, True)
 		model['global_params'] = dict()
 		for (key,val) in global_params.items():
 			model['global_params'][key] = dict({key : val})
 		global_set = list(global_params.keys())
 
-		#
 		# Define all the components.  We define the name, type,
 		# parameters, and global parameters.  Raise an exception
 		# if a particular device has no SST component implementation.
-		#
 		components = list()
 		for d0 in rank_components:
 			if d0.sstlib is None:
@@ -331,9 +303,7 @@ class BuildSST(object):
 
 		model['components'] = components
 
-		#
 		# Now define the links between components.
-		#
 		links = list()
 		for (p0,p1,dt) in rank_links:
 			dt = max(dt, 1)
