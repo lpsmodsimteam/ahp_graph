@@ -20,11 +20,7 @@ Port = types.SimpleNamespace(
     Bounded=lambda x: x,
     # Whether the port is optional or required.
     Optional=False,
-    Required=True,
-    # Define common port types for checking port compatibility.
-    # Each of these ends in an implicit message in SST.
-    Analog="Analog",
-    Digital="Digital",
+    Required=True
 )
 
 
@@ -179,7 +175,8 @@ class Device:
         self._rank = rank
         self._thread = thread
 
-    def add_subcomponent(self, device: 'Device', name: str, slot: str) -> None:
+    def add_subcomponent(self, device: 'Device', name: str,
+                         slotIndex: int = None) -> None:
         """
         Add a subcomponent to this component.
 
@@ -193,7 +190,7 @@ class Device:
             raise RuntimeError(f"A sub-component must be an SST class")
         device._issub = True
         device._subOwner = self
-        self._sub.append((device, name, slot))
+        self._sub.append((device, name, slotIndex))
 
     def is_subcomponent(self) -> bool:
         """Return whether this component is a subcomponent."""

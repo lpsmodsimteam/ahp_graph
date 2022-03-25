@@ -30,9 +30,9 @@ class BuildSST(object):
     def __portname(self, port: 'DevicePort') -> str:
         """Return the canonical SST port name for a Device port."""
         if port.number is None:
-            return f"{port.name}Port"
+            return f"{port.name}"
         else:
-            return f"{port.name}Port.{port.number}"
+            return f"{port.name}.{port.number}"
 
     def __encode(self, attr, stringify: bool = False) -> dict:
         """
@@ -115,7 +115,10 @@ class BuildSST(object):
                 for (d1, n1, s1) in d0.get_subcomponents():
                     if d1.sstlib is None:
                         raise RuntimeError(f"No SST library: {d1.name}")
-                    c1 = c0.setSubComponent(n1, d1.sstlib, s1)
+                    if s1 is None:
+                        c1 = c0.setSubComponent(n1, d1.sstlib)
+                    else:
+                        c1 = c0.setSubComponent(n1, d1.sstlib, s1)
                     c1.addParams(self.__encode(d1.attr))
                     components[d1] = c1
                     n2c[d1.name] = c1
