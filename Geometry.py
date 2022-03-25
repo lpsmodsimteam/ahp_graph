@@ -3,7 +3,7 @@ This module defines the geometry object describing Devices.
 
 A geometry contains the following information:
   * plane:  one of the z plotting planes
-  * shape:  either LineShape or PolygonShape
+  * shape:  either Line or Polygon
   * color:  color understood by matplotlib
   * offset: (x,y) offset
   * scale:  (x,y) scale factors
@@ -31,27 +31,15 @@ from matplotlib.patches import PathPatch  # type: ignore[import]
 from matplotlib.path import Path  # type: ignore[import]
 
 
-class LineShape:
-    """A LineShape is rendered as a set of points connected by a line."""
+class Shape:
+    """Class representing either a Line or Polygon."""
 
-    def __init__(self, points, color=None):
-        """Initialize a line with points and optional color."""
-        self.stype = "Line"
-        self.points = points
-        self.color = color
-
-
-class PolygonShape:
-    """
-    Represents any polygon.
-
-    A PolygonShape is rendered as a closed polygon described by a
-    series of points.  The first and last points must be the same.
-    """
-
-    def __init__(self, points, color=None):
-        """Initialize a Polygon with points and an optional color."""
-        self.stype = "Polygon"
+    def __init__(self, stype: str, points: list, color=None) -> 'Shape':
+        """Initialize a shape with the type points and color"""
+        if stype != 'Line' and stype != 'Polygon':
+            raise RuntimeError('The only acceptable types are '
+                               'currently Line and Polygon')
+        self.stype = stype
         self.points = points
         self.color = color
 
@@ -64,7 +52,7 @@ class Geometry:
     from the Device database. The geometry is plotted using matplotlib.
     """
 
-    def __init__(self, offset, shape, **kwargs):
+    def __init__(self, offset: tuple, shape: 'Shape', **kwargs) -> 'Geometry':
         """
         Create a geometry object.
 
@@ -99,13 +87,13 @@ class Geometry:
         self.pts = [(A * x + B * y + dx, C * x + D * y + dy)
                     for (x, y) in self.shape.points]
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Text representation."""
         return (f"o:{self.offset},s:{self.shape},p:{self.plane},"
                 f"c:{self.color},sc:{self.scale},r:{self.rot}:p:{self.pts}")
 
     @staticmethod
-    def DataSheetShape(dtype, model, datasheet):
+    def DataSheetShape(dtype, model, datasheet: dict) -> 'Shape':
         """Get datasheet info and return the appropriate shape."""
         if dtype not in datasheet:
             raise RuntimeError(f"Unknown Geometry for device: {dtype}")
@@ -120,15 +108,14 @@ class Geometry:
         color = info.get("color")
         points = info["shape"][1:]
 
-        if stype == "Line":
-            return LineShape(points, color)
-        elif stype == "Polygon":
-            return PolygonShape(points, color)
+        if stype == "Line" or stype == "Polygon":
+            return Shape(stype, points, color)
         else:
             raise RuntimeError(f"Unknown shape: {stype}")
 
     @staticmethod
-    def plot(graph, title=None, show=True, figfile=None, figsize=None):
+    def plot(graph: 'DeviceGraph', title: str = None, show: bool = True,
+             figfile: str = None, figsize=None) -> None:
         """
         Plot the devices in the graph using matplotlib.
 
@@ -188,7 +175,7 @@ class Geometry:
             pyplot.show()
 
     @staticmethod
-    def write(filename, graph):
+    def write(filename: str, graph: 'DeviceGraph') -> None:
         """Write the device geometry information to the specified JSON file."""
         config = dict()
 
@@ -209,7 +196,8 @@ class Geometry:
             jfile.write(orjson.dumps(config, option=orjson.OPT_INDENT_2))
 
     @staticmethod
-    def plotjson(jsonfile, title=None, show=True, figfile=None, figsize=None):
+    def plotjson(jsonfile: str, title: str = None, show: bool = True,
+                 figfile: str = None, figsize=None) -> None:
         """Plot the JSON file."""
         # Pull in the device plotting information from the JSON file.
         with io.open(jsonfile, "r") as jfile:

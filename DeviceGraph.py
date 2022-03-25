@@ -21,7 +21,7 @@ class DeviceGraph:
     This implements an AHP (annotated hierarchical port) graph.
     """
 
-    def __init__(self, attr=None):
+    def __init__(self, attr=None) -> 'DeviceGraph':
         """
         Define an empty device graph.
 
@@ -43,7 +43,7 @@ class DeviceGraph:
         self._extports = set()
         self._extlinkset = set()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Pretty print graph with devices followed by links."""
         lines = list()
         for device in sorted(self._devices, key=lambda d: d.name):
@@ -54,11 +54,11 @@ class DeviceGraph:
             lines.append(f"{p0} <---> {p1}")
         return "\n".join(lines)
 
-    def set_config(self, config):
+    def set_config(self, config) -> None:
         """Set the shared configuration file attribute."""
         self.attr["SharedConfig"] = config
 
-    def add(self, node):
+    def add(self, node) -> None:
         """
         Add a node to the device graph.
 
@@ -81,19 +81,19 @@ class DeviceGraph:
                 raise RuntimeError(f"Name already in graph: {name}")
             self._extnames.add(name)
 
-    def device(self, name):
+    def device(self, name: str) -> 'Device':
         """Return a particular device by name."""
         return self._devicemap[name]
 
-    def devices(self):
+    def devices(self) -> iter:
         """Return an iterator over the devices in the graph."""
         return iter(self._devices)
 
-    def ext_comps(self):
+    def ext_comps(self) -> iter:
         """Return an iterator over the external components in the graph."""
         return iter(self._extnames)
 
-    def links(self):
+    def links(self) -> iter:
         """
         Return an iterator over the port links in the graph.
 
@@ -102,18 +102,18 @@ class DeviceGraph:
         """
         return iter(self._linklist)
 
-    def ext_links(self):
+    def ext_links(self) -> iter:
         """Return an iterator over the external port links in the graph."""
         return iter(self._extlinkset)
 
-    def count(self, device, port):
+    def count(self, device: 'Device', port) -> int:
         """Return a link count for the specified port name on the device."""
         links = self._linkmap.get(device)
         if links is None:
             raise RuntimeError(f"Device {device.name} not in graph")
         return len([1 for (p0, p1) in links if p0.name == port])
 
-    def link(self, p0, p1, t=0):
+    def link(self, p0, p1, t=0) -> None:
         """
         Link two ports on two different devices.
 
@@ -184,7 +184,7 @@ class DeviceGraph:
         self._linkset.add((p0, p1))
         self._linklist.append((p0, p1, t))
 
-    def link_external(self, p0, p1):
+    def link_external(self, p0, p1) -> None:
         """
         Similar to link().
 
@@ -208,7 +208,7 @@ class DeviceGraph:
         self._extports.add(p1)
         self._extlinkset.add((p0, p1))
 
-    def verify_links(self):
+    def verify_links(self) -> None:
         """
         Verify that all required ports are linked up.
 
@@ -228,7 +228,7 @@ class DeviceGraph:
                 if need and name not in d2ports[device]:
                     raise RuntimeError(f"{device.name} requires port {name}")
 
-    def follow_links(self, rank):
+    def follow_links(self, rank: int) -> 'DeviceGraph':
         """
         Chase links betweeen ranks.
 
@@ -253,7 +253,8 @@ class DeviceGraph:
                 break
         return graph
 
-    def flatten(self, levels=None, name=None, rank=None, expand=None):
+    def flatten(self, levels: int = None, name: str = None,
+                rank: int = None, expand: set = None) -> 'DeviceGraph':
         """
         Recursively flatten the graph by the specified number of levels.
 
@@ -403,7 +404,7 @@ class DeviceGraph:
             None if levels is None else levels - 1, name, rank, expand
         )
 
-    def count_devices(self):
+    def count_devices(self) -> dict:
         """
         Count the devices in a graph.
 
@@ -417,7 +418,8 @@ class DeviceGraph:
             counter[(dtype, model)] += 1
         return counter
 
-    def write_dot_file(self, filename, title="Device Graph"):
+    def write_dot_file(self, filename: str,
+                       title: str = "Device Graph") -> None:
         """Write the device graph as a DOT file."""
         devices = list(sorted(self._devices, key=lambda d: d.name))
         extcomps = list(sorted(self._extnames))

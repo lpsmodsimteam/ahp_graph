@@ -28,7 +28,7 @@ Port = types.SimpleNamespace(
 )
 
 
-def sstlib(name):
+def sstlib(name: str) -> 'Device':
     """
     Python decorator to define the SST component associated with this Device.
 
@@ -36,14 +36,14 @@ def sstlib(name):
     be an assembly (e.g., a multi-resolution model of a component).
     """
 
-    def wrapper(cls):
+    def wrapper(cls: 'Device') -> 'Device':
         cls.sstlib = name
         return cls
 
     return wrapper
 
 
-def assembly(cls):
+def assembly(cls: 'Device') -> 'Device':
     """
     Python decorator to indicate that a device is an assembly.
 
@@ -55,7 +55,8 @@ def assembly(cls):
     return cls
 
 
-def port(name, card, ptype=None, need=Port.Optional):
+def port(name: str, card, ptype: str = None,
+         need: bool = Port.Optional) -> 'Device':
     """
     Python decorator to define the ports for a particular device.
 
@@ -63,7 +64,7 @@ def port(name, card, ptype=None, need=Port.Optional):
     a port type (a string or None), and whether it is required.
     """
 
-    def wrapper(cls):
+    def wrapper(cls: 'Device') -> 'Device':
         if not hasattr(cls, "_portlist"):
             cls._portlist = list()
             cls._porttype = dict()
@@ -86,24 +87,25 @@ class DevicePort:
     optional port number.
     """
 
-    def __init__(self, device, name, number=None):
+    def __init__(self, device: 'Device', name: str,
+                 number: int = None) -> 'DevicePort':
         """Initialize the device, name, and port number."""
         self.device = device
         self.name = name
         self.number = number
 
-    def is_single(self):
+    def is_single(self) -> bool:
         """Return whether this is a single port or not."""
         return self.number is None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return a string representation of this DevicePort."""
         if self.number is None:
             return f"{self.device.name}.{self.name}"
         else:
             return f"{self.device.name}.{self.name}.{self.number}"
 
-    def __lt__(self, other):
+    def __lt__(self, other: 'DevicePort') -> bool:
         """Compare this DevicePort to another."""
         n0 = -1 if self.number is None else self.number
         n1 = -1 if other.number is None else other.number
@@ -115,20 +117,20 @@ class DevicePort:
 class ExternalPort:
     """An ExternalPort object contains an sst.Component and a port name."""
 
-    def __init__(self, comp, portName):
+    def __init__(self, comp, portName: str) -> 'ExternalPort':
         """Initialize the component and portName."""
         self.comp = comp
         self.portName = portName
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return a string representation of this ExternalPort."""
         return f"{self.comp.getFullName()}.{self.portName}"
 
-    def comp_name(self):
+    def comp_name(self) -> str:
         """Return the component name."""
         return self.comp.getFullName()
 
-    def port_name(self):
+    def port_name(self) -> str:
         """Return the port name."""
         return self.portName
 
@@ -151,7 +153,7 @@ class Device:
     sstlib = None
     assembly = False
 
-    def __init__(self, name, model, attr=None):
+    def __init__(self, name: str, model, attr=None) -> 'Device':
         """
         Initialize the device.
 
@@ -172,12 +174,12 @@ class Device:
         self.attr["model"] = model
         self.attr["type"] = self.__class__.__name__
 
-    def set_partition(self, rank, thread=0):
+    def set_partition(self, rank: int, thread: int = 0) -> None:
         """Assign a rank and optional thread to this device."""
         self._rank = rank
         self._thread = thread
 
-    def add_subcomponent(self, device, name, slot):
+    def add_subcomponent(self, device: 'Device', name: str, slot: str) -> None:
         """
         Add a subcomponent to this component.
 
@@ -193,15 +195,15 @@ class Device:
         device._subOwner = self
         self._sub.append((device, name, slot))
 
-    def is_subcomponent(self):
+    def is_subcomponent(self) -> bool:
         """Return whether this component is a subcomponent."""
         return self._issub
 
-    def get_subcomponents(self):
+    def get_subcomponents(self) -> list:
         """Return the list of (device,slot) sub-component pairs."""
         return self._sub
 
-    def __getattr__(self, port):
+    def __getattr__(self, port: str) -> 'DevicePort':
         """
         Enable ports to be treated as variables.
 
@@ -218,7 +220,7 @@ class Device:
         else:
             return lambda x: self.port(port, x)
 
-    def port(self, port, number=None):
+    def port(self, port, number: int = None) -> 'DevicePort':
         """
         Return a Port object representing the port on this device.
 
@@ -254,12 +256,12 @@ class Device:
                 self._ports[port][number] = DevicePort(self, port, number)
             return self._ports[port][number]
 
-    def reset_port_count(self):
+    def reset_port_count(self) -> None:
         """Reset the port count for multiports."""
         for port in self._nport:
             self._nport[port] = 0
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return a description of the Device."""
         lines = list()
         lines.append(f"Device={self.__class__.__name__}")

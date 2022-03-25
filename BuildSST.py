@@ -23,18 +23,18 @@ class BuildSST(object):
     We can build a live graph (build) or write a JSON file (write).
     """
 
-    def __init__(self):
+    def __init__(self) -> 'BuildSST':
         """Create the SST builder object. The default time base is 1ps."""
         self._TIMEBASE = "1ps"
 
-    def __portname(self, port):
+    def __portname(self, port: 'DevicePort') -> str:
         """Return the canonical SST port name for a Device port."""
         if port.number is None:
             return f"{port.name}Port"
         else:
             return f"{port.name}Port.{port.number}"
 
-    def __encode(self, attr, stringify=False):
+    def __encode(self, attr, stringify: bool = False) -> dict:
         """
         Convert attributes into SST Params.
 
@@ -44,7 +44,7 @@ class BuildSST(object):
         Ignore bad conversions.
         """
 
-        def supported_f(x):
+        def supported_f(x) -> bool:
             """Return whether the type is supported by SST."""
             return isinstance(x, (bool, float, int, str))
 
@@ -70,7 +70,7 @@ class BuildSST(object):
 
         return params
 
-    def build(self, graph):
+    def build(self, graph: 'DeviceGraph') -> dict:
         """
         Build the SST graph.
 
@@ -151,14 +151,9 @@ class BuildSST(object):
         # Return a map of component names to components.
         return n2c
 
-    def write(
-        self,
-        graph,
-        filename,
-        nranks=1,
-        program_options=None,
-        partialExpand=False,
-    ):
+    def write(self, graph: 'DeviceGraph', filename: str, nranks: int = 1,
+              program_options: dict = None,
+              partialExpand: bool = False) -> None:
         """
         Generate the JSON and write it to the specified filename.
 
@@ -225,7 +220,7 @@ class BuildSST(object):
                 del partition
                 gc.collect()
 
-    def __partition_graph(self, graph, nranks):
+    def __partition_graph(self, graph: 'DeviceGraph', nranks: int) -> list:
         """
         Partition the graph based on ranks.
 
@@ -259,15 +254,9 @@ class BuildSST(object):
 
         return partition
 
-    def __write_model(
-        self,
-        graph,
-        filename,
-        nranks,
-        rank_components,
-        rank_links,
-        program_options,
-    ):
+    def __write_model(self, graph: 'DeviceGraph', filename: str, nranks: int,
+                      rank_components: set, rank_links: list,
+                      program_options: dict) -> None:
         """
         Generate the model for the SST program.
 

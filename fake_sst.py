@@ -10,13 +10,13 @@ of SST.  This module is only loaded if the standard SST import fails.
 class Component(object):
     """An SST component."""
 
-    def __init__(self, name, objref):
+    def __init__(self, name: str, objref) -> 'Component':
         """Initialize the component name and reference."""
         self._name = name
         self._objref = objref
         print(f"Component '{name}' of class '{objref}'")
 
-    def addParams(self, params):
+    def addParams(self, params: dict) -> None:
         """Add parameters to a component."""
         self.params = params
         for (key, val) in self.params.items():
@@ -26,11 +26,11 @@ class Component(object):
 class Link(object):
     """A link between two SST components."""
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> 'Link':
         """Initialize a link with a name."""
         self._name = name
 
-    def connect(self, A, B):
+    def connect(self, A: 'Component', B: 'Component') -> None:
         """Connect components A and B together on this link."""
         self.c0 = A[0]
         self.p0 = A[1]

@@ -13,7 +13,7 @@ import orjson
 import numexpr  # type: ignore[import]
 
 
-def load(filename):
+def load(filename: str) -> dict:
     """
     Load a datasheet.
 
@@ -27,7 +27,7 @@ def load(filename):
     return datasheet
 
 
-def __recurse_math_expr(dict_like):
+def __recurse_math_expr(dict_like) -> dict:
     """
     Iterate over the database.
 
@@ -42,7 +42,7 @@ def __recurse_math_expr(dict_like):
             __recurse_math_expr(val)
 
 
-def merge(ds1, ds2):
+def merge(ds1: dict, ds2: dict) -> dict:
     """Return the merge of two data sheets."""
     ds = copy.deepcopy(ds1)
 
