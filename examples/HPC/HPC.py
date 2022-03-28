@@ -21,7 +21,7 @@ class BaseCPU(Device):
 
     def __init__(self, name, **kwargs):
         """Initialize."""
-        super().__init__(name, '', kwargs)
+        super().__init__(name, kwargs)
 
 
 @sstlib('miranda.RandomGenerator')
@@ -30,7 +30,7 @@ class RandomGenerator(Device):
 
     def __init__(self, name, **kwargs):
         """Initialize with the maxAddress set."""
-        super().__init__(name, '', kwargs)
+        super().__init__(name, kwargs)
 
 
 @sstlib('memHierarchy.Cache')
@@ -51,7 +51,7 @@ class MemController(Device):
 
     def __init__(self, name, **kwargs):
         """Initialize."""
-        super().__init__(name, '', kwargs)
+        super().__init__(name, kwargs)
 
 
 @sstlib('memHierarchy.simpleMem')
@@ -60,7 +60,7 @@ class simpleMem(Device):
 
     def __init__(self, name, **kwargs):
         """Initialize."""
-        super().__init__(name, '', kwargs)
+        super().__init__(name, kwargs)
 
 
 @sstlib('merlin.hr_router')
@@ -70,7 +70,7 @@ class Router(Device):
 
     def __init__(self, name, **kwargs):
         """Initialize."""
-        super().__init__(name, '', kwargs)
+        super().__init__(name, kwargs)
 
 
 @assembly
@@ -80,7 +80,7 @@ class SimpleServer(Device):
 
     def __init__(self, name, **kwargs):
         """Store our name"""
-        super().__init__(name, '', kwargs)
+        super().__init__(name, kwargs)
 
     def expand(self):
         """Expand the server into its components."""

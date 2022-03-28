@@ -22,8 +22,8 @@ class Pong(Device):
     """Pong Device."""
 
     def __init__(self, name, **kwargs):
-        """No model for Pong so just put in Default."""
-        super().__init__(name, "Default", kwargs)
+        """No model for Pong."""
+        super().__init__(name, kwargs)
 
 
 @assembly

@@ -149,7 +149,7 @@ class Device:
     sstlib = None
     assembly = False
 
-    def __init__(self, name: str, model, attr=None) -> 'Device':
+    def __init__(self, name: str, model=None, attr=None) -> 'Device':
         """
         Initialize the device.
 
@@ -166,9 +166,10 @@ class Device:
 
         self._rank = None
         self._thread = None
-
-        self.attr["model"] = model
         self.attr["type"] = self.__class__.__name__
+
+        if model is not None:
+            self.attr["model"] = model
 
     def set_partition(self, rank: int, thread: int = 0) -> None:
         """Assign a rank and optional thread to this device."""

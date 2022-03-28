@@ -418,51 +418,167 @@ class DeviceGraph:
             counter[(dtype, model)] += 1
         return counter
 
-    def write_dot_file(self, filename: str,
-                       title: str = "Device Graph") -> None:
+
+    @staticmethod
+    def _format_graph(name: str) -> pygraphviz.AGraph:
+        """Setup graph formatting and return a new graph."""
+        h = ('.edge:hover text {\n'
+             '\tfill: red;\n'
+             '}\n'
+             '.edge:hover path, .node:hover polygon, .node:hover ellipse, {\n'
+             '\tstroke: red;\n'
+             '\tstroke-width: 10;\n'
+             '}')
+        with open('highlightStyle.css', 'w') as f:
+            f.write(h)
+
+        graph = pygraphviz.AGraph(strict=False, name=name)
+        graph.graph_attr.update(stylesheet='highlightStyle.css')
+        graph.node_attr.update(style='filled')
+        graph.node_attr.update(fillcolor='#EEEEEE') # light gray fill
+        graph.edge_attr.update(penwidth='2')
+
+        return graph
+
+
+    @staticmethod
+    def _dot_add_links(self, graph: pygraphviz.AGraph, links: list) -> None:
+        duplicates = collections.Counter(links)
+        for key in duplicates:
+            if duplicates[key] > 1:
+                # more than one link going between components
+                graph.add_edge(key[0], key[1], label=duplicates[key])
+            else:
+                # single link between components
+                graph.add_edge(key[0], key[1])
+
+
+    def write_dot_hierarchy(self, name: str, draw: bool = False,
+                            assembly: str = None, types: set = None) -> None:
+        """
+        Take an un-flattened DeviceGraph and write dot files for each assembly
+
+        Write a graphviz dot file for each unique assembly (type, model) in the
+        graph
+        The draw parameter will automatically generate SVGs if set to True
+        assembly and types should NOT be specified by the user, they are
+        soley used for recursion of this function
+        """
+        graph = self._format_graph(name)
+        if types is None:
+            types = set()
+
+        if assembly is not None:
+            splitName = assembly.split('.')
+            splitNameLen = len(splitName)
+
+        def get_unique(dev: 'Device'):
+            """Return the unique (type, model) and associated name."""
+            if 'model' in dev.attr:
+                unique = (dev.attr['type'], dev.attr['model'])
+                newName = '_'.join(unique)
+            else:
+                unique = dev.attr['type']
+                newName = unique
+            return unique, newName
+
+        def port2Node(port: 'DevicePort') -> str:
+            """Return a node name given a DevicePort."""
+            node = port.device.name
+            if node == assembly:
+                node = f"{port.device.attr['type']}__{port.name}"
+            elif assembly is not None:
+                if splitName == node.split('.')[0:splitNameLen]:
+                    node = '.'.join(node.split('.')[splitNameLen:])
+            return node
+
+        # expand all unique assembly types and write separate graphviz files
+        for dev in self._devices:
+            if dev.assembly:
+                unique, newName = get_unique(dev)
+                if unique not in types:
+                    types.add(unique)
+                    expanded = dev.expand()
+                    types = expanded.write_dot_hierarchy(newName, draw,
+                                                         dev.name, types)
+
+        # graph the current graph
+        # need to check if the provided assembly name is in the graph
+        # and if so make that our cluster
+        if assembly is not None:
+            for dev in self._devices:
+                if assembly == dev.name:
+                    # this device is the PyDL assembly that we just expanded
+                    # make this a cluster and add its ports as nodes
+                    clusterName = f"cluster_{dev.attr['type']}"
+                    subgraph = graph.subgraph(name=clusterName, color='green')
+                    for port in dev._ports:
+                        graph.add_node(f"{dev.attr['type']}__{port}",
+                                       shape='diamond', color='green',
+                                       label=port)
+        else:
+            # no provided assembly, this is most likely the top level
+            subgraph = graph
+
+        for dev in self._devices:
+            if assembly != dev.name:
+                label = dev.name
+                nodeName = dev.name
+                if assembly is not None:
+                    if splitName == dev.name.split('.')[0:splitNameLen]:
+                        nodeName = '.'.join(dev.name.split('.')[splitNameLen:])
+                        label = nodeName
+                if 'model' in dev.attr:
+                    label += f"\\nmodel={dev.attr['model']}"
+
+                # if the device is an assembly, put a link to its SVG
+                if dev.assembly:
+                    unique, newName = get_unique(dev)
+                    subgraph.add_node(nodeName, label=label,
+                                      href=f"{newName}.svg",
+                                      shape='rectangle', fontcolor='blue')
+                else:
+                    subgraph.add_node(nodeName, label=label)
+
+        for comp in self._extnames:
+            subgraph.add_node(comp)
+
+        links = list()
+        for (p0, p1) in self._linkset:
+            links.append((port2Node(p0), port2Node(p1)))
+        for (p0, p1) in self._extlinkset:
+            links.append((port2Node(p0), p1.comp_name()))
+        self._dot_add_links(graph, links)
+
+        graph.write(f"{name}.dot")
+        if draw:
+            graph.draw(f"{name}.svg", format='svg', prog='dot')
+
+
+    def write_dot_file(self, name: str, draw: bool = False) -> None:
         """Write the device graph as a DOT file."""
+        graph = self._format_graph(name)
+
         devices = list(sorted(self._devices, key=lambda d: d.name))
         extcomps = list(sorted(self._extnames))
-        d2n = dict([(d, f"n{n}") for (n, d) in enumerate(devices + extcomps)])
+        dev2node = dict([(d, f"n{n}") for (n, d) in enumerate(devices + extcomps)])
 
-        with io.open(filename, "w") as gvfile:
-            print(f'graph "{title}" {{', file=gvfile)
+        for dev in devices:
+            label = dev.name
+            if 'model' in dev.attr:
+                label += f"\\nmodel={dev.attr['model']}"
+            graph.add_node(dev2node[dev], label=label)
 
-            for d0 in devices:
-                n0 = d2n[d0]
-                s0 = d0.name
-                if "model" in d0.attr:
-                    s0 += f"\\nmodel={d0.attr['model']}"
-                if "level" in d0.attr:
-                    s0 += f"\\nlabel={d0.attr['level']}"
-                print(f'  {n0} [shape=box, label="{s0}"];', file=gvfile)
+        for comp in extcomps:
+            graph.add_node(dev2node[comp])
 
-            links = list()
-            for (p0, p1) in self._linkset:
-                links.append(f"{d2n[p0.device]} -- {d2n[p1.device]}")
-            duplicates = collections.Counter(links)
-            for key in duplicates:
-                if duplicates[key] > 1:
-                    # more than one link going between components
-                    print(f'  {key} [label="{duplicates[key]}"];', file=gvfile)
-                else:
-                    # single link between components
-                    print(f"  {key};", file=gvfile)
+        links = list()
+        for (p0, p1) in self._linkset:
+            links.append((dev2node[p0.device], dev2node[p1.device]))
+        for (p0, p1) in self._extlinkset:
+            links.append((dev2node[p0.device], dev2node[p1.comp_name()]))
+        self._dot_add_links(graph, links)
 
-            for c0 in extcomps:
-                n0 = d2n[c0]
-                print(f'  {n0} [shape=box, label="{c0}"];', file=gvfile)
-
-            links = list()
-            for (p0, p1) in self._extlinkset:
-                links.append(f"{d2n[p0.device]} -- {d2n[p1.comp_name()]}")
-            duplicates = collections.Counter(links)
-            for key in duplicates:
-                if duplicates[key] > 1:
-                    # more than one link going between components
-                    print(f'  {key} [label="{duplicates[key]}"];', file=gvfile)
-                else:
-                    # single link between components
-                    print(f"  {key};", file=gvfile)
-
-            print("}", file=gvfile)
+        graph.write(f"{name}.dot")
+        if draw:
+            graph.draw(f"{name}.svg", format='svg', prog='dot')
