@@ -404,15 +404,6 @@ class DeviceGraph:
             None if levels is None else levels - 1, name, rank, expand
         )
 
-    @staticmethod
-    def _get_category(dev: 'Device') -> str:
-        """Return the category for this Device (type, model)."""
-        if 'model' in dev.attr:
-            return f"{dev.attr['type']}_{dev.attr['model']}"
-        else:
-            return f"{dev.attr['type']}"
-
-
     def count_devices(self) -> dict:
         """
         Count the devices in a graph.
@@ -422,7 +413,7 @@ class DeviceGraph:
         """
         counter = collections.defaultdict(int)
         for device in self._devices:
-            counter[self._get_category(device)] += 1
+            counter[device.get_category()] += 1
         return counter
 
     @staticmethod
@@ -480,7 +471,7 @@ class DeviceGraph:
         # expand all unique assembly types and write separate graphviz files
         for dev in self._devices:
             if dev.assembly:
-                category = self._get_category(dev)
+                category = dev.get_category()
                 if category not in types:
                     types.add(category)
                     expanded = dev.expand()
@@ -518,9 +509,8 @@ class DeviceGraph:
 
                 # if the device is an assembly, put a link to its SVG
                 if dev.assembly:
-                    category = self._get_category(dev)
                     subgraph.add_node(nodeName, label=label,
-                                      href=f"{category}.svg",
+                                      href=f"{dev.get_category()}.svg",
                                       shape='rectangle', fontcolor='blue')
                 else:
                     subgraph.add_node(nodeName, label=label)

@@ -259,6 +259,13 @@ class Device:
         for port in self._nport:
             self._nport[port] = 0
 
+    def get_category(self) -> str:
+        """Return the category for this Device (type, model)."""
+        if 'model' in self.attr:
+            return f"{self.attr['type']}_{self.attr['model']}"
+        else:
+            return f"{self.attr['type']}"
+
     def __repr__(self) -> str:
         """Return a description of the Device."""
         lines = list()
