@@ -417,7 +417,7 @@ class DeviceGraph:
         return counter
 
     @staticmethod
-    def _format_graph(name: str, record: bool = False) -> pygraphviz.AGraph:
+    def __format_graph(name: str, record: bool = False) -> pygraphviz.AGraph:
         """Setup graph formatting and return a new graph."""
         h = ('.edge:hover text {\n'
              '\tfill: red;\n'
@@ -439,7 +439,7 @@ class DeviceGraph:
 
         return graph
 
-    def _dot_add_links(self, graph: pygraphviz.AGraph,
+    def __dot_add_links(self, graph: pygraphviz.AGraph,
                        ports: bool = False, assembly: str = None,
                        splitName: str = None, splitNameLen: int = 0) -> None:
         """Adds edges to the graph with a label for the number of edges."""
@@ -483,7 +483,7 @@ class DeviceGraph:
         assembly and types should NOT be specified by the user, they are
         soley used for recursion of this function
         """
-        graph = self._format_graph(name, ports)
+        graph = self.__format_graph(name, ports)
         if types is None:
             types = set()
 
@@ -543,7 +543,7 @@ class DeviceGraph:
         for comp in self._extnames:
             subgraph.add_node(comp)
 
-        self._dot_add_links(graph, ports, assembly, splitName, splitNameLen)
+        self.__dot_add_links(graph, ports, assembly, splitName, splitNameLen)
 
         graph.write(f"{name}.dot")
         if draw:
@@ -552,7 +552,7 @@ class DeviceGraph:
     def write_dot_file(self, name: str,
                        draw: bool = False, ports: bool = False) -> None:
         """Write the device graph as a DOT file."""
-        graph = self._format_graph(name, ports)
+        graph = self.__format_graph(name, ports)
 
         for dev in self._devices:
             label = dev.name
@@ -565,7 +565,7 @@ class DeviceGraph:
         for comp in self._extnames:
             graph.add_node(comp)
 
-        self._dot_add_links(graph, ports)
+        self.__dot_add_links(graph, ports)
 
         graph.write(f"{name}.dot")
         if draw:
