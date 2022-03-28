@@ -513,8 +513,8 @@ class DeviceGraph:
                     subgraph = graph.subgraph(name=clusterName, color='green')
                     for port in dev._ports:
                         graph.add_node(f"{dev.attr['type']}__{port}",
-                                       shape='diamond', color='green',
-                                       label=port)
+                                       shape='diamond', label=port,
+                                       color='green', fontcolor='green')
         else:
             # no provided assembly, this is most likely the top level
             subgraph = graph
@@ -536,7 +536,7 @@ class DeviceGraph:
                 if dev.assembly:
                     subgraph.add_node(nodeName, label=label,
                                       href=f"{dev.get_category()}.svg",
-                                      shape='rectangle', fontcolor='blue')
+                                      color='blue', fontcolor='blue')
                 else:
                     subgraph.add_node(nodeName, label=label)
 
