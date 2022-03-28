@@ -79,5 +79,5 @@ if __name__ == "__main__":
         builder.build(graph)
     else:
         # generate a graphviz dot file and json output for demonstration
-        graph.write_dot_file("pingpong.gv", title="Ping Pong")
+        graph.write_dot_file("pingpong", draw=True, ports=True)
         builder.write(graph, "pingpong.json")

@@ -417,7 +417,7 @@ class DeviceGraph:
         return counter
 
     @staticmethod
-    def _format_graph(name: str) -> pygraphviz.AGraph:
+    def _format_graph(name: str, record: bool = False) -> pygraphviz.AGraph:
         """Setup graph formatting and return a new graph."""
         h = ('.edge:hover text {\n'
              '\tfill: red;\n'
@@ -434,12 +434,33 @@ class DeviceGraph:
         graph.node_attr.update(style='filled')
         graph.node_attr.update(fillcolor='#EEEEEE') # light gray fill
         graph.edge_attr.update(penwidth='2')
+        if record:
+            graph.node_attr.update(shape='record')
 
         return graph
 
-    @staticmethod
-    def _dot_add_links(self, graph: pygraphviz.AGraph, links: list) -> None:
+    def _dot_add_links(self, graph: pygraphviz.AGraph,
+                       ports: bool = False, assembly: str = None,
+                       splitName: str = None, splitNameLen: int = 0) -> None:
         """Adds edges to the graph with a label for the number of edges."""
+        def port2Node(port: 'DevicePort', includePort: bool = False) -> str:
+            """Return a node name given a DevicePort."""
+            node = port.device.name
+            if node == assembly:
+                return f"{port.device.attr['type']}__{port.name}"
+            elif assembly is not None:
+                if splitName == node.split('.')[0:splitNameLen]:
+                    node = '.'.join(node.split('.')[splitNameLen:])
+            if includePort:
+                node += f":{port.name}"
+            return node
+
+        links = list()
+        for (p0, p1) in self._linkset:
+            links.append((port2Node(p0, ports), port2Node(p1, ports)))
+        for (p0, p1) in self._extlinkset:
+            links.append((port2Node(p0, ports), p1.comp_name()))
+
         duplicates = collections.Counter(links)
         for key in duplicates:
             if duplicates[key] > 1:
@@ -449,7 +470,8 @@ class DeviceGraph:
                 # single link between components
                 graph.add_edge(key[0], key[1])
 
-    def write_dot_hierarchy(self, name: str, draw: bool = False,
+    def write_dot_hierarchy(self, name: str,
+                            draw: bool = False, ports: bool = False,
                             assembly: str = None, types: set = None) -> None:
         """
         Take an un-flattened DeviceGraph and write dot files for each assembly
@@ -457,10 +479,11 @@ class DeviceGraph:
         Write a graphviz dot file for each unique assembly (type, model) in the
         graph
         The draw parameter will automatically generate SVGs if set to True
+        The ports parameter will display ports on the graph if set to True
         assembly and types should NOT be specified by the user, they are
         soley used for recursion of this function
         """
-        graph = self._format_graph(name)
+        graph = self._format_graph(name, ports)
         if types is None:
             types = set()
 
@@ -506,6 +529,8 @@ class DeviceGraph:
                         label = nodeName
                 if 'model' in dev.attr:
                     label += f"\\nmodel={dev.attr['model']}"
+                if ports:
+                    label += f"|{dev.label_ports()}"
 
                 # if the device is an assembly, put a link to its SVG
                 if dev.assembly:
@@ -518,50 +543,29 @@ class DeviceGraph:
         for comp in self._extnames:
             subgraph.add_node(comp)
 
-        def port2Node(port: 'DevicePort') -> str:
-            """Return a node name given a DevicePort."""
-            node = port.device.name
-            if node == assembly:
-                node = f"{port.device.attr['type']}__{port.name}"
-            elif assembly is not None:
-                if splitName == node.split('.')[0:splitNameLen]:
-                    node = '.'.join(node.split('.')[splitNameLen:])
-            return node
-
-        links = list()
-        for (p0, p1) in self._linkset:
-            links.append((port2Node(p0), port2Node(p1)))
-        for (p0, p1) in self._extlinkset:
-            links.append((port2Node(p0), p1.comp_name()))
-        self._dot_add_links(graph, links)
+        self._dot_add_links(graph, ports, assembly, splitName, splitNameLen)
 
         graph.write(f"{name}.dot")
         if draw:
             graph.draw(f"{name}.svg", format='svg', prog='dot')
 
-    def write_dot_file(self, name: str, draw: bool = False) -> None:
+    def write_dot_file(self, name: str,
+                       draw: bool = False, ports: bool = False) -> None:
         """Write the device graph as a DOT file."""
-        graph = self._format_graph(name)
+        graph = self._format_graph(name, ports)
 
-        devices = list(sorted(self._devices, key=lambda d: d.name))
-        extcomps = list(sorted(self._extnames))
-        dev2node = dict([(d, f"n{n}") for (n, d) in enumerate(devices + extcomps)])
-
-        for dev in devices:
+        for dev in self._devices:
             label = dev.name
             if 'model' in dev.attr:
                 label += f"\\nmodel={dev.attr['model']}"
-            graph.add_node(dev2node[dev], label=label)
+            if ports:
+                label += f"|{dev.label_ports()}"
+            graph.add_node(dev.name, label=label)
 
-        for comp in extcomps:
-            graph.add_node(dev2node[comp])
+        for comp in self._extnames:
+            graph.add_node(comp)
 
-        links = list()
-        for (p0, p1) in self._linkset:
-            links.append((dev2node[p0.device], dev2node[p1.device]))
-        for (p0, p1) in self._extlinkset:
-            links.append((dev2node[p0.device], dev2node[p1.comp_name()]))
-        self._dot_add_links(graph, links)
+        self._dot_add_links(graph, ports)
 
         graph.write(f"{name}.dot")
         if draw:

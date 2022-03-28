@@ -170,5 +170,5 @@ if __name__ == "__main__":
 
     else:
         # generate a graphviz dot file and json output for demonstration
-        graph.write_dot_file("HPC.gv", title="HPC Cluster")
+        graph.write_dot_file("HPC", draw=True, ports=True)
         builder.write(graph, "HPC.json")

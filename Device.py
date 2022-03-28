@@ -266,6 +266,13 @@ class Device:
         else:
             return f"{self.attr['type']}"
 
+    def label_ports(self) -> str:
+        """Return the port labels for a graphviz record style node."""
+        label = '{'
+        for port in self._ports:
+            label += f"{port}|"
+        return label[:-1] + '}'
+
     def __repr__(self) -> str:
         """Return a description of the Device."""
         lines = list()
