@@ -404,20 +404,26 @@ class DeviceGraph:
             None if levels is None else levels - 1, name, rank, expand
         )
 
+    @staticmethod
+    def _get_category(dev: 'Device') -> str:
+        """Return the category for this Device (type, model)."""
+        if 'model' in dev.attr:
+            return f"{dev.attr['type']}_{dev.attr['model']}"
+        else:
+            return f"{dev.attr['type']}"
+
+
     def count_devices(self) -> dict:
         """
         Count the devices in a graph.
 
         Return a map of components to integer counts. The keys are of the
-        form (CLASS,MODEL).
+        form "CLASS_MODEL".
         """
         counter = collections.defaultdict(int)
         for device in self._devices:
-            dtype = device.attr["type"]
-            model = device.attr["model"]
-            counter[(dtype, model)] += 1
+            counter[self._get_category(device)] += 1
         return counter
-
 
     @staticmethod
     def _format_graph(name: str) -> pygraphviz.AGraph:
@@ -440,9 +446,9 @@ class DeviceGraph:
 
         return graph
 
-
     @staticmethod
     def _dot_add_links(self, graph: pygraphviz.AGraph, links: list) -> None:
+        """Adds edges to the graph with a label for the number of edges."""
         duplicates = collections.Counter(links)
         for key in duplicates:
             if duplicates[key] > 1:
@@ -451,7 +457,6 @@ class DeviceGraph:
             else:
                 # single link between components
                 graph.add_edge(key[0], key[1])
-
 
     def write_dot_hierarchy(self, name: str, draw: bool = False,
                             assembly: str = None, types: set = None) -> None:
@@ -472,34 +477,14 @@ class DeviceGraph:
             splitName = assembly.split('.')
             splitNameLen = len(splitName)
 
-        def get_unique(dev: 'Device'):
-            """Return the unique (type, model) and associated name."""
-            if 'model' in dev.attr:
-                unique = (dev.attr['type'], dev.attr['model'])
-                newName = '_'.join(unique)
-            else:
-                unique = dev.attr['type']
-                newName = unique
-            return unique, newName
-
-        def port2Node(port: 'DevicePort') -> str:
-            """Return a node name given a DevicePort."""
-            node = port.device.name
-            if node == assembly:
-                node = f"{port.device.attr['type']}__{port.name}"
-            elif assembly is not None:
-                if splitName == node.split('.')[0:splitNameLen]:
-                    node = '.'.join(node.split('.')[splitNameLen:])
-            return node
-
         # expand all unique assembly types and write separate graphviz files
         for dev in self._devices:
             if dev.assembly:
-                unique, newName = get_unique(dev)
-                if unique not in types:
-                    types.add(unique)
+                category = self._get_category(dev)
+                if category not in types:
+                    types.add(category)
                     expanded = dev.expand()
-                    types = expanded.write_dot_hierarchy(newName, draw,
+                    types = expanded.write_dot_hierarchy(category, draw,
                                                          dev.name, types)
 
         # graph the current graph
@@ -533,15 +518,25 @@ class DeviceGraph:
 
                 # if the device is an assembly, put a link to its SVG
                 if dev.assembly:
-                    unique, newName = get_unique(dev)
+                    category = self._get_category(dev)
                     subgraph.add_node(nodeName, label=label,
-                                      href=f"{newName}.svg",
+                                      href=f"{category}.svg",
                                       shape='rectangle', fontcolor='blue')
                 else:
                     subgraph.add_node(nodeName, label=label)
 
         for comp in self._extnames:
             subgraph.add_node(comp)
+
+        def port2Node(port: 'DevicePort') -> str:
+            """Return a node name given a DevicePort."""
+            node = port.device.name
+            if node == assembly:
+                node = f"{port.device.attr['type']}__{port.name}"
+            elif assembly is not None:
+                if splitName == node.split('.')[0:splitNameLen]:
+                    node = '.'.join(node.split('.')[splitNameLen:])
+            return node
 
         links = list()
         for (p0, p1) in self._linkset:
@@ -553,7 +548,6 @@ class DeviceGraph:
         graph.write(f"{name}.dot")
         if draw:
             graph.draw(f"{name}.svg", format='svg', prog='dot')
-
 
     def write_dot_file(self, name: str, draw: bool = False) -> None:
         """Write the device graph as a DOT file."""
