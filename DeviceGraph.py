@@ -475,15 +475,15 @@ class DeviceGraph:
             if duplicates[key] > 1:
                 label = duplicates[key]
 
-            nodes = [key[0], key[1]]
-            ports = ['', '']
+            graphNodes = [key[0], key[1]]
+            graphPorts = ['', '']
             for i in range(2):
                 if type(key[i]) is tuple:
-                    nodes[i] = key[i][0]
-                    port[i] = key[i][1]
+                    graphNodes[i] = key[i][0]
+                    graphPorts[i] = key[i][1]
 
-            graph.add_edge(nodes[0], nodes[1], label=label,
-                           tailport=ports[0], headport=ports[1])
+            graph.add_edge(graphNodes[0], graphNodes[1], label=label,
+                           tailport=graphPorts[0], headport=graphPorts[1])
 
         def device2Node(dev: 'Device') -> str:
             """Return a node name given a Device."""
