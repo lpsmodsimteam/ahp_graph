@@ -112,55 +112,46 @@ class SimpleRack(Device):
         return graph
 
 
-@assembly
-class SimpleCluster(Device):
+def SimpleCluster(name, model, datasheet) -> 'DeviceGraph':
     """Example HPC Cluster built out of racks. Using a 2D mesh network."""
+    graph = DeviceGraph()  # initialize a Device Graph
+    info = datasheet['SimpleCluster'][model]
 
-    def __init__(self, name, model, datasheet, **kwargs):
-        """Store our name"""
-        super().__init__(name, model, attr=kwargs)
-        self.datasheet = datasheet
+    # setup some network parameters that we need to pass to the racks
+    # which can then inform the routers about the overall network layout
+    dimensions = [int(dim) for dim in info['mesh'].split('x')]
+    servers = datasheet['SimpleRack'][info['rack']]['number']
+    networkParams = dict()
+    networkParams['num_peers'] = servers * dimensions[0] * dimensions[1]
+    networkParams['mesh.shape'] = info['mesh']
+    networkParams['mesh.local_ports'] = servers
 
-    def expand(self):
-        """Expand the cluster into its components."""
-        graph = DeviceGraph()  # initialize a Device Graph
-        info = self.datasheet['SimpleCluster'][self.attr['model']]
+    racks = dict()
+    id = 0
+    for x in range(dimensions[0]):
+        for y in range(dimensions[1]):
+            networkParams['id'] = id
+            racks[f"{x}x{y}"] = SimpleRack(f"{name}.Rack{x}x{y}",
+                                           info['rack'], networkParams,
+                                           datasheet)
+            graph.add(racks[f"{x}x{y}"])
+            id += 1
 
-        # setup some network parameters that we need to pass to the racks
-        # which can then inform the routers about the overall network layout
-        dimensions = [int(dim) for dim in info['mesh'].split('x')]
-        servers = self.datasheet['SimpleRack'][info['rack']]['number']
-        networkParams = dict()
-        networkParams['num_peers'] = servers * dimensions[0] * dimensions[1]
-        networkParams['mesh.shape'] = info['mesh']
-        networkParams['mesh.local_ports'] = servers
+    # initialize the four mesh ports
+    # order is 0: north, 1: east, 2: south, 3: west
+    for x in range(dimensions[0]):
+        for y in range(dimensions[1]):
+            # connect to rack to the east if available
+            if x < (dimensions[0] - 1):
+                graph.link(racks[f"{x}x{y}"].network(1),
+                           racks[f"{x}x{y}"].network(3))
 
-        racks = dict()
-        id = 0
-        for x in range(dimensions[0]):
-            for y in range(dimensions[1]):
-                networkParams['id'] = id
-                racks[f"{x}x{y}"] = SimpleRack(f"{self.name}.Rack{x}x{y}",
-                                               info['rack'], networkParams,
-                                               self.datasheet)
-                graph.add(racks[f"{x}x{y}"])
-                id += 1
+            # connect to rack to the north if available
+            if y < (dimensions[1] - 1):
+                graph.link(racks[f"{x}x{y}"].network(0),
+                           racks[f"{x}x{y}"].network(2))
 
-        # initialize the four mesh ports
-        # order is 0: north, 1: east, 2: south, 3: west
-        for x in range(dimensions[0]):
-            for y in range(dimensions[1]):
-                # connect to rack to the east if available
-                if x < (dimensions[0] - 1):
-                    graph.link(racks[f"{x}x{y}"].network(1),
-                               racks[f"{x}x{y}"].network(3))
-
-                # connect to rack to the north if available
-                if y < (dimensions[1] - 1):
-                    graph.link(racks[f"{x}x{y}"].network(0),
-                               racks[f"{x}x{y}"].network(2))
-
-        return graph
+    return graph
 
 
 if __name__ == "__main__":
@@ -192,22 +183,21 @@ if __name__ == "__main__":
     # a Python Dictionary, with dictionaries and lists nested inside
     datasheet = DataSheet.load(datasheet_file)
 
-    # Construct a DeviceGraph and put HPC into it, then flatten the graph
-    # and make sure the connections are valid
-    # set verbosity as a global SST parameter
-    graph = DeviceGraph({'verbose': 0})
-
     # read in the model if provided
     model = 'small'
     if args.model is not None:
         model = args.model
-    cluster = SimpleCluster('Cluster', model=model, datasheet=datasheet)
-    graph.add(cluster)
-    graph.verify_links()
+
+    # Construct a DeviceGraph from SimpleCluster, then flatten the graph
+    # and make sure the connections are valid
+    graph = SimpleCluster('Cluster', model, datasheet)
+    # set verbosity as a global SST parameter
+    graph.attr['verbose'] = 0
+    # graph.verify_links()
 
     # flatten the graph and verify it is linked properly
     flat = graph.flatten()
-    flat.verify_links()
+    # flat.verify_links()
 
     builder = BuildSST()
 
