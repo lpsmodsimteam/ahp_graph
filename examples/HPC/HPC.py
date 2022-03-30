@@ -77,9 +77,10 @@ class SimpleServer(Device):
 class SimpleRack(Device):
     """Rack constructed of a router and some servers."""
 
-    def __init__(self, name, model, datasheet, **kwargs):
+    def __init__(self, name, model, networkParams, datasheet, **kwargs):
         """Store our name"""
         super().__init__(name, model, kwargs)
+        self.networkParams = networkParams
         self.datasheet = datasheet
 
     def expand(self):
@@ -89,8 +90,11 @@ class SimpleRack(Device):
         graph.add(self)
         info = self.datasheet['SimpleRack'][self.attr['model']]
 
+        # use num_ports as the router model since that can change the
+        # overall system graph if it changes
+        routerInfo = self.networkParams.update(self.datasheet['Router'])
         router = Router(f"{self.name}.Router",
-                        self.datasheet['Router']['ports'])
+                        routerInfo['num_ports'], attr=routerInfo)
         graph.add(router)
 
         # connect the servers to the router
@@ -121,13 +125,25 @@ class SimpleCluster(Device):
         graph = DeviceGraph()  # initialize a Device Graph
         info = self.datasheet['SimpleCluster'][self.attr['model']]
 
-        dimensions = info['mesh'].split('x')
+        # setup some network parameters that we need to pass to the racks
+        # which can then inform the routers about the overall network layout
+        dimensions = [int(dim) for dim in info['mesh'].split('x')]
+        servers = self.datasheet['SimpleRack'][info['rack']]['number']
+        networkParams = dict()
+        networkParams['num_peers'] = servers * dimensions[0] * dimensions[1]
+        networkParams['mesh.shape'] = info['mesh']
+        networkParams['mesh.local_ports'] = servers
+
         racks = dict()
+        id = 0
         for x in range(dimensions[0]):
             for y in range(dimensions[1]):
+                networkParams['id'] = id
                 racks[f"{x}x{y}"] = SimpleRack(f"{self.name}.Rack{x}x{y}",
-                                               info['rack'], self.datasheet)
+                                               info['rack'], networkParams,
+                                               self.datasheet)
                 graph.add(racks[f"{x}x{y}"])
+                id += 1
 
         # initialize the four mesh ports
         # order is 0: north, 1: east, 2: south, 3: west
@@ -142,6 +158,8 @@ class SimpleCluster(Device):
                 if y < (dimensions[1] - 1):
                     graph.link(racks[f"{x}x{y}"].network(0),
                                racks[f"{x}x{y}"].network(2))
+
+        return graph
 
 
 if __name__ == "__main__":

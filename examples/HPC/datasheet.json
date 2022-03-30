@@ -43,7 +43,24 @@
     },
 
     "Router" : {
-        "ports" : 64
+        //"id"        : "ID of the router."},
+        "num_ports" : 64,
+        //"num_peers" : 1,
+        "num_dims"  : 2,
+        "topology"  : "merlin.mesh",
+        "flit_size" : "8B",
+        "link_bw"   : "1Gb/s",
+        "xbar_bw"   : "8GB/s",
+
+        "input_latency"  : "10ns",
+        "output_latency" : "10ns",
+
+        "input_buf_size"  : "1KB",
+        "output_buf_size" : "1KB",
+
+        //"mesh.shape"       :  "",
+        "mesh.width"       : "1x1",
+        //"mesh.local_ports" : 1
     },
 
     "SimpleServer" : {

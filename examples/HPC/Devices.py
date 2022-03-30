@@ -31,7 +31,7 @@ class Cache(Device):
     """Cache"""
 
     def __init__(self, name, model, **kwargs):
-        """Initialize."""
+        """Initialize with a model of which cache level this is (L1, L2)."""
         super().__init__(name, model, kwargs)
 
 
@@ -60,5 +60,5 @@ class Router(Device):
     """Router"""
 
     def __init__(self, name, model, **kwargs):
-        """Initialize."""
+        """Initialize with a model describing the number of ports."""
         super().__init__(name, model, kwargs)
