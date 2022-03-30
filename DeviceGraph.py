@@ -436,6 +436,7 @@ class DeviceGraph:
         graph.edge_attr.update(penwidth='2')
         if record:
             graph.node_attr.update(shape='record')
+            graph.graph_attr.update(rankdir='LR')
 
         return graph
 

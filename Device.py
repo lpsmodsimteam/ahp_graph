@@ -270,7 +270,7 @@ class Device:
         """Return the port labels for a graphviz record style node."""
         label = '{'
         for port in self._ports:
-            label += f"{port}|"
+            label += f"<{port}> {port}|"
         return label[:-1] + '}'
 
     def __repr__(self) -> str:
