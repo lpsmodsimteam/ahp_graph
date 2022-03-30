@@ -33,18 +33,18 @@
     },
 
     "MemController" : {
-          "clock"          : "1GHz",
-          //"addr_range_end" : "512MiB"
+        "clock"          : "1GHz",
+        //"addr_range_end" : "512MiB"
     },
 
     "simpleMem" : {
-          "access_time" : "1us",
-          //"mem_size"    : "512MiB",
+        "access_time" : "1us",
+        //"mem_size"    : "512MiB",
     },
 
-    //"Router" : {
-          //
-    //},
+    "Router" : {
+        "ports" : 64
+    },
 
     "SimpleServer" : {
         "basic" : {
@@ -89,6 +89,21 @@
         "full" : {
             "server" : "multicore",
             "number" : 32
+        }
+    },
+
+    "SimpleCluster" : {
+        "small" : {
+            "rack" : "half",
+            "mesh" : "2x2"
+        },
+        "medium" : {
+            "rack" : "full",
+            "mesh" : "2x2"
+        },
+        "large" : {
+            "rack" : "full",
+            "mesh" : "4x4"
         }
     }
 }

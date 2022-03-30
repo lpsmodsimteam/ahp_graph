@@ -6,67 +6,8 @@ out of small components
 This example utilizes sst-elements to start with a processor and memory
 and then build all the way up to a cluster
 """
+from .Devices import *
 from PyDL import *
-
-
-@sstlib('miranda.BaseCPU')
-@port('cache_link', Port.Single, 'simpleMem')
-@port('src', Port.Single, 'network')
-class BaseCPU(Device):
-    """Miranda base CPU."""
-
-    def __init__(self, name, **kwargs):
-        """Initialize."""
-        super().__init__(name, kwargs)
-
-
-@sstlib('miranda.RandomGenerator')
-class RandomGenerator(Device):
-    """Random Generator for the miranda base CPU."""
-
-    def __init__(self, name, **kwargs):
-        """Initialize with the maxAddress set."""
-        super().__init__(name, kwargs)
-
-
-@sstlib('memHierarchy.Cache')
-@port('high_network', Port.Single, 'simpleMem')
-@port('low_network', Port.Single, 'simpleMem')
-class Cache(Device):
-    """Cache"""
-
-    def __init__(self, name, model, **kwargs):
-        """Initialize."""
-        super().__init__(name, model, kwargs)
-
-
-@sstlib('memHierarchy.MemController')
-@port('direct_link', Port.Single, 'simpleMem')
-class MemController(Device):
-    """MemController"""
-
-    def __init__(self, name, **kwargs):
-        """Initialize."""
-        super().__init__(name, kwargs)
-
-
-@sstlib('memHierarchy.simpleMem')
-class simpleMem(Device):
-    """simpleMem"""
-
-    def __init__(self, name, **kwargs):
-        """Initialize."""
-        super().__init__(name, kwargs)
-
-
-@sstlib('merlin.hr_router')
-@port('network', Port.Multi, 'network')
-class Router(Device):
-    """Router"""
-
-    def __init__(self, name, **kwargs):
-        """Initialize."""
-        super().__init__(name, kwargs)
 
 
 @assembly
@@ -97,8 +38,10 @@ class SimpleServer(Device):
         cacheAttr['cache_frequency'] = info['L1_freq']
         cacheAttr['cache_size'] = info['L1_size']
         for i in range(info['cpus']):
-            cpu = BaseCPU(f"{self.name}.BaseCPU{i}",
-                          attr={'clock': info['cpu_freq']})
+            cpuInfo = self.datasheet['BaseCPU']
+            cpuInfo['clock'] = info['cpu_freq']
+            cpu = BaseCPU(f"{self.name}.BaseCPU{i}", attr=cpuInfo)
+
             rand = RandomGenerator(f"{self.name}.RandomGenerator{i}",
                                    attr={'count': info['randomCount'],
                                    'max_address': info['max_addr']})
@@ -112,10 +55,13 @@ class SimpleServer(Device):
             graph.link(cpu.cache_link, l1.high_network)
             graph.link(l1.low_network, l2.high_network(i))
 
-        memCtrl = MemController(f"{self.name}.MemCtrl",
-                                attr={'addr_range_end': info['mem_size']})
-        mem = simpleMem(f"{self.name}.RAM",
-                        attr={'mem_size': info['mem_size']})
+        memInfo = self.datasheet['MemController']
+        memInfo['addr_range_end'] = info['mem_size']
+        memCtrl = MemController(f"{self.name}.MemCtrl", attr=memInfo)
+
+        memInfo = self.datasheet['simpleMem']
+        memInfo['mem_size'] = info['mem_size']
+        mem = simpleMem(f"{self.name}.RAM", attr=memInfo)
         memCtrl.add_subcomponent(mem, "backend")
         graph.add(memCtrl)
 
@@ -143,16 +89,59 @@ class SimpleRack(Device):
         graph.add(self)
         info = self.datasheet['SimpleRack'][self.attr['model']]
 
-        router = Router(f"{self.name}.Router")
+        router = Router(f"{self.name}.Router",
+                        self.datasheet['Router']['ports'])
         graph.add(router)
 
+        # connect the servers to the router
         for i in range(info['number']):
             server = SimpleServer(f"{self.name}.Server{i}",
                                   info['server'], self.datasheet)
             graph.add(server)
             graph.link(router.network(i), server.network)
 
+        # make all the extra ports available outside the rack
+        for i in range(self.datasheet['Router']['ports'] - info['number']):
+            graph.link(router.network(None), self.network(None))
+
         return graph
+
+
+@assembly
+class SimpleCluster(Device):
+    """Example HPC Cluster built out of racks. Using a 2D mesh network."""
+
+    def __init__(self, name, model, datasheet, **kwargs):
+        """Store our name"""
+        super().__init__(name, model, kwargs)
+        self.datasheet = datasheet
+
+    def expand(self):
+        """Expand the cluster into its components."""
+        graph = DeviceGraph()  # initialize a Device Graph
+        info = self.datasheet['SimpleCluster'][self.attr['model']]
+
+        dimensions = info['mesh'].split('x')
+        racks = dict()
+        for x in range(dimensions[0]):
+            for y in range(dimensions[1]):
+                racks[f"{x}x{y}"] = SimpleRack(f"{self.name}.Rack{x}x{y}",
+                                               info['rack'], self.datasheet)
+                graph.add(racks[f"{x}x{y}"])
+
+        # initialize the four mesh ports
+        # order is 0: north, 1: east, 2: south, 3: west
+        for x in range(dimensions[0]):
+            for y in range(dimensions[1]):
+                # connect to rack to the east if available
+                if x < (dimensions[0] - 1):
+                    graph.link(racks[f"{x}x{y}"].network(1),
+                               racks[f"{x}x{y}"].network(3))
+
+                # connect to rack to the north if available
+                if y < (dimensions[1] - 1):
+                    graph.link(racks[f"{x}x{y}"].network(0),
+                               racks[f"{x}x{y}"].network(2))
 
 
 if __name__ == "__main__":
@@ -190,10 +179,10 @@ if __name__ == "__main__":
     graph = DeviceGraph({'verbose': 0})
 
     # read in the model if provided
-    model = 'half'
+    model = 'small'
     if args.model is not None:
         model = args.model
-    graph.add(SimpleRack('Rack', model=model, datasheet=datasheet))
+    graph.add(SimpleCluster('Cluster', model=model, datasheet=datasheet))
 
     # flatten the graph and verify it is linked properly
     graph = graph.flatten()
