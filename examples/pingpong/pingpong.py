@@ -13,7 +13,7 @@ class Ping(Device):
 
     def __init__(self, name, size, **kwargs):
         """Size parameter is stored as the model attribute of a device."""
-        super().__init__(name, size, kwargs)
+        super().__init__(name, size, attr=kwargs)
 
 
 @sstlib("pingpong.Pong")
@@ -23,7 +23,7 @@ class Pong(Device):
 
     def __init__(self, name, **kwargs):
         """No model for Pong."""
-        super().__init__(name, kwargs)
+        super().__init__(name, attr=kwargs)
 
 
 @assembly
@@ -32,7 +32,7 @@ class pingpong(Device):
 
     def __init__(self, name, size=10, **kwargs):
         """Size parameter is stored as the model attribute of a device."""
-        super().__init__(name, size, kwargs)
+        super().__init__(name, size, attr=kwargs)
 
     def expand(self):
         """Expand the overall architecture into its components."""

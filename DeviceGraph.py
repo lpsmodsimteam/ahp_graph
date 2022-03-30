@@ -422,7 +422,7 @@ class DeviceGraph:
         h = ('.edge:hover text {\n'
              '\tfill: red;\n'
              '}\n'
-             '.edge:hover path, .node:hover polygon, .node:hover ellipse, {\n'
+             '.edge:hover path, .node:hover polygon, .node:hover ellipse {\n'
              '\tstroke: red;\n'
              '\tstroke-width: 10;\n'
              '}')

@@ -12,7 +12,7 @@ class BaseCPU(Device):
 
     def __init__(self, name, **kwargs):
         """Initialize."""
-        super().__init__(name, kwargs)
+        super().__init__(name, attr=kwargs)
 
 
 @sstlib('miranda.RandomGenerator')
@@ -21,7 +21,7 @@ class RandomGenerator(Device):
 
     def __init__(self, name, **kwargs):
         """Initialize with the maxAddress set."""
-        super().__init__(name, kwargs)
+        super().__init__(name, attr=kwargs)
 
 
 @sstlib('memHierarchy.Cache')
@@ -32,7 +32,7 @@ class Cache(Device):
 
     def __init__(self, name, model, **kwargs):
         """Initialize with a model of which cache level this is (L1, L2)."""
-        super().__init__(name, model, kwargs)
+        super().__init__(name, model, attr=kwargs)
 
 
 @sstlib('memHierarchy.MemController')
@@ -42,7 +42,7 @@ class MemController(Device):
 
     def __init__(self, name, **kwargs):
         """Initialize."""
-        super().__init__(name, kwargs)
+        super().__init__(name, attr=kwargs)
 
 
 @sstlib('memHierarchy.simpleMem')
@@ -51,7 +51,7 @@ class simpleMem(Device):
 
     def __init__(self, name, **kwargs):
         """Initialize."""
-        super().__init__(name, kwargs)
+        super().__init__(name, attr=kwargs)
 
 
 @sstlib('merlin.hr_router')
@@ -61,4 +61,4 @@ class Router(Device):
 
     def __init__(self, name, model, **kwargs):
         """Initialize with a model describing the number of ports."""
-        super().__init__(name, model, kwargs)
+        super().__init__(name, model, attr=kwargs)

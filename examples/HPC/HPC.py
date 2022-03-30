@@ -17,7 +17,7 @@ class SimpleServer(Device):
 
     def __init__(self, name, model, datasheet, **kwargs):
         """Store our name"""
-        super().__init__(name, model, kwargs)
+        super().__init__(name, model, attr=kwargs)
         self.datasheet = datasheet
 
     def expand(self):
@@ -79,7 +79,7 @@ class SimpleRack(Device):
 
     def __init__(self, name, model, networkParams, datasheet, **kwargs):
         """Store our name"""
-        super().__init__(name, model, kwargs)
+        super().__init__(name, model, attr=kwargs)
         self.networkParams = networkParams
         self.datasheet = datasheet
 
@@ -117,7 +117,7 @@ class SimpleCluster(Device):
 
     def __init__(self, name, model, datasheet, **kwargs):
         """Store our name"""
-        super().__init__(name, model, kwargs)
+        super().__init__(name, model, attr=kwargs)
         self.datasheet = datasheet
 
     def expand(self):
@@ -214,5 +214,6 @@ if __name__ == "__main__":
 
     else:
         # generate a graphviz dot file and json output for demonstration
-        graph.write_dot_file('HPC', draw=True, ports=True)
+        graph.write_dot_file('HPC_Cluster', draw=True, ports=True)
+        graph.write_dot_hierarchy('HPC', draw=True, ports=True)
         builder.write(graph, 'HPC.json')
