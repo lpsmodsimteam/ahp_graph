@@ -489,10 +489,19 @@ class DeviceGraph:
             graph.add_edge(node0, node1, label=label,
                            headport=headport, tailport=tailport)
 
+        def device2Node(dev: 'Device') -> str:
+            """Return a node name given a Device."""
+            node = dev.name
+            if assembly is not None:
+                if splitName == node.split('.')[0:splitNameLen]:
+                    node = '.'.join(node.split('.')[splitNameLen:])
+            return node
+
         # add "links" to subcomponents so they don't just float around
         for dev in self._devices:
             if dev.is_subcomponent():
-                graph.add_edge(dev.name, dev._subOwner.name, color='purple')
+                graph.add_edge(device2Node(dev), 
+                               device2Node(dev._subOwner.name), color='purple')
 
     def write_dot_hierarchy(self, name: str,
                             draw: bool = False, ports: bool = False,
