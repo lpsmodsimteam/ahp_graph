@@ -472,7 +472,7 @@ class DeviceGraph:
 
     def write_dot_hierarchy(self, name: str,
                             draw: bool = False, ports: bool = False,
-                            assembly: str = None, types: set = None) -> None:
+                            assembly: str = None, types: set = None) -> set:
         """
         Take an un-flattened DeviceGraph and write dot files for each assembly
 
@@ -498,7 +498,7 @@ class DeviceGraph:
                 if category not in types:
                     types.add(category)
                     expanded = dev.expand()
-                    types = expanded.write_dot_hierarchy(category, draw,
+                    types = expanded.write_dot_hierarchy(category, draw, ports
                                                          dev.name, types)
 
         # graph the current graph
@@ -548,6 +548,8 @@ class DeviceGraph:
         graph.write(f"{name}.dot")
         if draw:
             graph.draw(f"{name}.svg", format='svg', prog='dot')
+
+        return types
 
     def write_dot_file(self, name: str,
                        draw: bool = False, ports: bool = False) -> None:
