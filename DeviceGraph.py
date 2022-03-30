@@ -543,7 +543,11 @@ class DeviceGraph:
         for comp in self._extnames:
             subgraph.add_node(comp)
 
-        self.__dot_add_links(graph, ports, assembly, splitName, splitNameLen)
+        if assembly is not None:
+            self.__dot_add_links(graph, ports, assembly,
+                                 splitName, splitNameLen)
+        else:
+            self.__dot_add_links(graph, ports)
 
         graph.write(f"{name}.dot")
         if draw:
