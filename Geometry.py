@@ -200,7 +200,8 @@ class Geometry:
                  figfile: str = None, figsize=None) -> None:
         """Plot the JSON file."""
         # Pull in the device plotting information from the JSON file
-        devices = commentjson.load(jsonfile)
+        with open(jsonfile, 'r') as fp:
+            devices = commentjson.load(fp)
 
         # Use matplotlib to create the figure and axes.  We place the
         # two axes next to each other so plot with the same Y values.
