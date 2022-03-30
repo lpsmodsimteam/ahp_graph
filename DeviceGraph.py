@@ -500,8 +500,8 @@ class DeviceGraph:
         # add "links" to subcomponents so they don't just float around
         for dev in self._devices:
             if dev.is_subcomponent():
-                graph.add_edge(device2Node(dev), 
-                               device2Node(dev._subOwner.name), color='purple')
+                graph.add_edge(device2Node(dev), device2Node(dev._subOwner),
+                               color='purple')
 
     def write_dot_hierarchy(self, name: str,
                             draw: bool = False, ports: bool = False,
