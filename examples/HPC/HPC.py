@@ -160,6 +160,7 @@ if __name__ == "__main__":
     proceed.  Check if we are running with SST or from Python.
     """
     import argparse
+    import commentjson
     try:
         import sst
 
@@ -179,9 +180,10 @@ if __name__ == "__main__":
     datasheet_file = 'datasheet.json'
     if args.datasheet is not None:
         datasheet_file = args.datasheet
-    # loads a DataSheet and removes comments, result is most likely
+    # loads a JSON file and removes comments, result is most likely
     # a Python Dictionary, with dictionaries and lists nested inside
-    datasheet = DataSheet.load(datasheet_file)
+    datasheet = commentjson.load(datasheet_file)
+
 
     # read in the model if provided
     model = 'small'

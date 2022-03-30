@@ -11,7 +11,7 @@ Ubuntu apt packages:
  apt install graphviz libgraphviz-dev
 
 Python3 packages:
- python3 -m pip install pygraphviz orjson numexpr matplotlib
+ python3 -m pip install pygraphviz commentjson orjson numexpr matplotlib
 
 
 tests folder includes some tests to verify functionality of PyDL
