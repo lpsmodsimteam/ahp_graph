@@ -461,6 +461,7 @@ class DeviceGraph:
                                (port2Node(p1), p1.name)) )
             else:
                 links.append((port2Node(p0), port2Node(p1)))
+
         for (p0, p1) in self._extlinkset:
             if ports:
                 links.append( ((port2Node(p0), p0.name),
@@ -474,20 +475,15 @@ class DeviceGraph:
             if duplicates[key] > 1:
                 label = duplicates[key]
 
-            node0 = key[0]
-            tailport = ''
-            if type(node0) is tuple:
-                node0 = key[0][0]
-                tailport = key[0][1]
+            nodes = [key[0], key[1]]
+            ports = ['', '']
+            for i in range(2):
+                if type(key[i]) is tuple:
+                    nodes[i] = key[i][0]
+                    port[i] = key[i][1]
 
-            node1 = key[1]
-            headport = ''
-            if type(node1) is tuple:
-                node1 = key[1][0]
-                headport = key[1][1]
-
-            graph.add_edge(node0, node1, label=label,
-                           headport=headport, tailport=tailport)
+            graph.add_edge(nodes[0], nodes[1], label=label,
+                           tailport=ports[0], headport=ports[1])
 
         def device2Node(dev: 'Device') -> str:
             """Return a node name given a Device."""
