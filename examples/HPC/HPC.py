@@ -11,7 +11,7 @@ from PyDL import *
 
 
 @assembly
-@port('network', Port.Single, 'network')
+@port('network', Port.Single, 'network', Port.Optional)
 class SimpleServer(Device):
     """Server constructed of a processor and some memory."""
 
@@ -67,7 +67,7 @@ class SimpleServer(Device):
 
         # link to server
         #graph.link(cpu.src, self.network)
-        graph.link(l2.low_network, mem.direct_link)
+        graph.link(l2.low_network, memCtrl.direct_link)
 
         return graph
 

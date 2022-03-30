@@ -6,7 +6,7 @@ from PyDL import *
 
 @sstlib('miranda.BaseCPU')
 @port('cache_link', Port.Single, 'simpleMem')
-@port('src', Port.Single, 'network', Port.Optional)
+@port('src', Port.Single, 'TODO: fix this', Port.Optional)
 class BaseCPU(Device):
     """Miranda base CPU."""
 
@@ -55,7 +55,7 @@ class simpleMem(Device):
 
 
 @sstlib('merlin.hr_router')
-@port('network', Port.Multi, 'network')
+@port('network', Port.Multi, 'network', Port.Optional)
 class Router(Device):
     """Router"""
 
