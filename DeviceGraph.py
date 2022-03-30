@@ -555,7 +555,7 @@ class DeviceGraph:
                     label += f"\\nmodel={dev.attr['model']}"
                 if ports:
                     portLabels = dev.label_ports()
-                    if not portLabels:
+                    if portLabels != '':
                         label += f"|{portLabels}"
 
                 # if the device is an assembly, put a link to its SVG
@@ -595,7 +595,7 @@ class DeviceGraph:
                 label += f"\\nmodel={dev.attr['model']}"
             if ports:
                 portLabels = dev.label_ports()
-                if not portLabels:
+                if portLabels != '':
                     label += f"|{portLabels}"
             if dev.is_subcomponent():
                 graph.add_node(dev.name, label=label,

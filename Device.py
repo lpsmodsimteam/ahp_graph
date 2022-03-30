@@ -268,7 +268,7 @@ class Device:
 
     def label_ports(self) -> str:
         """Return the port labels for a graphviz record style node."""
-        if not self._ports:
+        if len(self._ports) == 0:
             return ''
         label = '{'
         for port in self._ports:
