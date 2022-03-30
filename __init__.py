@@ -6,7 +6,6 @@
 #
 
 from .BuildSST import *
-from . import DataSheet
 from .Device import *
 from .DeviceGraph import *
 from .Geometry import *
