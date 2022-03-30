@@ -10,11 +10,6 @@ import gc
 
 import orjson
 
-try:
-    import sst
-except ImportError:
-    from . import fake_sst as sst  # type: ignore[no-redef]
-
 
 class BuildSST(object):
     """
@@ -78,6 +73,9 @@ class BuildSST(object):
         Sorting devices and links is optional, but when debugging,
         it assures deterministic ordering from run to run.
         """
+        # only import sst when we are going to build the graph inside of sst
+        import sst
+
         components = dict()
         n2c = dict()
         deterministic = False  # Enable this for deterministic ordering.
