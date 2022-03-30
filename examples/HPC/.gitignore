@@ -1,2 +1,4 @@
 *.json
-*.gv
+*.dot
+*.svg
+*.css
