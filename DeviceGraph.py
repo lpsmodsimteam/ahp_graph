@@ -498,7 +498,7 @@ class DeviceGraph:
                 if category not in types:
                     types.add(category)
                     expanded = dev.expand()
-                    types = expanded.write_dot_hierarchy(category, draw, ports
+                    types = expanded.write_dot_hierarchy(category, draw, ports,
                                                          dev.name, types)
 
         # graph the current graph
