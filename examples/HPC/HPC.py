@@ -201,20 +201,22 @@ if __name__ == "__main__":
     model = 'small'
     if args.model is not None:
         model = args.model
-    graph.add(SimpleCluster('Cluster', model=model, datasheet=datasheet))
+    cluster = SimpleCluster('Cluster', model=model, datasheet=datasheet)
+    graph.add(cluster)
+    graph.verify_links()
 
     # flatten the graph and verify it is linked properly
-    graph = graph.flatten()
-    graph.verify_links()
+    flat = graph.flatten()
+    flat.verify_links()
 
     builder = BuildSST()
 
     if SST:
         # If running within SST, generate the SST graph
-        builder.build(graph)
+        builder.build(flat)
 
     else:
         # generate a graphviz dot file and json output for demonstration
-        graph.write_dot_file('HPC_Cluster', draw=True, ports=True)
+        flat.write_dot_file('HPC_Cluster', draw=True, ports=True)
         graph.write_dot_hierarchy('HPC', draw=True, ports=True)
-        builder.write(graph, 'HPC.json')
+        builder.write(flat, 'HPC.json')
