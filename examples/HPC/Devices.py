@@ -6,7 +6,7 @@ from PyDL import *
 
 @sstlib('miranda.BaseCPU')
 @port('cache_link', Port.Single, 'simpleMem')
-@port('src', Port.Single, 'TODO: fix this', Port.Optional)
+@port('src', Port.Single, 'network', Port.Optional)
 class BaseCPU(Device):
     """Miranda base CPU."""
 

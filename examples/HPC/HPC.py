@@ -66,7 +66,7 @@ class SimpleServer(Device):
         graph.add(memCtrl)
 
         # link to server
-        #graph.link(cpu.src, self.network)
+        graph.link(cpu.src, self.network)
         graph.link(l2.low_network, memCtrl.direct_link)
 
         return graph
