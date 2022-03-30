@@ -489,6 +489,11 @@ class DeviceGraph:
             graph.add_edge(node0, node1, label=label,
                            headport=headport, tailport=tailport)
 
+        # add "links" to subcomponents so they don't just float around
+        for dev in self._devices:
+            if dev.is_subcomponent():
+                graph.add_edge(dev.name, dev._subOwner.name, color='purple')
+
     def write_dot_hierarchy(self, name: str,
                             draw: bool = False, ports: bool = False,
                             assembly: str = None, types: set = None) -> set:
@@ -549,13 +554,18 @@ class DeviceGraph:
                 if 'model' in dev.attr:
                     label += f"\\nmodel={dev.attr['model']}"
                 if ports:
-                    label += f"|{dev.label_ports()}"
+                    portLabels = dev.label_ports()
+                    if not portLabels:
+                        label += f"|{portLabels}"
 
                 # if the device is an assembly, put a link to its SVG
                 if dev.assembly:
                     subgraph.add_node(nodeName, label=label,
                                       href=f"{dev.get_category()}.svg",
                                       color='blue', fontcolor='blue')
+                elif dev.is_subcomponent():
+                    subgraph.add_node(nodeName, label=label,
+                                      color='purple', fontcolor='purple')
                 else:
                     subgraph.add_node(nodeName, label=label)
 
@@ -584,8 +594,14 @@ class DeviceGraph:
             if 'model' in dev.attr:
                 label += f"\\nmodel={dev.attr['model']}"
             if ports:
-                label += f"|{dev.label_ports()}"
-            graph.add_node(dev.name, label=label)
+                portLabels = dev.label_ports()
+                if not portLabels:
+                    label += f"|{portLabels}"
+            if dev.is_subcomponent():
+                graph.add_node(dev.name, label=label,
+                               color='purple', fontcolor='purple')
+            else:
+                graph.add_node(dev.name, label=label)
 
         for comp in self._extnames:
             graph.add_node(comp)
