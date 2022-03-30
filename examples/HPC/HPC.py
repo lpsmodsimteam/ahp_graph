@@ -52,7 +52,7 @@ class SimpleServer(Device):
             l1 = Cache(f"{self.name}.L1Cache{i}", 'L1', attr=cacheAttr)
             graph.add(l1)
 
-            graph.link(cpu.cache_link, l1.high_network)
+            graph.link(cpu.cache_link, l1.high_network(0))
             graph.link(l1.low_network, l2.high_network(i))
 
         memInfo = self.datasheet['MemController']
@@ -92,7 +92,8 @@ class SimpleRack(Device):
 
         # use num_ports as the router model since that can change the
         # overall system graph if it changes
-        routerInfo = self.networkParams.update(self.datasheet['Router'])
+        routerInfo = self.datasheet['Router']
+        routerInfo.update(self.networkParams)
         router = Router(f"{self.name}.Router",
                         routerInfo['num_ports'], attr=routerInfo)
         graph.add(router)
@@ -105,7 +106,7 @@ class SimpleRack(Device):
             graph.link(router.network(i), server.network)
 
         # make all the extra ports available outside the rack
-        for i in range(self.datasheet['Router']['ports'] - info['number']):
+        for i in range(self.datasheet['Router']['num_ports'] - info['number']):
             graph.link(router.network(None), self.network(None))
 
         return graph

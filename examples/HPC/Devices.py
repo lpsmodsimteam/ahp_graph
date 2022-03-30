@@ -6,7 +6,7 @@ from PyDL import *
 
 @sstlib('miranda.BaseCPU')
 @port('cache_link', Port.Single, 'simpleMem')
-@port('src', Port.Single, 'network')
+@port('src', Port.Single, 'network', Port.Optional)
 class BaseCPU(Device):
     """Miranda base CPU."""
 
@@ -25,7 +25,7 @@ class RandomGenerator(Device):
 
 
 @sstlib('memHierarchy.Cache')
-@port('high_network', Port.Single, 'simpleMem')
+@port('high_network', Port.Multi, 'simpleMem')
 @port('low_network', Port.Single, 'simpleMem')
 class Cache(Device):
     """Cache"""
