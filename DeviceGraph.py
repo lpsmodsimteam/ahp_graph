@@ -430,13 +430,13 @@ class DeviceGraph:
             f.write(h)
 
         graph = pygraphviz.AGraph(strict=False, name=name)
-        graph.graph_attr.update(stylesheet='highlightStyle.css')
-        graph.node_attr.update(style='filled')
-        graph.node_attr.update(fillcolor='#EEEEEE') # light gray fill
-        graph.edge_attr.update(penwidth='2')
+        graph.graph_attr['stylesheet'] = 'highlightStyle.css'
+        graph.node_attr['style'] = 'filled'
+        graph.node_attr['fillcolor'] = '#EEEEEE'  # light gray fill
+        graph.edge_attr['penwidth'] = '2'
         if record:
-            graph.node_attr.update(shape='record')
-            graph.graph_attr.update(rankdir='LR')
+            graph.node_attr['shape'] = 'record'
+            graph.graph_attr['rankdir'] = 'LR'
 
         return graph
 
@@ -444,7 +444,7 @@ class DeviceGraph:
                        ports: bool = False, assembly: str = None,
                        splitName: str = None, splitNameLen: int = 0) -> None:
         """Adds edges to the graph with a label for the number of edges."""
-        def port2Node(port: 'DevicePort', includePort: bool = False) -> str:
+        def port2Node(port: 'DevicePort') -> str:
             """Return a node name given a DevicePort."""
             node = port.device.name
             if node == assembly:
@@ -452,24 +452,42 @@ class DeviceGraph:
             elif assembly is not None:
                 if splitName == node.split('.')[0:splitNameLen]:
                     node = '.'.join(node.split('.')[splitNameLen:])
-            if includePort:
-                node += f":{port.name}"
             return node
 
         links = list()
         for (p0, p1) in self._linkset:
-            links.append((port2Node(p0, ports), port2Node(p1, ports)))
+            if ports:
+                links.append( ((port2Node(p0), p0.name),
+                               (port2Node(p1), p1.name)) )
+            else:
+                links.append((port2Node(p0), port2Node(p1)))
         for (p0, p1) in self._extlinkset:
-            links.append((port2Node(p0, ports), p1.comp_name()))
+            if ports:
+                links.append( ((port2Node(p0), p0.name),
+                                p1.comp_name()) )
+            else:
+                links.append((port2Node(p0), p1.comp_name()))
 
         duplicates = collections.Counter(links)
         for key in duplicates:
+            label = ''
             if duplicates[key] > 1:
-                # more than one link going between components
-                graph.add_edge(key[0], key[1], label=duplicates[key])
-            else:
-                # single link between components
-                graph.add_edge(key[0], key[1])
+                label = duplicates[key]
+
+            node0 = key[0]
+            headport = ''
+            if type(node0) is tuple:
+                node0 = key[0][0]
+                headport = key[0][1]
+
+            node1 = key[1]
+            tailport = ''
+            if type(node1) is tuple:
+                node1 = key[1][0]
+                tailport = key[1][1]
+
+            graph.add_edge(node0, node1, label=label,
+                           headport=headport, tailport=tailport)
 
     def write_dot_hierarchy(self, name: str,
                             draw: bool = False, ports: bool = False,
