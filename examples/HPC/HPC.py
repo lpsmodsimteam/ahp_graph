@@ -182,7 +182,8 @@ if __name__ == "__main__":
         datasheet_file = args.datasheet
     # loads a JSON file and removes comments, result is most likely
     # a Python Dictionary, with dictionaries and lists nested inside
-    datasheet = commentjson.load(datasheet_file)
+    with open(datasheet_file, 'r') as fp:
+        datasheet = commentjson.load(fp)
 
 
     # read in the model if provided
