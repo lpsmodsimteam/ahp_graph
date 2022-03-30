@@ -9,5 +9,6 @@ test:
 
 # Remove the files
 clean:
-  find . \! -name 'datasheet.json' -delete
-	rm *.dot *.svg *.css
+	mv datasheet.json datasheet.conf
+	rm -rf __pycache__ *.json *.dot *.svg *.css
+	mv datasheet.conf datasheet.json
