@@ -475,16 +475,16 @@ class DeviceGraph:
                 label = duplicates[key]
 
             node0 = key[0]
-            headport = ''
+            tailport = ''
             if type(node0) is tuple:
                 node0 = key[0][0]
-                headport = key[0][1]
+                tailport = key[0][1]
 
             node1 = key[1]
-            tailport = ''
+            headport = ''
             if type(node1) is tuple:
                 node1 = key[1][0]
-                tailport = key[1][1]
+                headport = key[1][1]
 
             graph.add_edge(node0, node1, label=label,
                            headport=headport, tailport=tailport)
