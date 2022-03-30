@@ -144,12 +144,12 @@ def SimpleCluster(name, model, datasheet) -> 'DeviceGraph':
             # connect to rack to the east if available
             if x < (dimensions[0] - 1):
                 graph.link(racks[f"{x}x{y}"].network(1),
-                           racks[f"{x}x{y}"].network(3))
+                           racks[f"{x+1}x{y}"].network(3))
 
             # connect to rack to the north if available
             if y < (dimensions[1] - 1):
                 graph.link(racks[f"{x}x{y}"].network(0),
-                           racks[f"{x}x{y}"].network(2))
+                           racks[f"{x}x{y+1}"].network(2))
 
     return graph
 
