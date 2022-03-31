@@ -15,9 +15,9 @@ from PyDL import *
 class SimpleServer(Device):
     """Server constructed of a processor and some memory."""
 
-    def __init__(self, name, model, datasheet, **kwargs):
+    def __init__(self, name, model, datasheet):
         """Store our name"""
-        super().__init__(name, model, attr=kwargs)
+        super().__init__(name, model)
         self.datasheet = datasheet
 
     def expand(self):
@@ -28,11 +28,15 @@ class SimpleServer(Device):
         info = self.datasheet['SimpleServer'][self.attr['model']]
         cacheInfo = self.datasheet['Cache']
 
+        bus = Bus(f"{self.name}.Bus", self.datasheet['Bus'])
+        graph.add(bus)
+
         cacheAttr = cacheInfo['L2']
         cacheAttr['cache_frequency'] = info['L2_freq']
         cacheAttr['cache_size'] = info['L2_size']
-        l2 = Cache(f"{self.name}.L2Cache", 'L2', attr=cacheAttr)
+        l2 = Cache(f"{self.name}.L2Cache", 'L2', cacheAttr)
         graph.add(l2)
+        graph.link(bus.low_network(0), l2.high_network(0), 50)
 
         cacheAttr = cacheInfo['L1']
         cacheAttr['cache_frequency'] = info['L1_freq']
@@ -40,34 +44,34 @@ class SimpleServer(Device):
         for i in range(info['cpus']):
             cpuInfo = self.datasheet['BaseCPU']
             cpuInfo['clock'] = info['cpu_freq']
-            cpu = BaseCPU(f"{self.name}.BaseCPU{i}", attr=cpuInfo)
+            cpu = BaseCPU(f"{self.name}.BaseCPU{i}", cpuInfo)
 
             rand = RandomGenerator(f"{self.name}.RandomGenerator{i}",
-                                   attr={'count': info['randomCount'],
-                                   'max_address': info['max_addr']})
-                                   # 'max_address': info['mem_size']})
+                                   {'count': info['randomCount'],
+                                    'max_address': info['max_addr']})
+            # 'max_address': info['mem_size']})
             cpu.add_subcomponent(rand, "generator")
             graph.add(cpu)
 
-            l1 = Cache(f"{self.name}.L1Cache{i}", 'L1', attr=cacheAttr)
+            l1 = Cache(f"{self.name}.L1Cache{i}", 'L1', cacheAttr)
             graph.add(l1)
 
-            graph.link(cpu.cache_link, l1.high_network(0))
-            graph.link(l1.low_network, l2.high_network(i))
+            graph.link(cpu.cache_link, l1.high_network(0), 1000)
+            graph.link(l1.low_network(0), bus.high_network(i), 50)
 
         memInfo = self.datasheet['MemController']
         memInfo['addr_range_end'] = info['mem_size']
-        memCtrl = MemController(f"{self.name}.MemCtrl", attr=memInfo)
+        memCtrl = MemController(f"{self.name}.MemCtrl", memInfo)
 
         memInfo = self.datasheet['simpleMem']
         memInfo['mem_size'] = info['mem_size']
-        mem = simpleMem(f"{self.name}.RAM", attr=memInfo)
+        mem = simpleMem(f"{self.name}.RAM", memInfo)
         memCtrl.add_subcomponent(mem, "backend")
         graph.add(memCtrl)
 
         # link to server
         graph.link(cpu.src, self.network)
-        graph.link(l2.low_network, memCtrl.direct_link)
+        graph.link(l2.low_network(0), memCtrl.direct_link, 50)
 
         return graph
 
@@ -77,9 +81,9 @@ class SimpleServer(Device):
 class SimpleRack(Device):
     """Rack constructed of a router and some servers."""
 
-    def __init__(self, name, model, networkParams, datasheet, **kwargs):
+    def __init__(self, name, model, networkParams, datasheet):
         """Store our name"""
-        super().__init__(name, model, attr=kwargs)
+        super().__init__(name, model)
         self.networkParams = networkParams
         self.datasheet = datasheet
 
@@ -95,7 +99,13 @@ class SimpleRack(Device):
         routerInfo = self.datasheet['Router']
         routerInfo.update(self.networkParams)
         router = Router(f"{self.name}.Router",
-                        routerInfo['num_ports'], attr=routerInfo)
+                        routerInfo['num_ports'], routerInfo)
+
+        topoInfo = self.datasheet['Topology']
+        topoInfo.update(self.networkParams)
+        topology = MeshTopology(f"{self.name}.MeshTopology", topoInfo)
+        router.add_subcomponent(topology, "topology")
+
         graph.add(router)
 
         # connect the servers to the router
@@ -103,11 +113,11 @@ class SimpleRack(Device):
             server = SimpleServer(f"{self.name}.Server{i}",
                                   info['server'], self.datasheet)
             graph.add(server)
-            graph.link(router.network(i), server.network)
+            graph.link(router.port('port', i), server.network)
 
         # make all the extra ports available outside the rack
         for i in range(self.datasheet['Router']['num_ports'] - info['number']):
-            graph.link(router.network(None), self.network(None))
+            graph.link(router.port('port', None), self.network(None))
 
         return graph
 
@@ -171,9 +181,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='HPC Cluster Simulation')
     parser.add_argument('--model', type=str,
-        help='optional top level model to use')
+                        help='optional top level model to use')
     parser.add_argument('--datasheet', type=str,
-        help='optional datasheet file')
+                        help='optional datasheet file')
     args = parser.parse_args()
 
     # Read in our DataSheet with parameters for each device
@@ -184,7 +194,6 @@ if __name__ == "__main__":
     # a Python Dictionary, with dictionaries and lists nested inside
     with open(datasheet_file, 'r') as fp:
         datasheet = commentjson.load(fp)
-
 
     # read in the model if provided
     model = 'small'

@@ -10,7 +10,7 @@ All links are unidirectional.
 import collections
 import io
 import pygraphviz
-from .Device import *
+from PyDL.Device import *
 
 
 class DeviceGraph:
@@ -172,8 +172,8 @@ class DeviceGraph:
         if d1 not in self._devices:
             raise RuntimeError(f"Device name not in graph: {d1.name}")
 
-        t0 = d0._porttype[p0.name]
-        t1 = d1._porttype[p1.name]
+        t0 = d0._portinfo[p0.name][1]
+        t1 = d1._portinfo[p1.name][1]
 
         if t0 != t1:
             raise RuntimeError(
@@ -223,9 +223,9 @@ class DeviceGraph:
             d2ports[p0.device].add(p0.name)
 
         # Walk all devices and make sure required ports are connected.
-        for device in self._devices:
-            for (name, _, _, need) in device._portlist:
-                if need and name not in d2ports[device]:
+        for device in self.devices():
+            for name in device._portinfo:
+                if device._portinfo[name][2] and name not in d2ports[device]:
                     raise RuntimeError(f"{device.name} requires port {name}")
 
     def follow_links(self, rank: int) -> 'DeviceGraph':
@@ -288,7 +288,7 @@ class DeviceGraph:
         if name is not None:
             splitName = name.split(".")
 
-        for dev in self._devices:
+        for dev in self.devices():
             assembly = dev.assembly
 
             # check to see if the name matches
@@ -303,7 +303,7 @@ class DeviceGraph:
 
             if assembly:
                 assemblies.append(dev)
-            else:
+            elif not dev.is_subcomponent():
                 devices.append(dev)
 
         if levels == 0 or not assemblies:
@@ -400,9 +400,8 @@ class DeviceGraph:
                     graph.link(p0, p1, linktimes[(p0, p1)])
 
         # Recursively flatten
-        return graph.flatten(
-            None if levels is None else levels - 1, name, rank, expand
-        )
+        return graph.flatten(None if levels is None else levels - 1,
+                             name, rank, expand)
 
     def count_devices(self) -> dict:
         """
@@ -412,7 +411,7 @@ class DeviceGraph:
         form "CLASS_MODEL".
         """
         counter = collections.defaultdict(int)
-        for device in self._devices:
+        for device in self.devices():
             counter[device.get_category()] += 1
         return counter
 
@@ -441,8 +440,8 @@ class DeviceGraph:
         return graph
 
     def __dot_add_links(self, graph: pygraphviz.AGraph,
-                       ports: bool = False, assembly: str = None,
-                       splitName: str = None, splitNameLen: int = 0) -> None:
+                        ports: bool = False, assembly: str = None,
+                        splitName: str = None, splitNameLen: int = 0) -> None:
         """Adds edges to the graph with a label for the number of edges."""
         def port2Node(port: 'DevicePort') -> str:
             """Return a node name given a DevicePort."""
@@ -457,15 +456,15 @@ class DeviceGraph:
         links = list()
         for (p0, p1) in self._linkset:
             if ports:
-                links.append( ((port2Node(p0), p0.name),
-                               (port2Node(p1), p1.name)) )
+                links.append(((port2Node(p0), p0.name),
+                              (port2Node(p1), p1.name)))
             else:
                 links.append((port2Node(p0), port2Node(p1)))
 
         for (p0, p1) in self._extlinkset:
             if ports:
-                links.append( ((port2Node(p0), p0.name),
-                                p1.comp_name()) )
+                links.append(((port2Node(p0), p0.name),
+                              p1.comp_name()))
             else:
                 links.append((port2Node(p0), p1.comp_name()))
 
@@ -494,7 +493,7 @@ class DeviceGraph:
             return node
 
         # add "links" to subcomponents so they don't just float around
-        for dev in self._devices:
+        for dev in self.devices():
             if dev.is_subcomponent():
                 graph.add_edge(device2Node(dev), device2Node(dev._subOwner),
                                color='purple')
@@ -521,7 +520,7 @@ class DeviceGraph:
             splitNameLen = len(splitName)
 
         # expand all unique assembly types and write separate graphviz files
-        for dev in self._devices:
+        for dev in self.devices():
             if dev.assembly:
                 category = dev.get_category()
                 if category not in types:
@@ -534,7 +533,7 @@ class DeviceGraph:
         # need to check if the provided assembly name is in the graph
         # and if so make that our cluster
         if assembly is not None:
-            for dev in self._devices:
+            for dev in self.devices():
                 if assembly == dev.name:
                     # this device is the PyDL assembly that we just expanded
                     # make this a cluster and add its ports as nodes
@@ -548,7 +547,7 @@ class DeviceGraph:
             # no provided assembly, this is most likely the top level
             subgraph = graph
 
-        for dev in self._devices:
+        for dev in self.devices():
             if assembly != dev.name:
                 label = dev.name
                 nodeName = dev.name
@@ -594,7 +593,7 @@ class DeviceGraph:
         """Write the device graph as a DOT file."""
         graph = self.__format_graph(name, ports)
 
-        for dev in self._devices:
+        for dev in self.devices():
             label = dev.name
             if 'model' in dev.attr:
                 label += f"\\nmodel={dev.attr['model']}"

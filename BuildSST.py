@@ -21,13 +21,6 @@ class BuildSST(object):
         """Create the SST builder object. The default time base is 1ps."""
         self._TIMEBASE = "1ps"
 
-    def __portname(self, port: 'DevicePort') -> str:
-        """Return the canonical SST port name for a Device port."""
-        if port.number is None:
-            return f"{port.name}"
-        else:
-            return f"{port.name}.{port.number}"
-
     def __encode(self, attr, stringify: bool = False) -> dict:
         """
         Convert attributes into SST Params.
@@ -130,8 +123,8 @@ class BuildSST(object):
             dt = max(t, 1)
             c0 = components[p0.device]
             c1 = components[p1.device]
-            s0 = self.__portname(p0)
-            s1 = self.__portname(p1)
+            s0 = p0.get_name()
+            s1 = p1.get_name()
             link = sst.Link(f"{p0}__{dt}__{p1}")
             n0 = (c0, s0, f"{dt}ps")
             n1 = (c1, s1, f"{dt}ps")
@@ -140,7 +133,7 @@ class BuildSST(object):
         for (p0, p1) in graph.ext_links():
             dt = 1
             c0 = components[p0.device]
-            s0 = self.__portname(p0)
+            s0 = p0.get_name()
             c1 = p1.comp
             s1 = p1.portName
             link = sst.Link(f"{p0}__{dt}__{p1}")
@@ -332,12 +325,12 @@ class BuildSST(object):
                     "name": f"{p0}__{dt}__{p1}",
                     "left": {
                         "component": p0.device.name,
-                        "port": self.__portname(p0),
+                        "port": p0.get_name(),
                         "latency": f"{dt}ps",
                     },
                     "right": {
                         "component": p1.device.name,
-                        "port": self.__portname(p1),
+                        "port": p1.get_name(),
                         "latency": f"{dt}ps",
                     },
                 }

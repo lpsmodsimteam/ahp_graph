@@ -52,24 +52,19 @@ def assembly(cls: 'Device') -> 'Device':
 
 
 def port(name: str, card, ptype: str = None,
-         need: bool = Port.Optional) -> 'Device':
+         need: bool = Port.Optional, format: str = '.#') -> 'Device':
     """
     Python decorator to define the ports for a particular device.
 
     A port is defined by a name, cardinality (single, multiple, or bounded),
     a port type (a string or None), and whether it is required.
+    Can also have an optional format for how to handle Multi connections
     """
 
     def wrapper(cls: 'Device') -> 'Device':
-        if not hasattr(cls, "_portlist"):
-            cls._portlist = list()
-            cls._porttype = dict()
-            cls._portcard = dict()
-            cls._portneed = dict()
-        cls._portlist.insert(0, (name, card, ptype, need))
-        cls._portcard[name] = card
-        cls._porttype[name] = ptype
-        cls._portneed[name] = need
+        if not hasattr(cls, "_portinfo"):
+            cls._portinfo = dict()
+        cls._portinfo[name] = (card, ptype, need, format)
         return cls
 
     return wrapper
@@ -81,25 +76,41 @@ class DevicePort:
 
     DevicePort contains a device reference, a port name, and an
     optional port number.
+    Optional format parameter for how to format a port number.
+    This allows for ports to mimic the format of certain SST elements
     """
 
     def __init__(self, device: 'Device', name: str,
-                 number: int = None) -> 'DevicePort':
-        """Initialize the device, name, and port number."""
+                 number: int = None, format: str = '.#') -> 'DevicePort':
+        """
+        Initialize the device, name, port number, and format.
+
+        The DevicePort has the typical format of name.portNum
+        If this doesn't work, you can specify the format to include a '#'
+        to indicate where the portNum is placed after name.
+        For example: format = '(#)' will result in name(portNum)
+                     format = '_#'  will result in name_portNum
+        """
         self.device = device
         self.name = name
         self.number = number
+        self.format = format
 
     def is_single(self) -> bool:
         """Return whether this is a single port or not."""
         return self.number is None
 
+    def get_name(self) -> str:
+        """Return a string representation of the port name and number."""
+        if self.number is None:
+            return self.name
+        else:
+            sf = self.format.split('#')
+            return f"{self.name}{sf[0]}{self.number}{sf[1]}"
+
     def __repr__(self) -> str:
         """Return a string representation of this DevicePort."""
-        if self.number is None:
-            return f"{self.device.name}.{self.name}"
-        else:
-            return f"{self.device.name}.{self.name}.{self.number}"
+        return f"{self.device.name}.{self.get_name()}"
 
     def __lt__(self, other: 'DevicePort') -> bool:
         """Compare this DevicePort to another."""
@@ -209,11 +220,11 @@ class Device:
         class (e.g., Device.Input instead of Device.port("Input").
         If the port is not defined, then we thrown an exception.
         """
-        card = self._portcard.get(port)
+        info = self._portinfo.get(port)
 
-        if card is None:
+        if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
-        elif card == Port.Single:
+        elif info[0] == Port.Single:
             return self.port(port)
         else:
             return lambda x: self.port(port, x)
@@ -230,16 +241,16 @@ class Device:
         list.  Make sure we do not create too many connections if Bounded.
         Finally, if the port has not already been defined, then create it.
         """
-        portcard = self._portcard.get(port)
+        info = self._portinfo.get(port)
 
-        if portcard is None:
+        if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
 
-        elif portcard == Port.Single:
+        elif info[0] == Port.Single:
             if number is not None:
                 raise RuntimeError(f"Port supports one connection: {port}")
             if port not in self._ports:
-                self._ports[port] = DevicePort(self, port)
+                self._ports[port] = DevicePort(self, port, format=info[3])
             return self._ports[port]
 
         else:
@@ -248,10 +259,11 @@ class Device:
                 self._nport[port] += 1
             else:
                 self._nport[port] = number + 1
-            if portcard != Port.Multi and number >= portcard:
+            if info[0] != Port.Multi and number >= info[0]:
                 raise RuntimeError(f"Too many connections: {port}")
             if number not in self._ports[port]:
-                self._ports[port][number] = DevicePort(self, port, number)
+                self._ports[port][number] = DevicePort(self, port,
+                                                       number, format=info[3])
             return self._ports[port][number]
 
     def reset_port_count(self) -> None:

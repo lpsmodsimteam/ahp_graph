@@ -32,6 +32,10 @@
         }
     },
 
+    "Bus" : {
+        "bus_frequency" : "2GHz"
+    },
+
     "MemController" : {
         "clock"          : "1GHz"
         //"addr_range_end" : "512MiB"
@@ -54,13 +58,14 @@
         "output_latency" : "10ns",
 
         "input_buf_size"  : "1KB",
-        "output_buf_size" : "1KB",
-
-        "mesh.width"       : "1x1"
+        "output_buf_size" : "1KB"
 
         //"id"        : 0
         //"num_peers" : 1
+    },
 
+    "Topology" : {
+        "mesh.width"       : "1x1"
         //"mesh.shape"       :  ""
         //"mesh.local_ports" : 1
     },
