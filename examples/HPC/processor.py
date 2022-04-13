@@ -144,8 +144,8 @@ class memInterface(Device):
 
 
 @sstlib('memHierarchy.Cache')
-@port('high_network', Port.Multi, 'simpleMem', Port.Required, '_#')
-@port('low_network', Port.Multi, 'simpleMem', Port.Required, '_#')
+@port('high_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
+@port('low_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
 class Cache(Device):
     """Cache"""
 
@@ -177,8 +177,8 @@ class Cache(Device):
 
 
 @sstlib('memHierarchy.Bus')
-@port('high_network', Port.Multi, 'simpleMem', Port.Required, '_#')
-@port('low_network', Port.Multi, 'simpleMem', Port.Required, '_#')
+@port('high_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
+@port('low_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
 class Bus(Device):
     """Bus"""
 
@@ -199,14 +199,11 @@ class MemLink(Device):
 
     def __init__(self, name: str, attr: dict = None):
         """Initialize."""
-        parameters = dict()
-        if attr is not None:
-            parameters.update(attr)
-        super().__init__(name, attr=parameters)
+        super().__init__(name, attr=attr)
 
 
 @assembly
-@port('low_network', Port.Multi, 'simpleMem', Port.Required, '_#')
+@port('low_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
 class Processor(Device):
     """Processor"""
 
