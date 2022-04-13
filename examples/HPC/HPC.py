@@ -6,79 +6,36 @@ out of small components
 This example utilizes sst-elements to start with a processor and memory
 and then build all the way up to a cluster
 """
-from PyDL.examples.HPC.Devices import *
+from PyDL.examples.HPC.server import Server
 from PyDL import *
 
 
-@assembly
-@port('network', Port.Single, 'network', Port.Optional)
-class SimpleServer(Device):
-    """Server constructed of a processor and some memory."""
+# remove this eventually
+from PyDL.examples.HPC.processor import Processor
 
-    def __init__(self, name, model, datasheet):
-        """Store our name"""
-        super().__init__(name, model)
-        self.datasheet = datasheet
 
-    def expand(self):
-        """Expand the server into its components."""
-        graph = DeviceGraph()  # initialize a Device Graph
-        # add myself to the graph, useful if the assembly has ports
-        graph.add(self)
-        info = self.datasheet['SimpleServer'][self.attr['model']]
-        cacheInfo = self.datasheet['Cache']
+@sstlib('merlin.hr_router')
+@port('port', Port.Multi, 'network', Port.Optional, '#')
+class Router(Device):
+    """Router"""
 
-        bus = Bus(f"{self.name}.Bus", self.datasheet['Bus'])
-        graph.add(bus)
+    def __init__(self, name, model, attr):
+        """Initialize with a model describing the number of ports."""
+        super().__init__(name, model, attr)
 
-        cacheAttr = cacheInfo['L2']
-        cacheAttr['cache_frequency'] = info['L2_freq']
-        cacheAttr['cache_size'] = info['L2_size']
-        l2 = Cache(f"{self.name}.L2Cache", 'L2', cacheAttr)
-        graph.add(l2)
-        graph.link(bus.low_network(0), l2.high_network(0), 50)
 
-        cacheAttr = cacheInfo['L1']
-        cacheAttr['cache_frequency'] = info['L1_freq']
-        cacheAttr['cache_size'] = info['L1_size']
-        for i in range(info['cpus']):
-            cpuInfo = self.datasheet['BaseCPU']
-            cpuInfo['clock'] = info['cpu_freq']
-            cpu = BaseCPU(f"{self.name}.BaseCPU{i}", cpuInfo)
+@sstlib('merlin.torus')
+class TorusTopology(Device):
+    """Torus Topology"""
 
-            rand = RandomGenerator(f"{self.name}.RandomGenerator{i}",
-                                   {'count': info['randomCount'],
-                                    'max_address': info['max_addr']})
-            # 'max_address': info['mem_size']})
-            cpu.add_subcomponent(rand, "generator")
-            graph.add(cpu)
-
-            l1 = Cache(f"{self.name}.L1Cache{i}", 'L1', cacheAttr)
-            graph.add(l1)
-
-            graph.link(cpu.cache_link, l1.high_network(0), 1000)
-            graph.link(l1.low_network(0), bus.high_network(i), 50)
-
-        memInfo = self.datasheet['MemController']
-        memInfo['addr_range_end'] = info['mem_size']
-        memCtrl = MemController(f"{self.name}.MemCtrl", memInfo)
-
-        memInfo = self.datasheet['simpleMem']
-        memInfo['mem_size'] = info['mem_size']
-        mem = simpleMem(f"{self.name}.RAM", memInfo)
-        memCtrl.add_subcomponent(mem, "backend")
-        graph.add(memCtrl)
-
-        # link to server
-        graph.link(cpu.src, self.network)
-        graph.link(l2.low_network(0), memCtrl.direct_link, 50)
-
-        return graph
+    def __init__(self, name, attr):
+        """Initialize."""
+        super().__init__(name, attr=attr)
 
 
 @assembly
 @port('network', Port.Multi, 'network', Port.Optional)
-class SimpleRack(Device):
+class Rack(Device):
     """Rack constructed of a router and some servers."""
 
     def __init__(self, name, model, networkParams, datasheet):
@@ -103,38 +60,38 @@ class SimpleRack(Device):
 
         topoInfo = self.datasheet['Topology']
         topoInfo.update(self.networkParams)
-        topology = MeshTopology(f"{self.name}.MeshTopology", topoInfo)
+        topology = TorusTopology(f"{self.name}.TorusTopology", topoInfo)
         router.add_subcomponent(topology, "topology")
 
         graph.add(router)
+
+        # make all the torus ports available outside the rack
+        for i in range(4):
+            graph.link(router.port('port', i), self.network(i))
 
         # connect the servers to the router
         for i in range(info['number']):
             server = SimpleServer(f"{self.name}.Server{i}",
                                   info['server'], self.datasheet)
             graph.add(server)
-            graph.link(router.port('port', i), server.network)
-
-        # make all the extra ports available outside the rack
-        for i in range(self.datasheet['Router']['num_ports'] - info['number']):
-            graph.link(router.port('port', None), self.network(None))
+            graph.link(router.port('port', None), server.network)
 
         return graph
 
 
-def SimpleCluster(name, model, datasheet) -> 'DeviceGraph':
-    """Example HPC Cluster built out of racks. Using a 2D mesh network."""
+def Cluster(name, model, datasheet) -> 'DeviceGraph':
+    """Example HPC Cluster built out of racks. Using a 2D torus network."""
     graph = DeviceGraph()  # initialize a Device Graph
     info = datasheet['SimpleCluster'][model]
 
     # setup some network parameters that we need to pass to the racks
     # which can then inform the routers about the overall network layout
-    dimensions = [int(dim) for dim in info['mesh'].split('x')]
+    dimensions = [int(dim) for dim in info['torus'].split('x')]
     servers = datasheet['SimpleRack'][info['rack']]['number']
     networkParams = dict()
     networkParams['num_peers'] = servers * dimensions[0] * dimensions[1]
-    networkParams['mesh.shape'] = info['mesh']
-    networkParams['mesh.local_ports'] = servers
+    networkParams['torus.shape'] = info['torus']
+    networkParams['torus.local_ports'] = servers
 
     racks = dict()
     id = 0
@@ -147,19 +104,15 @@ def SimpleCluster(name, model, datasheet) -> 'DeviceGraph':
             graph.add(racks[f"{x}x{y}"])
             id += 1
 
-    # initialize the four mesh ports
+    # initialize the four torus ports
     # order is 0: north, 1: east, 2: south, 3: west
     for x in range(dimensions[0]):
         for y in range(dimensions[1]):
-            # connect to rack to the east if available
-            if x < (dimensions[0] - 1):
-                graph.link(racks[f"{x}x{y}"].network(1),
-                           racks[f"{x+1}x{y}"].network(3))
+            graph.link(racks[f"{x}x{y}"].network(1),
+                       racks[f"{(x+1) % dimensions[0]}x{y}"].network(3))
 
-            # connect to rack to the north if available
-            if y < (dimensions[1] - 1):
-                graph.link(racks[f"{x}x{y}"].network(0),
-                           racks[f"{x}x{y+1}"].network(2))
+            graph.link(racks[f"{x}x{y}"].network(0),
+                       racks[f"{x}x{(y+1) % dimensions[1]}"].network(2))
 
     return graph
 
@@ -170,10 +123,8 @@ if __name__ == "__main__":
     proceed.  Check if we are running with SST or from Python.
     """
     import argparse
-    import commentjson
     try:
         import sst
-
         SST = True
     except ImportError:
         SST = False
@@ -182,23 +133,22 @@ if __name__ == "__main__":
         description='HPC Cluster Simulation')
     parser.add_argument('--model', type=str,
                         help='optional top level model to use')
-    parser.add_argument('--datasheet', type=str,
-                        help='optional datasheet file')
     args = parser.parse_args()
-
-    # Read in our DataSheet with parameters for each device
-    datasheet_file = 'datasheet.json'
-    if args.datasheet is not None:
-        datasheet_file = args.datasheet
-    # loads a JSON file and removes comments, result is most likely
-    # a Python Dictionary, with dictionaries and lists nested inside
-    with open(datasheet_file, 'r') as fp:
-        datasheet = commentjson.load(fp)
 
     # read in the model if provided
     model = 'small'
     if args.model is not None:
         model = args.model
+
+    graph = DeviceGraph()
+    cpu = Processor('Processor', 0, 0)
+    graph.add(cpu)
+    flat = graph.flatten()
+    flat.write_dot_file('HPC', draw=True, ports=True)
+    builder = BuildSST()
+    builder.write(flat, 'HPC.json')
+
+    exit()
 
     # Construct a DeviceGraph from SimpleCluster, then flatten the graph
     # and make sure the connections are valid

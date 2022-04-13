@@ -19,7 +19,6 @@ import math
 import os
 import re
 import orjson
-import commentjson
 import matplotlib  # type: ignore[import]
 
 if "DISPLAY" not in os.environ:
@@ -200,8 +199,8 @@ class Geometry:
                  figfile: str = None, figsize=None) -> None:
         """Plot the JSON file."""
         # Pull in the device plotting information from the JSON file
-        with open(jsonfile, 'r') as fp:
-            devices = commentjson.load(fp)
+        with open(jsonfile, 'rb') as fp:
+            devices = orjson.loads(fp.read())
 
         # Use matplotlib to create the figure and axes.  We place the
         # two axes next to each other so plot with the same Y values.

@@ -9,6 +9,4 @@ test:
 
 # Remove the files
 clean:
-	mv datasheet.json datasheet.conf
-	rm -rf __pycache__ *.json *.dot *.svg *.css
-	mv datasheet.conf datasheet.json
+	rm -rf __pycache__ *.json *.dot *.svg *.png *.css

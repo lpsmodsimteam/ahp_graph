@@ -82,6 +82,22 @@ class BuildSST(object):
         if any([d0._rank is not None for d0 in graph.devices()]):
             sst.setProgramOption("partitioner", "sst.self")
 
+        def recurseSubcomponents(dev: 'Device', comp: 'Component'):
+            for (d1, n1, s1) in dev.get_subcomponents():
+                if d1.sstlib is None:
+                    raise RuntimeError(f"No SST library: {d1.name}")
+                if s1 is None:
+                    c1 = comp.setSubComponent(n1, d1.sstlib)
+                else:
+                    c1 = comp.setSubComponent(n1, d1.sstlib, s1)
+                c1.addParams(self.__encode(d1.attr))
+                components[d1] = c1
+                n2c[d1.name] = c1
+                for key in global_params:
+                    c1.addGlobalParamSet(key)
+                if len(d1.get_subcomponents()) > 0:
+                    recurseSubcomponents(d1, c1)
+
         # First, we instantiate all of the components with
         # their attributes.  Raise an exception if a particular
         # device has no SST component implementation.
@@ -101,19 +117,7 @@ class BuildSST(object):
                     c0.addGlobalParamSet(key)
                 if d0._rank is not None:
                     c0.setRank(d0._rank, d0._thread)
-
-                for (d1, n1, s1) in d0.get_subcomponents():
-                    if d1.sstlib is None:
-                        raise RuntimeError(f"No SST library: {d1.name}")
-                    if s1 is None:
-                        c1 = c0.setSubComponent(n1, d1.sstlib)
-                    else:
-                        c1 = c0.setSubComponent(n1, d1.sstlib, s1)
-                    c1.addParams(self.__encode(d1.attr))
-                    components[d1] = c1
-                    n2c[d1.name] = c1
-                    for key in global_params:
-                        c1.addGlobalParamSet(key)
+                recurseSubcomponents(d0, c0)
 
         # Second, link the component ports using graph links.
         graphLinks = graph.links()
@@ -228,9 +232,9 @@ class BuildSST(object):
             d0 = p0.device
             d1 = p1.device
 
-            if d0.is_subcomponent():
+            while d0.is_subcomponent():
                 d0 = d0._subOwner
-            if d1.is_subcomponent():
+            while d1.is_subcomponent():
                 d1 = d1._subOwner
 
             r0 = d0._rank
@@ -275,44 +279,49 @@ class BuildSST(object):
             model["global_params"][key] = dict({key: val})
         global_set = list(global_params.keys())
 
-        # Define all the components.  We define the name, type,
-        # parameters, and global parameters.  Raise an exception
-        # if a particular device has no SST component implementation.
-        components = list()
-        for d0 in rank_components:
-            if d0.sstlib is None:
-                raise RuntimeError(f"No SST library for device: {d0.name}")
-
-            component = {
-                "name": d0.name,
-                "type": d0.sstlib,
-                "params": self.__encode(d0.attr, True),
-                "params_global_sets": global_set,
-            }
-            if d0._rank is not None:
-                component["partition"] = {
-                    "rank": d0._rank,
-                    "thread": d0._thread,
-                }
-
+        def recurseSubcomponents(dev: 'Device') -> list:
             subcomponents = list()
-            for (d1, n1, s1) in d0.get_subcomponents():
+            for (d1, n1, s1) in dev.get_subcomponents():
                 if d1.sstlib is None:
                     raise RuntimeError(f"No SST library: {d1.name}")
 
-                subcomponents.append(
-                    {
+                item = {
                         "slot_name": n1,
                         "type": d1.sstlib,
                         "slot_number": s1,
                         "params": self.__encode(d1.attr, True),
                         "params_global_sets": global_set,
                     }
-                )
+                if len(d1.get_subcomponents()) > 0:
+                    item["subcomponents"] = recurseSubcomponents(d1)
+                subcomponents.append(item)
+            return subcomponents
 
-            if len(subcomponents) > 0:
-                component["subcomponents"] = subcomponents
-            components.append(component)
+        # Define all the components.  We define the name, type,
+        # parameters, and global parameters.  Raise an exception
+        # if a particular device has no SST component implementation.
+        components = list()
+        for d0 in rank_components:
+            if not d0.is_subcomponent():
+                if d0.sstlib is None:
+                    raise RuntimeError(f"No SST library for device: {d0.name}")
+
+                component = {
+                    "name": d0.name,
+                    "type": d0.sstlib,
+                    "params": self.__encode(d0.attr, True),
+                    "params_global_sets": global_set,
+                }
+                if d0._rank is not None:
+                    component["partition"] = {
+                        "rank": d0._rank,
+                        "thread": d0._thread,
+                    }
+
+                subcomponents = recurseSubcomponents(d0)
+                if len(subcomponents) > 0:
+                    component["subcomponents"] = subcomponents
+                components.append(component)
 
         model["components"] = components
 

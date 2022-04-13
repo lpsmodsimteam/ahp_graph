@@ -165,7 +165,7 @@ class Device:
         Initialize the device.
 
         Initialize with the unique name, model, and optional
-        dictionary of attributes (typically from kwargs).
+        dictionary of attributes.
         """
         self.name = name
         self.attr = dict(attr) if attr is not None else dict()
