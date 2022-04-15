@@ -5,7 +5,7 @@ from PyDL import *
 import os
 
 
-@sstlib('vanadis.VanadisCPU')
+@sstlib('vanadisdbg.VanadisCPU')
 class VanadisCPU(Device):
     """VanadisCPU"""
 
@@ -166,7 +166,10 @@ class Cache(Device):
             })
         elif model == 'L2':
             parameters.update({
-                "L1": 0
+                "L1": 0,
+                "access_latency_cycles": 14,
+                "associativity": 16,
+                "cache_size": "1MB"
             })
         else:
             return None
@@ -238,7 +241,7 @@ class Processor(Device):
 
         dcache = memInterface(f"{self.name}.DCache",
                               {'coreId': self.attr['core']})
-        cpu.add_subcomponent(dcache, 'memory_interface')
+        lsq.add_subcomponent(dcache, 'memory_interface')
 
         nodeOS = VanadisNodeOS(f"{self.name}.VanadisNodeOS")
         nodeOSmem = memInterface(f"{self.name}.NodeOSMemIF",
@@ -277,7 +280,7 @@ class Processor(Device):
         graph.link(nodeOSmem.port('port'), nodeOSL1D.high_network(0), 1000)
         graph.link(L1D_to_L2.port('port'), bus.high_network(0), 1000)
         graph.link(L1I_to_L2.port('port'), bus.high_network(1), 1000)
-        graph.link(cpuL1D.low_network(0), bus.high_network(2), 1000)
+        graph.link(nodeOSL1D.low_network(0), bus.high_network(2), 1000)
         graph.link(osHandler.os_link, nodeOS.core(0), 5000)
 
         graph.link(bus.low_network(0), self.low_network(0), 1000)

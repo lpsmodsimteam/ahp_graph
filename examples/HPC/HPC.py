@@ -6,29 +6,15 @@ out of small components
 This example utilizes sst-elements to start with a processor and memory
 and then build all the way up to a cluster
 """
-from PyDL.examples.HPC.server import Server
+from PyDL.examples.HPC.server import *
 from PyDL import *
-
-
-# remove this eventually
-from PyDL.examples.HPC.processor import Processor
-
-
-@sstlib('merlin.hr_router')
-@port('port', Port.Multi, 'network', Port.Optional, '#')
-class Router(Device):
-    """Router"""
-
-    def __init__(self, name, model, attr):
-        """Initialize with a model describing the number of ports."""
-        super().__init__(name, model, attr)
 
 
 @sstlib('merlin.torus')
 class TorusTopology(Device):
     """Torus Topology"""
 
-    def __init__(self, name, attr):
+    def __init__(self, name: str, attr: dict = None):
         """Initialize."""
         super().__init__(name, attr=attr)
 
@@ -38,11 +24,9 @@ class TorusTopology(Device):
 class Rack(Device):
     """Rack constructed of a router and some servers."""
 
-    def __init__(self, name, model, networkParams, datasheet):
+    def __init__(self, name: str, attr: dict = None):
         """Store our name"""
-        super().__init__(name, model)
-        self.networkParams = networkParams
-        self.datasheet = datasheet
+        super().__init__(name)
 
     def expand(self):
         """Expand the rack into its components."""
@@ -141,12 +125,21 @@ if __name__ == "__main__":
         model = args.model
 
     graph = DeviceGraph()
-    cpu = Processor('Processor', 0, 0)
+    builder = BuildSST()
+    cpu = Processor('CPU', 0, 0)
     graph.add(cpu)
     flat = graph.flatten()
-    flat.write_dot_file('HPC', draw=True, ports=True)
+    flat.write_dot_file('CPU', draw=True, ports=True)
+    builder.write(flat, 'CPU.json')
+
+    graph = DeviceGraph()
     builder = BuildSST()
-    builder.write(flat, 'HPC.json')
+    server = Server('server', 0)
+    graph.add(server)
+    flat = graph.flatten()
+    graph.write_dot_hierarchy('server', draw=True, ports=True)
+    flat.write_dot_file('serverFlat', draw=True, ports=True)
+    builder.write(flat, 'server.json')
 
     exit()
 

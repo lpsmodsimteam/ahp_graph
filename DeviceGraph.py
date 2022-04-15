@@ -496,7 +496,7 @@ class DeviceGraph:
         for dev in self.devices():
             if dev.is_subcomponent():
                 graph.add_edge(device2Node(dev), device2Node(dev._subOwner),
-                               color='purple')
+                               color='purple', style='dashed')
 
     def write_dot_hierarchy(self, name: str,
                             draw: bool = False, ports: bool = False,
