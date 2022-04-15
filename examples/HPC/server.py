@@ -210,8 +210,8 @@ class Server(Device):
                           "sources": "1",  # L2
                           "destinations": "2"})  # DC
         netLink = LinkControl(f"{self.name}.netLink")
+        mmioIf.add_subcomponent(mmioNIC, 'memlink')
         nic.add_subcomponent(mmioIf, 'mmio')
-        nic.add_subcomponent(mmioNIC, 'memlink')
         nic.add_subcomponent(netLink, 'rtrLink')
 
         graph.add(cpu)
