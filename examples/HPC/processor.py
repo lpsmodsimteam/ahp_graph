@@ -9,7 +9,7 @@ import os
 class VanadisCPU(Device):
     """VanadisCPU"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize"""
         parameters = {
             "clock": "1GHz",
@@ -48,7 +48,7 @@ class VanadisCPU(Device):
 class VanadisMIPSDecoder(Device):
     """VanadisMIPSDecoder"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize"""
         parameters = {
             "uop_cache_entries": 1536,
@@ -64,7 +64,7 @@ class VanadisMIPSDecoder(Device):
 class VanadisMIPSOSHandler(Device):
     """VanadisMIPSOSHandler"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize"""
         parameters = {
             "verbose": 0,
@@ -79,7 +79,7 @@ class VanadisMIPSOSHandler(Device):
 class VanadisBasicBranchUnit(Device):
     """VanadisBasicBranchUnit"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize"""
         parameters = {
             "branch_entries": 32
@@ -93,7 +93,7 @@ class VanadisBasicBranchUnit(Device):
 class VanadisSequentialLoadStoreQueue(Device):
     """VanadisSequentialLoadStoreQueue"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize"""
         parameters = {
             "verbose": 0,
@@ -113,7 +113,7 @@ class VanadisSequentialLoadStoreQueue(Device):
 class VanadisNodeOS(Device):
     """VanadisNodeOS"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize"""
         parameters = {
             "verbose": 0,
@@ -133,7 +133,7 @@ class VanadisNodeOS(Device):
 class memInterface(Device):
     """memInterface"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize"""
         parameters = {
             "coreId": 0
@@ -149,7 +149,7 @@ class memInterface(Device):
 class Cache(Device):
     """Cache"""
 
-    def __init__(self, name: str, model: str, attr: dict = None):
+    def __init__(self, name: str, model: str, attr: dict = None) -> 'Device':
         """Initialize with a model of which cache level this is (L1, L2)."""
         parameters = {
             "access_latency_cycles": 2,
@@ -176,7 +176,7 @@ class Cache(Device):
 
         if attr is not None:
             parameters.update(attr)
-        super().__init__(name, attr=parameters)
+        super().__init__(name, model, parameters)
 
 
 @sstlib('memHierarchy.Bus')
@@ -185,7 +185,7 @@ class Cache(Device):
 class Bus(Device):
     """Bus"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
         parameters = {
             "bus_frequency": "1GHz",
@@ -200,7 +200,7 @@ class Bus(Device):
 class MemLink(Device):
     """MemLink"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
         super().__init__(name, attr=attr)
 
@@ -210,13 +210,13 @@ class MemLink(Device):
 class Processor(Device):
     """Processor"""
 
-    def __init__(self, name: str, node: int, core: int):
+    def __init__(self, name: str, core: int = 0,
+                 attr: dict = None) -> 'Device':
         """Initialize."""
-        super().__init__(name)
-        self.attr['node'] = node
+        super().__init__(name, attr=attr)
         self.attr['core'] = core
 
-    def expand(self):
+    def expand(self) -> 'DeviceGraph':
         """Expand the server into its components."""
         graph = DeviceGraph()  # initialize a Device Graph
         # add myself to the graph, useful if the assembly has ports

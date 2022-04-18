@@ -447,26 +447,21 @@ class DeviceGraph:
             """Return a node name given a DevicePort."""
             node = port.device.name
             if node == assembly:
-                return f"{port.device.attr['type']}__{port.name}"
+                return f"{port.device.attr['type']}:{port.name}"
             elif assembly is not None:
                 if splitName == node.split('.')[0:splitNameLen]:
                     node = '.'.join(node.split('.')[splitNameLen:])
-            return node
+            if ports:
+                return (node, port.name)
+            else:
+                return node
 
         links = list()
         for (p0, p1) in self._linkset:
-            if ports:
-                links.append(((port2Node(p0), p0.name),
-                              (port2Node(p1), p1.name)))
-            else:
-                links.append((port2Node(p0), port2Node(p1)))
+            links.append((port2Node(p0), port2Node(p1)))
 
         for (p0, p1) in self._extlinkset:
-            if ports:
-                links.append(((port2Node(p0), p0.name),
-                              p1.comp_name()))
-            else:
-                links.append((port2Node(p0), p1.comp_name()))
+            links.append((port2Node(p0), p1.comp_name()))
 
         duplicates = collections.Counter(links)
         for key in duplicates:
@@ -540,7 +535,7 @@ class DeviceGraph:
                     clusterName = f"cluster_{dev.attr['type']}"
                     subgraph = graph.subgraph(name=clusterName, color='green')
                     for port in dev._ports:
-                        graph.add_node(f"{dev.attr['type']}__{port}",
+                        graph.add_node(f"{dev.attr['type']}:{port}",
                                        shape='diamond', label=port,
                                        color='green', fontcolor='green')
         else:

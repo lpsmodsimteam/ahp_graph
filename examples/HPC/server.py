@@ -10,7 +10,7 @@ from PyDL import *
 class MemNIC(Device):
     """MemNIC"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
         parameters = {
             "group": 1,
@@ -27,15 +27,16 @@ class MemNIC(Device):
 class Router(Device):
     """Router"""
 
-    def __init__(self, name: str, model: str, attr: dict = None):
+    def __init__(self, name: str, model: str, id: int = 0, ports: int = 3,
+                 attr: dict = None) -> 'Device':
         """Initialize with a model describing the number of ports."""
         parameters = {
-            "id": 0
+            "id": id
         }
         if model == 'NoC':
             parameters.update({
                 "flit_size": "72B",
-                "num_ports": 4,
+                "num_ports": ports,
                 "xbar_bw": "50GB/s",
                 "link_bw": "25GB/s",
                 "input_buf_size": "40KB",
@@ -50,21 +51,22 @@ class Router(Device):
                 "output_latency": "10ns",
                 "flitSize": "8B",
                 "input_buf_size": "14KB",
-                "output_buf_size": "14KB"
+                "output_buf_size": "14KB",
+                "num_dims": 1
             })
         else:
             return None
 
         if attr is not None:
             parameters.update(attr)
-        super().__init__(name, attr=parameters)
+        super().__init__(name, model, parameters)
 
 
 @sstlib('merlin.singlerouter')
 class SingleRouter(Device):
     """Single Router Topology"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
         super().__init__(name, attr=attr)
 
@@ -74,7 +76,7 @@ class SingleRouter(Device):
 class DirectoryController(Device):
     """DirectoryController"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
         parameters = {
             "coherence_protocol": "MESI",
@@ -92,7 +94,7 @@ class DirectoryController(Device):
 class MemController(Device):
     """MemController"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
         parameters = {
             "clock": "1GHz",
@@ -110,7 +112,7 @@ class MemController(Device):
 class simpleMem(Device):
     """simpleMem"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
         parameters = {
             "mem_size": "2GiB",
@@ -126,8 +128,9 @@ class simpleMem(Device):
 class RDMA_NIC(Device):
     """RDMA_NIC"""
 
-    def __init__(self, name: str, attr: dict = None):
-        """Initialize with a model describing the number of ports."""
+    def __init__(self, name: str, id: int = 0, nodes: int = 2,
+                 attr: dict = None) -> 'Device':
+        """Initialize."""
         parameters = {
             "clock": "8GHz",
             "maxPendingCmds": 128,
@@ -137,9 +140,8 @@ class RDMA_NIC(Device):
             'baseAddr': 0x80000000,
             'cmdQSize': 64,
             'pesPerNode': 1,
-            # probably want to set these
-            'nicId': 0,
-            'numNodes': 2
+            'nicId': id,
+            'numNodes': nodes
         }
         if attr is not None:
             parameters.update(attr)
@@ -151,7 +153,7 @@ class RDMA_NIC(Device):
 class LinkControl(Device):
     """LinkControl"""
 
-    def __init__(self, name: str, attr: dict = None):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
         parameters = {
             "link_bw": "16GB/s",
@@ -168,28 +170,38 @@ class LinkControl(Device):
 class Server(Device):
     """Server constructed of a processor and some memory."""
 
-    def __init__(self, name: str, node: int, attr: dict = None):
-        """Store our name"""
-        super().__init__(name, attr=attr)
+    def __init__(self, name: str, node: int = 0, cores: int = 1,
+                 attr: dict = None) -> 'Device':
+        """Store our name and use number of cores as the model type"""
+        super().__init__(name, f"{cores}Core", attr)
         self.attr['node'] = node
+        self.attr['cores'] = cores
 
-    def expand(self):
+    def expand(self) -> 'DeviceGraph':
         """Expand the server into its components."""
         graph = DeviceGraph()  # initialize a Device Graph
         # add myself to the graph, useful if the assembly has ports
         graph.add(self)
 
-        cpu = Processor(f"{self.name}.CPU", self.attr['node'], 0)
-
-        L2 = Cache(f"{self.name}.L2", 'L2')
-        L1_to_L2 = MemLink(f"{self.name}.L1_to_L2")
-        L2_to_mem = MemNIC(f"{self.name}.L1_to_mem")
-        L2.add_subcomponent(L1_to_L2, 'cpulink')
-        L2.add_subcomponent(L2_to_mem, 'memlink')
-
-        NoC = Router(f"{self.name}.NoC", 'NoC')
+        NoC = Router(f"{self.name}.NoC", 'NoC', 0, self.attr['cores'] + 2)
         NoC_topo = SingleRouter(f"{self.name}.NoC_topo")
         NoC.add_subcomponent(NoC_topo, 'topology')
+        graph.add(NoC)
+
+        for core in range(self.attr['cores']):
+            cpu = Processor(f"{self.name}.CPU{core}", core)
+
+            L2 = Cache(f"{self.name}.CPU{core}_L2", 'L2')
+            L1_to_L2 = MemLink(f"{self.name}.CPU{core}_L1_to_L2")
+            L2_to_mem = MemNIC(f"{self.name}.CPU{core}_L1_to_mem")
+            L2.add_subcomponent(L1_to_L2, 'cpulink')
+            L2.add_subcomponent(L2_to_mem, 'memlink')
+
+            graph.add(cpu)
+            graph.add(L2)
+
+            graph.link(cpu.low_network(0), L1_to_L2.port('port'), 1000)
+            graph.link(L2_to_mem.port('port'), NoC.port('port', core), 1000)
 
         dirctrl = DirectoryController(f"{self.name}.DirectoryController")
         dir_to_mem = MemLink(f"{self.name}.dir_to_mem")
@@ -203,7 +215,8 @@ class Server(Device):
         memctrl.add_subcomponent(mem_to_dir, 'cpulink')
         memctrl.add_subcomponent(memory, 'backend')
 
-        nic = RDMA_NIC(f"{self.name}.NIC")
+        nic = RDMA_NIC(f"{self.name}.NIC", self.attr['node'],
+                       self.attr['cores'])
         mmioIf = memInterface(f"{self.name}.MMIO_IF")
         mmioNIC = MemNIC(f"{self.name}.MMIO_NIC",
                          {"group": 3,
@@ -214,20 +227,13 @@ class Server(Device):
         nic.add_subcomponent(mmioIf, 'mmio')
         nic.add_subcomponent(netLink, 'rtrLink')
 
-        graph.add(cpu)
-        graph.add(L2)
-        graph.add(NoC)
         graph.add(dirctrl)
         graph.add(memctrl)
         graph.add(nic)
 
-        graph.link(L2_to_mem.port('port'), NoC.port('port', 0), 1000)
-        graph.link(NoC.port('port', 1), dirNIC.port('port'), 1000)
+        graph.link(NoC.port('port', None), dirNIC.port('port'), 1000)
+        graph.link(NoC.port('port', None), mmioNIC.port('port'), 10000)
         graph.link(dir_to_mem.port('port'), mem_to_dir.port('port'), 1000)
-
-        graph.link(cpu.low_network(0), L1_to_L2.port('port'), 1000)
-        graph.link(NoC.port('port', 3), mmioNIC.port('port'), 10000)
-
         graph.link(netLink.port('rtr_port'), self.network, 10000)
 
         return graph
