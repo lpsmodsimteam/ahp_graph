@@ -27,16 +27,16 @@ class MemNIC(Device):
 class Router(Device):
     """Router"""
 
-    def __init__(self, name: str, model: str, id: int = 0, ports: int = 3,
+    def __init__(self, name: str, model: str, id: int = 0, ports: int = 1,
                  attr: dict = None) -> 'Device':
         """Initialize with a model describing the number of ports."""
         parameters = {
-            "id": id
+            "id": id,
+            "num_ports": ports
         }
         if model == 'NoC':
             parameters.update({
                 "flit_size": "72B",
-                "num_ports": ports,
                 "xbar_bw": "50GB/s",
                 "link_bw": "25GB/s",
                 "input_buf_size": "40KB",
@@ -49,10 +49,10 @@ class Router(Device):
                 "link_lat": "10ns",
                 "input_latency": "10ns",
                 "output_latency": "10ns",
-                "flitSize": "8B",
+                "flit_size": "8B",
                 "input_buf_size": "14KB",
                 "output_buf_size": "14KB",
-                "num_dims": 1
+                "num_dims": 2
             })
         else:
             return None
