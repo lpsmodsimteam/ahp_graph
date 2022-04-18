@@ -110,46 +110,32 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description='HPC Cluster Simulation')
-    parser.add_argument('--model', type=str,
-                        help='optional top level model to use')
+    parser.add_argument('--dim', type=str,
+                        help='optional dimensions to use for the topology')
+    parser.add_argument('--nodes', type=int,
+                        help='optional number of nodes per rack')
+    parser.add_argument('--cores', type=int,
+                        help='optional number of cores per server')
     args = parser.parse_args()
 
-    # read in the model if provided
-    model = 'small'
-    if args.model is not None:
-        model = args.model
+    # read in the variables if provided
+    dim = '2x2'
+    if args.dim is not None:
+        dim = args.dim
+    dimX = int(dim.split('x')[0])
+    dimY = int(dim.split('x')[1])
+
+    nodes = 1
+    cores = 1
+    if args.nodes is not None:
+        nodes = args.nodes
+    if args.cores is not None:
+        cores = args.cores
+
+    graph = Cluster(dimX, dimY, nodes, cores)
+    flat = graph.flatten()
 
     builder = BuildSST()
-
-    # graph = DeviceGraph()
-    # cpu = Processor('CPU', 0)
-    # graph.add(cpu)
-    # flat = graph.flatten()
-    # flat.write_dot_file('CPU', draw=True, ports=True)
-    # builder.write(flat, 'CPU.json')
-    #
-    # graph = DeviceGraph()
-    # server = Server('server', 0, 1)
-    # graph.add(server)
-    # flat = graph.flatten()
-    # graph.write_dot_hierarchy('server', draw=True, ports=True)
-    # flat.write_dot_file('serverFlat', draw=True, ports=True)
-    # builder.write(flat, 'server.json')
-    #
-    # graph = DeviceGraph()
-    # rack = Rack('rack', '2x2', 0, 1, 1)
-    # graph.add(rack)
-    # flat = graph.flatten()
-    # graph.write_dot_hierarchy('rack', draw=True, ports=True)
-    # flat.write_dot_file('rackFlat', draw=True, ports=True)
-    # builder.write(flat, 'rack.json')
-
-    graph = Cluster(2, 2, 16, 4)
-    flat = graph.flatten()
-    graph.write_dot_hierarchy('cluster', draw=True, ports=True)
-    builder.write(flat, 'cluster.json')
-
-    exit()
 
     if SST:
         # If running within SST, generate the SST graph
@@ -157,6 +143,5 @@ if __name__ == "__main__":
 
     else:
         # generate a graphviz dot file and json output for demonstration
-        flat.write_dot_file('HPC_Cluster', draw=True, ports=True)
-        graph.write_dot_hierarchy('HPC', draw=True, ports=True)
-        builder.write(flat, 'HPC.json')
+        graph.write_dot_hierarchy('cluster', draw=True, ports=True)
+        builder.write(flat, 'cluster.json')

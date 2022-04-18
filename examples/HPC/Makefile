@@ -5,7 +5,7 @@
 all: test
 
 test:
-	python3 HPC.py
+	python3 HPC.py --dim=3x3 --nodes=16 --cores=8
 
 # Remove the files
 clean:
