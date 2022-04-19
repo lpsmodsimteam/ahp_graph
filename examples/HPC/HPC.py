@@ -6,7 +6,7 @@ out of small components
 This example utilizes sst-elements to start with a processor and memory
 and then build all the way up to a cluster
 """
-from PyDL.examples.HPC.server import *
+from server import *
 from PyDL import *
 
 

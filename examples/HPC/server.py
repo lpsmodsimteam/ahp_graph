@@ -1,7 +1,7 @@
 """
 Collection of PyDL Device wrappers around SST Components
 """
-from PyDL.examples.HPC.processor import *
+from processor import *
 from PyDL import *
 
 

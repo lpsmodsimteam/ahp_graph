@@ -8,10 +8,10 @@ LIB=$(APPS)/librdma.a
 all: test
 
 test: $(LIB)
-	python3 HPC.py --dim=3x3 --nodes=16 --cores=8
+	python3 HPC.py --shape=3x3 --nodes=16 --cores=8
 
 sst: $(LIB)
-	sst HPC.py #--dim=3x3 --nodes=16 --cores=8
+	sst HPC.py #--shape=3x3 --nodes=16 --cores=8
 
 $(LIB):
 	make -C $(APPS) all
