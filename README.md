@@ -16,7 +16,7 @@ apt install graphviz libgraphviz-dev
 ```
 ### Python3 packages:
 ```Bash
-python3 -m pip install pygraphviz orjson matplotlib
+python3 -m pip install pygraphviz orjson
 ```
 
 tests folder includes some tests to verify functionality of PyDL

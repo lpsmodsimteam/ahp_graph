@@ -417,7 +417,7 @@ class DeviceGraph:
 
     @staticmethod
     def __format_graph(name: str, record: bool = False) -> pygraphviz.AGraph:
-        """Setup graph formatting and return a new graph."""
+        """Format a new graph."""
         h = ('.edge:hover text {\n'
              '\tfill: red;\n'
              '}\n'
@@ -442,7 +442,7 @@ class DeviceGraph:
     def __dot_add_links(self, graph: pygraphviz.AGraph,
                         ports: bool = False, assembly: str = None,
                         splitName: str = None, splitNameLen: int = 0) -> None:
-        """Adds edges to the graph with a label for the number of edges."""
+        """Add edges to the graph with a label for the number of edges."""
         def port2Node(port: 'DevicePort') -> str:
             """Return a node name given a DevicePort."""
             node = port.device.name
@@ -497,7 +497,7 @@ class DeviceGraph:
                             draw: bool = False, ports: bool = False,
                             assembly: str = None, types: set = None) -> set:
         """
-        Take an un-flattened DeviceGraph and write dot files for each assembly
+        Take an un-flattened DeviceGraph and write dot files for each assembly.
 
         Write a graphviz dot file for each unique assembly (type, model) in the
         graph

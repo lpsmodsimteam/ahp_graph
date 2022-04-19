@@ -12,6 +12,8 @@ import os
 class VanadisCPU(Device):
     """VanadisCPU."""
 
+    shape = Shape('Rectangle', [5, 5], 'Blue')
+
     def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize using the msg executable."""
         parameters = {
