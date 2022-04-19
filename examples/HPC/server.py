@@ -16,17 +16,24 @@ class MemNIC(Device):
             "network_bw": "25GB/s"
         }
         if model == 'Cache':
-            parameters.update({"group": 1,
-                               "destinations": "2,3"})  # DirCtrl, SHMEMNIC
+            parameters.update({
+                "group": 1,
+                "destinations": "2,3"  # DirCtrl, SHMEMNIC
+            })
         elif model == 'DirCtrl':
-            parameters.update({"group": 2,
-                               "sources": "1,3"})  # Cache, SHMEMNIC
+            parameters.update({
+                "group": 2,
+                "sources": "1,3"  # Cache, SHMEMNIC
+            })
         elif model == 'SHMEMNIC':
-            parameters.update({"group": 3,
-                               "sources": "1",  # Cache
-                               "destinations": "2"})  # DirCtrl
+            parameters.update({
+                "group": 3,
+                "sources": "1",  # Cache
+                "destinations": "2"  # DirCtrl
+            })
         else:
             return None
+
         if attr is not None:
             parameters.update(attr)
         super().__init__(name, attr=parameters)

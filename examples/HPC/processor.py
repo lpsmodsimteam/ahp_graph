@@ -154,17 +154,17 @@ class Cache(Device):
     def __init__(self, name: str, model: str, attr: dict = None) -> 'Device':
         """Initialize with a model of which cache level this is (L1, L2)."""
         parameters = {
-            "access_latency_cycles": 2,
             "replacement_policy": "lru",
             "coherence_protocol": "MESI",
-            "associativity": 8,
             "cache_line_size": 64,
-            "cache_size": "32KB",
             "cache_frequency": "1GHz"
         }
         if model == 'L1':
             parameters.update({
-                "L1": 1
+                "L1": 1,
+                "access_latency_cycles": 2,
+                "associativity": 8,
+                "cache_size": "32KB",
             })
         elif model == 'L2':
             parameters.update({
