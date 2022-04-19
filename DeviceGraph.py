@@ -10,7 +10,7 @@ All links are unidirectional.
 import collections
 import io
 import pygraphviz
-from PyDL.Device import *
+from .Device import *
 
 
 class DeviceGraph:
