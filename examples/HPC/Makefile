@@ -1,14 +1,20 @@
 # Tell Make that these are NOT files, just targets
 .PHONY: all clean test sst
 
+APPS=$(SST_ELEMENTS_HOME)/src/sst/elements/rdmaNic/tests/app/rdma
+LIB=$(APPS)/librdma.a
+
 # Simply typing "make" calls this by default
 all: test
 
-test:
+test: $(LIB)
 	python3 HPC.py --dim=3x3 --nodes=16 --cores=8
 
-sst:
+sst: $(LIB)
 	sst HPC.py #--dim=3x3 --nodes=16 --cores=8
+
+$(LIB):
+	make -C $(APPS) all
 
 # Remove the files
 clean:

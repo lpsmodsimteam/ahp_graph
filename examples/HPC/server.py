@@ -10,13 +10,23 @@ from PyDL import *
 class MemNIC(Device):
     """MemNIC"""
 
-    def __init__(self, name: str, attr: dict = None) -> 'Device':
+    def __init__(self, name: str, model: str, attr: dict = None) -> 'Device':
         """Initialize."""
         parameters = {
-            "group": 1,
-            "destinations": "2,3",  # DC, SHMEMNIC
             "network_bw": "25GB/s"
         }
+        if model == 'Cache':
+            parameters.update({"group": 1,
+                               "destinations": "2,3"})  # DirCtrl, SHMEMNIC
+        elif model == 'DirCtrl':
+            parameters.update({"group": 2,
+                               "sources": "1,3"})  # Cache, SHMEMNIC
+        elif model == 'SHMEMNIC':
+            parameters.update({"group": 3,
+                               "sources": "1",  # Cache
+                               "destinations": "2"})  # DirCtrl
+        else:
+            return None
         if attr is not None:
             parameters.update(attr)
         super().__init__(name, attr=parameters)
@@ -129,7 +139,7 @@ class RDMA_NIC(Device):
     """RDMA_NIC"""
 
     def __init__(self, name: str, id: int = 0, nodes: int = 2,
-                 attr: dict = None) -> 'Device':
+                 cores: int = 1, attr: dict = None) -> 'Device':
         """Initialize."""
         parameters = {
             "clock": "8GHz",
@@ -139,7 +149,7 @@ class RDMA_NIC(Device):
             "cache_line_size": 64,
             'baseAddr': 0x80000000,
             'cmdQSize': 64,
-            'pesPerNode': 1,
+            'pesPerNode': cores,
             'nicId': id,
             'numNodes': nodes
         }
@@ -170,11 +180,14 @@ class LinkControl(Device):
 class Server(Device):
     """Server constructed of a processor and some memory."""
 
-    def __init__(self, name: str, node: int = 0, cores: int = 1,
+    def __init__(self, name: str, node: int = 0,
+                 racks: int = 2, nodes: int = 2, cores: int = 1,
                  attr: dict = None) -> 'Device':
         """Store our name and use number of cores as the model type"""
         super().__init__(name, f"{cores}Core", attr)
         self.attr['node'] = node
+        self.attr['racks'] = racks
+        self.attr['nodes'] = nodes
         self.attr['cores'] = cores
 
     def expand(self) -> 'DeviceGraph':
@@ -189,11 +202,11 @@ class Server(Device):
         graph.add(NoC)
 
         for core in range(self.attr['cores']):
-            cpu = Processor(f"{self.name}.CPU{core}", core)
+            cpu = Processor(f"{self.name}.CPU{core}", core, self.attr['cores'])
 
             L2 = Cache(f"{self.name}.CPU{core}_L2", 'L2')
             L1_to_L2 = MemLink(f"{self.name}.CPU{core}_L1_to_L2")
-            L2_to_mem = MemNIC(f"{self.name}.CPU{core}_L1_to_mem")
+            L2_to_mem = MemNIC(f"{self.name}.CPU{core}_L1_to_mem", 'Cache')
             L2.add_subcomponent(L1_to_L2, 'cpulink')
             L2.add_subcomponent(L2_to_mem, 'memlink')
 
@@ -205,7 +218,7 @@ class Server(Device):
 
         dirctrl = DirectoryController(f"{self.name}.DirectoryController")
         dir_to_mem = MemLink(f"{self.name}.dir_to_mem")
-        dirNIC = MemNIC(f"{self.name}.dirNIC")
+        dirNIC = MemNIC(f"{self.name}.dirNIC", 'DirCtrl')
         dirctrl.add_subcomponent(dir_to_mem, 'memlink')
         dirctrl.add_subcomponent(dirNIC, 'cpulink')
 
@@ -216,12 +229,10 @@ class Server(Device):
         memctrl.add_subcomponent(memory, 'backend')
 
         nic = RDMA_NIC(f"{self.name}.NIC", self.attr['node'],
+                       self.attr['racks'] * self.attr['nodes'],
                        self.attr['cores'])
         mmioIf = memInterface(f"{self.name}.MMIO_IF")
-        mmioNIC = MemNIC(f"{self.name}.MMIO_NIC",
-                         {"group": 3,
-                          "sources": "1",  # L2
-                          "destinations": "2"})  # DC
+        mmioNIC = MemNIC(f"{self.name}.MMIO_NIC", 'SHMEMNIC')
         netLink = LinkControl(f"{self.name}.netLink")
         mmioIf.add_subcomponent(mmioNIC, 'memlink')
         nic.add_subcomponent(mmioIf, 'mmio')

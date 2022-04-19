@@ -39,6 +39,9 @@ class Rack(Device):
         super().__init__(name, f"{nodes}Node_{cores}Core", attr)
         self.attr['shape'] = shape
         self.attr['rack'] = rack
+        dimX = int(shape.split('x')[0])
+        dimY = int(shape.split('x')[1])
+        self.attr['racks'] = dimX * dimY
         self.attr['nodes'] = nodes
         self.attr['cores'] = cores
 
@@ -63,6 +66,7 @@ class Rack(Device):
         for node in range(self.attr['nodes']):
             server = Server(f"{self.name}.Server{node}",
                             (self.attr['rack'] * self.attr['nodes']) + node,
+                            self.attr['racks'], self.attr['nodes'],
                             self.attr['cores'])
             graph.add(server)
             graph.link(router.port('port', None), server.network)
@@ -70,11 +74,12 @@ class Rack(Device):
         return graph
 
 
-def Cluster(dimX: int = 2, dimY: int = 2, nodes: int = 1,
+def Cluster(shape: str = '2x2', nodes: int = 1,
             cores: int = 1) -> 'DeviceGraph':
     """Example HPC Cluster built out of racks. Using a 2D torus network."""
     graph = DeviceGraph()  # initialize a Device Graph
-    shape = f"{dimX}x{dimY}"
+    dimX = int(shape.split('x')[0])
+    dimY = int(shape.split('x')[1])
 
     racks = dict()
     for x in range(dimX):
@@ -110,8 +115,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description='HPC Cluster Simulation')
-    parser.add_argument('--dim', type=str,
-                        help='optional dimensions to use for the topology')
+    parser.add_argument('--shape', type=str,
+                        help='optional shape to use for the topology')
     parser.add_argument('--nodes', type=int,
                         help='optional number of nodes per rack')
     parser.add_argument('--cores', type=int,
@@ -119,20 +124,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # read in the variables if provided
-    dim = '2x2'
-    if args.dim is not None:
-        dim = args.dim
-    dimX = int(dim.split('x')[0])
-    dimY = int(dim.split('x')[1])
-
+    shape = '2x2'
     nodes = 1
     cores = 1
+    if args.shape is not None:
+        shape = args.shape
     if args.nodes is not None:
         nodes = args.nodes
     if args.cores is not None:
         cores = args.cores
 
-    graph = Cluster(dimX, dimY, nodes, cores)
+    graph = Cluster(shape, nodes, cores)
     flat = graph.flatten()
 
     builder = BuildSST()

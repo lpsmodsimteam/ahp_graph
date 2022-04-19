@@ -113,11 +113,12 @@ class VanadisSequentialLoadStoreQueue(Device):
 class VanadisNodeOS(Device):
     """VanadisNodeOS"""
 
-    def __init__(self, name: str, attr: dict = None) -> 'Device':
+    def __init__(self, name: str, cores: int = 1,
+                 attr: dict = None) -> 'Device':
         """Initialize"""
         parameters = {
             "verbose": 0,
-            "cores": 1,
+            "cores": cores,
             "heap_start": 512 * 1024 * 1024,
             "heap_end": (2 * 1024 * 1024 * 1024) - 4096,
             "page_size": 4096,
@@ -133,10 +134,11 @@ class VanadisNodeOS(Device):
 class memInterface(Device):
     """memInterface"""
 
-    def __init__(self, name: str, attr: dict = None) -> 'Device':
+    def __init__(self, name: str, coreId: int = 0,
+                 attr: dict = None) -> 'Device':
         """Initialize"""
         parameters = {
-            "coreId": 0
+            "coreId": coreId
         }
         if attr is not None:
             parameters.update(attr)
@@ -210,11 +212,12 @@ class MemLink(Device):
 class Processor(Device):
     """Processor"""
 
-    def __init__(self, name: str, core: int = 0,
+    def __init__(self, name: str, core: int = 0, cores: int = 1,
                  attr: dict = None) -> 'Device':
         """Initialize."""
         super().__init__(name, attr=attr)
         self.attr['core'] = core
+        self.attr['cores'] = cores
 
     def expand(self) -> 'DeviceGraph':
         """Expand the server into its components."""
@@ -231,21 +234,19 @@ class Processor(Device):
         decoder.add_subcomponent(branch, "branch_unit")
         cpu.add_subcomponent(decoder, 'decoder0')
 
-        icache = memInterface(f"{self.name}.ICache",
-                              {'coreId': self.attr['core']})
+        icache = memInterface(f"{self.name}.ICache", self.attr['core'])
         cpu.add_subcomponent(icache, 'mem_interface_inst')
 
         lsq = VanadisSequentialLoadStoreQueue(
             f"{self.name}.VanadisSequentialLoadStoreQueue")
         cpu.add_subcomponent(lsq, 'lsq')
 
-        dcache = memInterface(f"{self.name}.DCache",
-                              {'coreId': self.attr['core']})
+        dcache = memInterface(f"{self.name}.DCache", self.attr['core'])
         lsq.add_subcomponent(dcache, 'memory_interface')
 
-        nodeOS = VanadisNodeOS(f"{self.name}.VanadisNodeOS")
-        nodeOSmem = memInterface(f"{self.name}.NodeOSMemIF",
-                                 {'coreId': self.attr['core']})
+        nodeOS = VanadisNodeOS(f"{self.name}.VanadisNodeOS",
+                               self.attr['cores'])
+        nodeOSmem = memInterface(f"{self.name}.NodeOSMemIF", self.attr['core'])
         nodeOS.add_subcomponent(nodeOSmem, 'mem_interface')
 
         nodeOSL1D = Cache(f"{self.name}.nodeOSL1D", 'L1')
