@@ -1,5 +1,8 @@
 """
-Collection of PyDL Device wrappers around SST Components
+Vanadis Processor assembly.
+
+Constructed from Vanadis components along with various L1 Caches.
+Processor connects via a memHierarchy Bus.
 """
 from PyDL import *
 import os
@@ -7,10 +10,10 @@ import os
 
 @sstlib('vanadisdbg.VanadisCPU')
 class VanadisCPU(Device):
-    """VanadisCPU"""
+    """VanadisCPU."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
-        """Initialize"""
+        """Initialize using the msg executable."""
         parameters = {
             "clock": "1GHz",
             "executable": (f"{os.getenv('SST_ELEMENTS_HOME')}"
@@ -46,10 +49,10 @@ class VanadisCPU(Device):
 
 @sstlib('vanadis.VanadisMIPSDecoder')
 class VanadisMIPSDecoder(Device):
-    """VanadisMIPSDecoder"""
+    """VanadisMIPSDecoder."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
-        """Initialize"""
+        """Initialize."""
         parameters = {
             "uop_cache_entries": 1536,
             "predecode_cache_entries": 4
@@ -62,10 +65,10 @@ class VanadisMIPSDecoder(Device):
 @sstlib('vanadis.VanadisMIPSOSHandler')
 @port('os_link', Port.Single, 'os', Port.Required)
 class VanadisMIPSOSHandler(Device):
-    """VanadisMIPSOSHandler"""
+    """VanadisMIPSOSHandler."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
-        """Initialize"""
+        """Initialize."""
         parameters = {
             "verbose": 0,
             "brk_zero_memory": "yes"
@@ -77,10 +80,10 @@ class VanadisMIPSOSHandler(Device):
 
 @sstlib('vanadis.VanadisBasicBranchUnit')
 class VanadisBasicBranchUnit(Device):
-    """VanadisBasicBranchUnit"""
+    """VanadisBasicBranchUnit."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
-        """Initialize"""
+        """Initialize."""
         parameters = {
             "branch_entries": 32
         }
@@ -91,10 +94,10 @@ class VanadisBasicBranchUnit(Device):
 
 @sstlib('vanadis.VanadisSequentialLoadStoreQueue')
 class VanadisSequentialLoadStoreQueue(Device):
-    """VanadisSequentialLoadStoreQueue"""
+    """VanadisSequentialLoadStoreQueue."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
-        """Initialize"""
+        """Initialize."""
         parameters = {
             "verbose": 0,
             "address_mask": 0xFFFFFFFF,
@@ -111,11 +114,11 @@ class VanadisSequentialLoadStoreQueue(Device):
 @sstlib('vanadis.VanadisNodeOS')
 @port('core', Port.Multi, 'os', Port.Required, '#')
 class VanadisNodeOS(Device):
-    """VanadisNodeOS"""
+    """VanadisNodeOS."""
 
     def __init__(self, name: str, cores: int = 1,
                  attr: dict = None) -> 'Device':
-        """Initialize"""
+        """Initialize with the number of cores per server."""
         parameters = {
             "verbose": 0,
             "cores": cores,
@@ -132,11 +135,11 @@ class VanadisNodeOS(Device):
 @sstlib('memHierarchy.standardInterface')
 @port('port', Port.Single, 'simpleMem', Port.Required)
 class memInterface(Device):
-    """memInterface"""
+    """memInterface."""
 
     def __init__(self, name: str, coreId: int = 0,
                  attr: dict = None) -> 'Device':
-        """Initialize"""
+        """Initialize."""
         parameters = {
             "coreId": coreId
         }
@@ -149,7 +152,7 @@ class memInterface(Device):
 @port('high_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
 @port('low_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
 class Cache(Device):
-    """Cache"""
+    """Cache."""
 
     def __init__(self, name: str, model: str, attr: dict = None) -> 'Device':
         """Initialize with a model of which cache level this is (L1, L2)."""
@@ -185,7 +188,7 @@ class Cache(Device):
 @port('high_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
 @port('low_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
 class Bus(Device):
-    """Bus"""
+    """Bus."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
@@ -200,7 +203,7 @@ class Bus(Device):
 @sstlib('memHierarchy.MemLink')
 @port('port', Port.Single, 'simpleMem', Port.Required)
 class MemLink(Device):
-    """MemLink"""
+    """MemLink."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
@@ -210,11 +213,11 @@ class MemLink(Device):
 @assembly
 @port('low_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
 class Processor(Device):
-    """Processor"""
+    """Processor assembly made of various Vanadis components and Caches."""
 
     def __init__(self, name: str, core: int = 0, cores: int = 1,
                  attr: dict = None) -> 'Device':
-        """Initialize."""
+        """Initialize with the core ID and number of cores in a server."""
         super().__init__(name, attr=attr)
         self.attr['core'] = core
         self.attr['cores'] = cores
@@ -225,6 +228,9 @@ class Processor(Device):
         # add myself to the graph, useful if the assembly has ports
         graph.add(self)
 
+        # Reminder to add subcomponents to the main component BEFORE adding
+        # the main component to the DeviceGraph. The subcomponents will be
+        # automatically added when the main component is added
         cpu = VanadisCPU(f"{self.name}.VanadisCPU")
 
         decoder = VanadisMIPSDecoder(f"{self.name}.VanadisMIPSDecoder")
@@ -265,8 +271,8 @@ class Processor(Device):
 
         bus = Bus(f"{self.name}.Bus")
 
-        # now that the subcomponents have been added, we can add things
-        # to the DeviceGraph and start linking them together
+        # Now that the subcomponents have been added, we can add things
+        # to the DeviceGraph and start linking them together.
         # Only devices that are NOT subcomponents get added to the graph
         # directly!
         graph.add(cpu)
@@ -284,5 +290,6 @@ class Processor(Device):
         graph.link(nodeOSL1D.low_network(0), bus.high_network(2), 1000)
         graph.link(osHandler.os_link, nodeOS.core(0), 5000)
 
+        # Our external connection goes through the memHierarchy Bus
         graph.link(bus.low_network(0), self.low_network(0), 1000)
         return graph

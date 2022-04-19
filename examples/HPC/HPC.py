@@ -2,9 +2,9 @@
 Abstract HPC cluster.
 
 This demonstrates how assemblies in PyDL can be used to build systems
-out of small components
+out of small components.
 This example utilizes sst-elements to start with a processor and memory
-and then build all the way up to a cluster
+and then build all the way up to a cluster.
 """
 from server import *
 from PyDL import *
@@ -12,11 +12,11 @@ from PyDL import *
 
 @sstlib('merlin.torus')
 class TorusTopology(Device):
-    """Torus Topology"""
+    """Torus Topology."""
 
     def __init__(self, name: str, shape: str = '2x2', nodes: int = 1,
                  attr: dict = None) -> 'Device':
-        """Initialize."""
+        """Initialize using the shape as the model."""
         parameters = {
             "shape": shape,
             "width": "1x1",
@@ -35,7 +35,7 @@ class Rack(Device):
     def __init__(self, name: str, shape: str = '2x2', rack: int = 0,
                  nodes: int = 1, cores: int = 1,
                  attr: dict = None) -> 'Device':
-        """Store our name"""
+        """Store our name and the model describing nodes and cores per node."""
         super().__init__(name, f"{nodes}Node_{cores}Core", attr)
         self.attr['shape'] = shape
         self.attr['rack'] = rack
@@ -76,7 +76,7 @@ class Rack(Device):
 
 def Cluster(shape: str = '2x2', nodes: int = 1,
             cores: int = 1) -> 'DeviceGraph':
-    """Example HPC Cluster built out of racks. Using a 2D torus network."""
+    """HPC Cluster built out of racks. Using a 2D torus network."""
     graph = DeviceGraph()  # initialize a Device Graph
     dimX = int(shape.split('x')[0])
     dimY = int(shape.split('x')[1])
@@ -104,7 +104,7 @@ def Cluster(shape: str = '2x2', nodes: int = 1,
 if __name__ == "__main__":
     """
     If we are running as a script (either via Python or from SST), then
-    proceed.  Check if we are running with SST or from Python.
+    proceed. Check if we are running with SST or from Python.
     """
     import argparse
     try:

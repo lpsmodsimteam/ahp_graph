@@ -1,5 +1,7 @@
 """
-Collection of PyDL Device wrappers around SST Components
+Server assembly.
+
+Constructed from Processors and main memory using a NoC.
 """
 from processor import *
 from PyDL import *
@@ -8,10 +10,10 @@ from PyDL import *
 @sstlib('memHierarchy.MemNIC')
 @port('port', Port.Single, 'simpleNet', Port.Required)
 class MemNIC(Device):
-    """MemNIC"""
+    """MemNIC."""
 
     def __init__(self, name: str, model: str, attr: dict = None) -> 'Device':
-        """Initialize."""
+        """Initialize with a model describing where this is on the NoC."""
         parameters = {
             "network_bw": "25GB/s"
         }
@@ -42,11 +44,11 @@ class MemNIC(Device):
 @sstlib('merlin.hr_router')
 @port('port', Port.Multi, 'simpleNet', Port.Optional, '#')
 class Router(Device):
-    """Router"""
+    """Router."""
 
     def __init__(self, name: str, model: str, id: int = 0, ports: int = 1,
                  attr: dict = None) -> 'Device':
-        """Initialize with a model describing the number of ports."""
+        """Initialize with a model for a NoC or Interconnect."""
         parameters = {
             "id": id,
             "num_ports": ports
@@ -81,7 +83,7 @@ class Router(Device):
 
 @sstlib('merlin.singlerouter')
 class SingleRouter(Device):
-    """Single Router Topology"""
+    """Single Router Topology."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
@@ -91,7 +93,7 @@ class SingleRouter(Device):
 @sstlib('memHierarchy.DirectoryController')
 @port('direct_link', Port.Single, 'simpleMem', Port.Required)
 class DirectoryController(Device):
-    """DirectoryController"""
+    """DirectoryController."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
@@ -109,7 +111,7 @@ class DirectoryController(Device):
 @sstlib('memHierarchy.MemController')
 @port('direct_link', Port.Single, 'simpleMem', Port.Required)
 class MemController(Device):
-    """MemController"""
+    """MemController."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
@@ -127,7 +129,7 @@ class MemController(Device):
 
 @sstlib('memHierarchy.simpleMem')
 class simpleMem(Device):
-    """simpleMem"""
+    """simpleMem."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
@@ -143,11 +145,16 @@ class simpleMem(Device):
 @sstlib('rdmaNic.nic')
 @port('port', Port.Multi, 'simpleNet', Port.Optional, '#')
 class RDMA_NIC(Device):
-    """RDMA_NIC"""
+    """RDMA_NIC."""
 
     def __init__(self, name: str, id: int = 0, nodes: int = 2,
                  cores: int = 1, attr: dict = None) -> 'Device':
-        """Initialize."""
+        """
+        Initialize using various simulation parameters.
+
+        Need to know the number of processing elements (cores) per node.
+        Also need the total number of nodes in the system.
+        """
         parameters = {
             "clock": "8GHz",
             "maxPendingCmds": 128,
@@ -168,7 +175,7 @@ class RDMA_NIC(Device):
 @sstlib('merlin.linkcontrol')
 @port('rtr_port', Port.Single, 'simpleNet', Port.Required)
 class LinkControl(Device):
-    """LinkControl"""
+    """LinkControl."""
 
     def __init__(self, name: str, attr: dict = None) -> 'Device':
         """Initialize."""
@@ -190,7 +197,7 @@ class Server(Device):
     def __init__(self, name: str, node: int = 0,
                  racks: int = 2, nodes: int = 2, cores: int = 1,
                  attr: dict = None) -> 'Device':
-        """Store our name and use number of cores as the model type"""
+        """Store our name and use number of cores as the model type."""
         super().__init__(name, f"{cores}Core", attr)
         self.attr['node'] = node
         self.attr['racks'] = racks
@@ -203,11 +210,13 @@ class Server(Device):
         # add myself to the graph, useful if the assembly has ports
         graph.add(self)
 
+        # Setup the NoC first so we can connect the Processors to it
         NoC = Router(f"{self.name}.NoC", 'NoC', 0, self.attr['cores'] + 2)
         NoC_topo = SingleRouter(f"{self.name}.NoC_topo")
         NoC.add_subcomponent(NoC_topo, 'topology')
         graph.add(NoC)
 
+        # Generate the appropriate number of Processors and L2 Caches
         for core in range(self.attr['cores']):
             cpu = Processor(f"{self.name}.CPU{core}", core, self.attr['cores'])
 
@@ -223,6 +232,7 @@ class Server(Device):
             graph.link(cpu.low_network(0), L1_to_L2.port('port'), 1000)
             graph.link(L2_to_mem.port('port'), NoC.port('port', core), 1000)
 
+        # Setup the main memory with controllers
         dirctrl = DirectoryController(f"{self.name}.DirectoryController")
         dir_to_mem = MemLink(f"{self.name}.dir_to_mem")
         dirNIC = MemNIC(f"{self.name}.dirNIC", 'DirCtrl')
@@ -235,6 +245,7 @@ class Server(Device):
         memctrl.add_subcomponent(mem_to_dir, 'cpulink')
         memctrl.add_subcomponent(memory, 'backend')
 
+        # Initialize the RDMA_NIC and its interfaces
         nic = RDMA_NIC(f"{self.name}.NIC", self.attr['node'],
                        self.attr['racks'] * self.attr['nodes'],
                        self.attr['cores'])
@@ -252,6 +263,7 @@ class Server(Device):
         graph.link(NoC.port('port', None), dirNIC.port('port'), 1000)
         graph.link(NoC.port('port', None), mmioNIC.port('port'), 10000)
         graph.link(dir_to_mem.port('port'), mem_to_dir.port('port'), 1000)
-        graph.link(netLink.port('rtr_port'), self.network, 10000)
 
+        # Our external link is through the RDMA_NIC
+        graph.link(netLink.port('rtr_port'), self.network, 10000)
         return graph
