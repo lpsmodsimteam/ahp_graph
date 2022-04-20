@@ -57,18 +57,54 @@ class BuildSST(object):
 
         return params
 
-    def build(self, graph: 'DeviceGraph') -> dict:
+    def build(self, graph: 'DeviceGraph', nranks: int = 1,
+              partialExpand: bool = False) -> dict:
         """
         Build the SST graph.
 
         Return a dictionary of component names to SST component objects.
-        Sorting devices and links is optional, but when debugging,
-        it assures deterministic ordering from run to run.
+        """
+        # If this is serial, generate the entire graph
+        if nranks == 1:
+            return self.__build_model(
+                graph,
+                nranks,
+                graph.devices.values(),
+                graph.links.values()
+            )
+
+        # Find the partition information and build the model for this rank
+        else:
+            # only import sst when we are going to build the graph
+            import sst
+            rank = sst.getSSTMyMPIRank()
+
+            rankGraph = graph
+            if partialExpand:
+                rankGraph = graph.flatten(rank=rank).follow_links(rank)
+            partition = self.__partition_graph(rankGraph, nranks)
+
+            for d0 in graph.devices.values():
+                if d0.rank is None:
+                    raise RuntimeError(f"No rank for component: {d0.name}")
+
+            return self.__build_model(
+                rankGraph,
+                nranks,
+                partition[rank][0],
+                partition[rank][1]
+            )
+
+    def __build_model(self, graph: 'DeviceGraph', nranks: int,
+                      rank_components: set, rank_links: list) -> dict:
+        """
+        Generate the model for the SST program.
+
+        If rank is None, then we are not running in parallel.
+        Otherwise only grab the components and links associated with this rank.
         """
         # only import sst when we are going to build the graph inside of sst
         import sst
-
-        components = dict()
         n2c = dict()
 
         # Set up global parameters.
@@ -76,9 +112,8 @@ class BuildSST(object):
         for (key, val) in global_params.items():
             sst.addGlobalParam(key, key, val)
 
-        # If we have specified partition information, then
-        # set up the self partitioner.
-        if any([d0.rank is not None for d0 in graph.devices.values()]):
+        # If we have multiple ranks, then set up the self partitioner.
+        if nranks != 1:
             sst.setProgramOption("partitioner", "sst.self")
 
         def recurseSubcomponents(dev: 'Device', comp: 'Component'):
@@ -90,7 +125,6 @@ class BuildSST(object):
                 else:
                     c1 = comp.setSubComponent(n1, d1.sstlib, s1)
                 c1.addParams(self.__encode(d1.attr))
-                components[d1] = c1
                 n2c[d1.name] = c1
                 for key in global_params:
                     c1.addGlobalParamSet(key)
@@ -100,14 +134,16 @@ class BuildSST(object):
         # First, we instantiate all of the components with
         # their attributes.  Raise an exception if a particular
         # device has no SST component implementation.
-        for d0 in graph.devices.values():
+        for d0 in rank_components:
             if d0.sstlib is None:
                 raise RuntimeError(f"No SST library for device: {d0.name}")
 
             if d0.subOwner is None:
                 c0 = sst.Component(d0.name, d0.sstlib)
                 c0.addParams(self.__encode(d0.attr))
-                components[d0] = c0
+                # Set the component rank if we are self-partitioning
+                if nranks != 1:
+                    c0.setRank((d0.rank, d0.thread))
                 n2c[d0.name] = c0
                 for key in global_params:
                     c0.addGlobalParamSet(key)
@@ -116,13 +152,12 @@ class BuildSST(object):
                 recurseSubcomponents(d0, c0)
 
         # Second, link the component ports using graph links.
-        for name in graph.links:
-            (p0, p1, t) = graph.links[name]
-            c0 = components[p0.device]
-            c1 = components[p1.device]
+        for (p0, p1, t) in rank_links:
+            c0 = n2c[p0.device.name]
+            c1 = n2c[p1.device.name]
             s0 = p0.get_name()
             s1 = p1.get_name()
-            link = sst.Link(name)
+            link = sst.Link(f"{p0}__{t}__{p1}")
             link.connect((c0, s0, t), (c1, s1, t))
 
         # Return a map of component names to components.
@@ -218,7 +253,7 @@ class BuildSST(object):
                 d1 = d1.subOwner
 
             r0 = d0.rank
-            r1 = d1. rank
+            r1 = d1.rank
 
             partition[r0][0].add(d0)
             partition[r0][0].add(d1)

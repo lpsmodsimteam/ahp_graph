@@ -133,6 +133,9 @@ if __name__ == "__main__":
     if args.cores is not None:
         cores = args.cores
 
+    dims = [int(x) for x in shape.split('x')]
+    ranks = dims[0] * dims[1]
+
     # Make each rack its own partition (rank)
     graph = Cluster(shape, nodes, cores)
     for rack in graph.devices.values():
@@ -142,9 +145,10 @@ if __name__ == "__main__":
 
     if SST:
         # If running within SST, generate the SST graph
-        flat = graph.flatten()
-        flat.verify_links()
-        builder.build(flat)
+        builder.build(graph, nranks=ranks, partialExpand=True)
+        # We could also build the graph without specifying nranks and let
+        # sst do the partitioning:
+        # builder.build(graph, partialExpand=True)
 
     else:
         # generate a graphviz dot file and json output for demonstration
