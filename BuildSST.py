@@ -57,8 +57,7 @@ class BuildSST(object):
 
         return params
 
-    def build(self, graph: 'DeviceGraph', nranks: int = 1,
-              partialExpand: bool = False) -> dict:
+    def build(self, graph: 'DeviceGraph', nranks: int = 1) -> dict:
         """
         Build the SST graph.
 
@@ -80,9 +79,7 @@ class BuildSST(object):
             rank = sst.getMyMPIRank()
             sst.setProgramOption("partitioner", "sst.self")
 
-            rankGraph = graph
-            if partialExpand:
-                rankGraph = graph.flatten(rank=rank).follow_links(rank)
+            rankGraph = graph.flatten(rank=rank).follow_links(rank)
             partition = self.__partition_graph(rankGraph, nranks)
 
             for d0 in graph.devices.values():

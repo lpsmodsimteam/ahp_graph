@@ -13,8 +13,9 @@ test:
 sst: $(LIB)
 	sst HPC.py #--shape=3x3 --nodes=16 --cores=8
 
-parallel: $(LIB)
-	mpirun -np 4 sst --parallel-load=SINGLE HPC.py
+partitioner ?= 'sst'
+mpi: $(LIB)
+	mpirun -np 4 sst --parallel-load=SINGLE HPC.py --partitioner=$(partitioner)
 
 $(LIB):
 	make -C $(APPS) all

@@ -114,6 +114,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description='HPC Cluster Simulation')
+    parser.add_argument('--partitioner', type=str,
+                        help='which partitioner to use: pydl, sst')
     parser.add_argument('--shape', type=str,
                         help='optional shape to use for the topology')
     parser.add_argument('--nodes', type=int,
@@ -126,6 +128,9 @@ if __name__ == "__main__":
     shape = '2x2'
     nodes = 1
     cores = 1
+    partitioner = 'sst'
+    if args.partitioner is not None:
+        partitioner = args.partitioner
     if args.shape is not None:
         shape = args.shape
     if args.nodes is not None:
@@ -145,12 +150,23 @@ if __name__ == "__main__":
 
     if SST:
         # If running within SST, generate the SST graph
-        # For this to work you need to pass --parallel-load=SINGLE to sst
-        builder.build(graph, nranks=racks, partialExpand=True)
+        # There are multiple ways to run, below are a few common examples
 
-        # We could also build the graph without specifying nranks and let
-        # sst do the partitioning:
-        # builder.build(graph, partialExpand=True)
+        # SST partitioner, flatten the whole graph and then run it in sst
+        # This will work in serial or running SST with MPI in parallel
+        if partitioner.lower() == 'sst':
+            flat = graph.flatten()
+            flat.verify_links()
+            builder.build(flat)
+
+        # MPI mode with PyDL graph partitioning. Specifying nranks tells
+        # BuildSST that it is doing the partitioning, not SST. If we are
+        # doing the partitioning, we need the un-flattened graph so that
+        # we can partially expand it and only instantiate the devices
+        # for this particular rank
+        # For this to work you need to pass --parallel-load=SINGLE to sst
+        elif partitioner.lower() == 'pydl':
+            builder.build(graph, nranks=racks)
 
     else:
         # generate a graphviz dot file and json output for demonstration
