@@ -11,11 +11,16 @@ test:
 	python3 HPC.py #--shape=3x3 --nodes=16 --cores=8
 
 sst: $(LIB)
-	sst HPC.py #--shape=3x3 --nodes=16 --cores=8
+	# arguments after '-- ' are passed to the sst model instead of taken by sst
+	sst HPC.py #-- --shape=3x3 --nodes=16 --cores=8
 
-partitioner ?= 'sst'
-mpi: $(LIB)
-	mpirun -np 4 sst --parallel-load=SINGLE HPC.py --partitioner=$(partitioner)
+mpi-sst: $(LIB)
+	# arguments after '-- ' are passed to the sst model instead of taken by sst
+	mpirun -np 4 sst HPC.py -- --partitioner=sst
+
+mpi-pydl: $(LIB)
+	# arguments after '-- ' are passed to the sst model instead of taken by sst
+	mpirun -np 4 sst --parallel-load=SINGLE HPC.py -- --partitioner=pydl
 
 $(LIB):
 	make -C $(APPS) all
