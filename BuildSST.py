@@ -143,7 +143,7 @@ class BuildSST(object):
                 c0.addParams(self.__encode(d0.attr))
                 # Set the component rank if we are self-partitioning
                 if nranks != 1:
-                    c0.setRank((d0.rank, d0.thread))
+                    c0.setRank(d0.rank, d0.thread)
                 n2c[d0.name] = c0
                 for key in global_params:
                     c0.addGlobalParamSet(key)
