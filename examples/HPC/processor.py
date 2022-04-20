@@ -133,7 +133,7 @@ class VanadisNodeOS(Device):
 
 
 @sstlib('memHierarchy.standardInterface')
-@port('port', Port.Single, 'simpleMem', Port.Required)
+@port('port', Port.Single, 'simpleMem', Port.Optional)
 class memInterface(Device):
     """memInterface."""
 
@@ -275,21 +275,21 @@ class Processor(Device):
         # to the DeviceGraph and start linking them together.
         # Only devices that are NOT subcomponents get added to the graph
         # directly!
-        graph.add(cpu)
-        graph.add(nodeOS)
-        graph.add(nodeOSL1D)
-        graph.add(cpuL1D)
-        graph.add(cpuL1I)
-        graph.add(bus)
+        # graph.add(cpu)
+        # graph.add(nodeOS)
+        # graph.add(nodeOSL1D)
+        # graph.add(cpuL1D)
+        # graph.add(cpuL1I)
+        # graph.add(bus)
 
-        graph.link(dcache.port('port'), cpu_to_L1D.port('port'), 1000)
-        graph.link(icache.port('port'), cpu_to_L1I.port('port'), 1000)
-        graph.link(nodeOSmem.port('port'), nodeOSL1D.high_network(0), 1000)
-        graph.link(L1D_to_L2.port('port'), bus.high_network(0), 1000)
-        graph.link(L1I_to_L2.port('port'), bus.high_network(1), 1000)
-        graph.link(nodeOSL1D.low_network(0), bus.high_network(2), 1000)
-        graph.link(osHandler.os_link, nodeOS.core(0), 5000)
+        graph.link(dcache.port('port'), cpu_to_L1D.port('port'), '1ns')
+        graph.link(icache.port('port'), cpu_to_L1I.port('port'), '1ns')
+        graph.link(nodeOSmem.port('port'), nodeOSL1D.high_network(0), '1ns')
+        graph.link(L1D_to_L2.port('port'), bus.high_network(0), '1ns')
+        graph.link(L1I_to_L2.port('port'), bus.high_network(1), '1ns')
+        graph.link(nodeOSL1D.low_network(0), bus.high_network(2), '1ns')
+        graph.link(osHandler.os_link, nodeOS.core(0), '5ns')
 
         # Our external connection goes through the memHierarchy Bus
-        graph.link(bus.low_network(0), self.low_network(0), 1000)
+        graph.link(bus.low_network(0), self.low_network(0), '1ns')
         return graph

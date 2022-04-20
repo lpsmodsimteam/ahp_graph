@@ -35,7 +35,6 @@ def sstlib(name: str) -> 'Device':
     def wrapper(cls: 'Device') -> 'Device':
         cls.sstlib = name
         return cls
-
     return wrapper
 
 
@@ -62,11 +61,10 @@ def port(name: str, card, ptype: str = None,
     """
 
     def wrapper(cls: 'Device') -> 'Device':
-        if not hasattr(cls, "_portinfo"):
+        if cls._portinfo is None:
             cls._portinfo = dict()
         cls._portinfo[name] = (card, ptype, need, format)
         return cls
-
     return wrapper
 
 
@@ -110,36 +108,34 @@ class DevicePort:
 
     def __repr__(self) -> str:
         """Return a string representation of this DevicePort."""
-        return f"{self.device.name}.{self.get_name()}"
+        return f"{self.device.name}:{self.get_name()}"
 
-    def __lt__(self, other: 'DevicePort') -> bool:
-        """Compare this DevicePort to another."""
+    def __cmp__(self, other: 'DevicePort') -> tuple:
+        """Generate tuples to use for comparison."""
         n0 = -1 if self.number is None else self.number
         n1 = -1 if other.number is None else other.number
         p0 = (self.device.name, self.name, n0)
         p1 = (other.device.name, other.name, n1)
+        return (p0, p1)
+
+    def __lt__(self, other: 'DevicePort') -> bool:
+        """Compare this DevicePort to another."""
+        (p0, p1) = self.__cmp__(other)
         return p0 < p1
 
+    def __gt__(self, other: 'DevicePort') -> bool:
+        """Compare this DevicePort to another."""
+        (p0, p1) = self.__cmp__(other)
+        return p0 > p1
 
-class ExternalPort:
-    """An ExternalPort object contains an sst.Component and a port name."""
+    def __eq__(self, other: 'DevicePort') -> bool:
+        """Compare this DevicePort to another."""
+        (p0, p1) = self.__cmp__(other)
+        return p0 == p1
 
-    def __init__(self, comp, portName: str) -> 'ExternalPort':
-        """Initialize the component and portName."""
-        self.comp = comp
-        self.portName = portName
-
-    def __repr__(self) -> str:
-        """Return a string representation of this ExternalPort."""
-        return f"{self.comp.getFullName()}.{self.portName}"
-
-    def comp_name(self) -> str:
-        """Return the component name."""
-        return self.comp.getFullName()
-
-    def port_name(self) -> str:
-        """Return the port name."""
-        return self.portName
+    def __hash__(self):
+        """Need to define a hash function since we defined __eq__."""
+        return id(self)
 
 
 class Device:
@@ -159,6 +155,7 @@ class Device:
 
     sstlib = None
     assembly = False
+    _portinfo = None
 
     def __init__(self, name: str, model=None, attr=None) -> 'Device':
         """
@@ -169,23 +166,19 @@ class Device:
         """
         self.name = name
         self.attr = dict(attr) if attr is not None else dict()
-        self._ports = collections.defaultdict(dict)
-        self._nport = collections.defaultdict(int)
-        self._sub = list()
-        self._issub = False
-        self._subOwner = None
-
-        self._rank = None
-        self._thread = None
+        self.ports = collections.defaultdict(dict)
+        self.subs = set()
+        self.subOwner = None
+        self.rank = None
+        self.thread = None
         self.attr["type"] = self.__class__.__name__
-
         if model is not None:
             self.attr["model"] = model
 
     def set_partition(self, rank: int, thread: int = 0) -> None:
         """Assign a rank and optional thread to this device."""
-        self._rank = rank
-        self._thread = thread
+        self.rank = rank
+        self.thread = thread
 
     def add_subcomponent(self, device: 'Device', name: str,
                          slotIndex: int = None) -> None:
@@ -200,17 +193,8 @@ class Device:
             raise RuntimeError(f"Parent of sub-component must be an SST class")
         if device.sstlib is None:
             raise RuntimeError(f"A sub-component must be an SST class")
-        device._issub = True
-        device._subOwner = self
-        self._sub.append((device, name, slotIndex))
-
-    def is_subcomponent(self) -> bool:
-        """Return whether this component is a subcomponent."""
-        return self._issub
-
-    def get_subcomponents(self) -> list:
-        """Return the list of (device,slot) sub-component pairs."""
-        return self._sub
+        device.subOwner = self
+        self.subs.add((device, name, slotIndex))
 
     def __getattr__(self, port: str) -> 'DevicePort':
         """
@@ -229,7 +213,7 @@ class Device:
         else:
             return lambda x: self.port(port, x)
 
-    def port(self, port, number: int = None) -> 'DevicePort':
+    def port(self, port: str, number: int = None) -> 'DevicePort':
         """
         Return a Port object representing the port on this device.
 
@@ -249,27 +233,25 @@ class Device:
         elif info[0] == Port.Single:
             if number is not None:
                 raise RuntimeError(f"Port supports one connection: {port}")
-            if port not in self._ports:
-                self._ports[port] = DevicePort(self, port, format=info[3])
-            return self._ports[port]
+            if port not in self.ports:
+                self.ports[port] = DevicePort(self, port, format=info[3])
+            return self.ports[port]
 
         else:
             if number is None:
-                number = self._nport[port]
-                self._nport[port] += 1
-            else:
-                self._nport[port] = number + 1
+                number = len(self.ports[port])
             if info[0] != Port.Multi and number >= info[0]:
                 raise RuntimeError(f"Too many connections: {port}")
-            if number not in self._ports[port]:
-                self._ports[port][number] = DevicePort(self, port,
-                                                       number, format=info[3])
-            return self._ports[port][number]
+            if number not in self.ports[port]:
+                self.ports[port][number] = DevicePort(self, port, number,
+                                                      format=info[3])
+            return self.ports[port][number]
 
-    def reset_port_count(self) -> None:
-        """Reset the port count for multiports."""
-        for port in self._nport:
-            self._nport[port] = 0
+    def get_portinfo(self) -> dict:
+        """Return the portinfo for this Device Class."""
+        if self._portinfo is None:
+            return dict()
+        return self._portinfo
 
     def get_category(self) -> str:
         """Return the category for this Device (type, model)."""
@@ -280,10 +262,10 @@ class Device:
 
     def label_ports(self) -> str:
         """Return the port labels for a graphviz record style node."""
-        if len(self._ports) == 0:
+        if len(self.ports) == 0:
             return ''
         label = '{'
-        for port in self._ports:
+        for port in self.ports:
             label += f"<{port}> {port}|"
         return label[:-1] + '}'
 

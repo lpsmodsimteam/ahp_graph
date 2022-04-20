@@ -3,8 +3,8 @@ Server assembly.
 
 Constructed from Processors and main memory using a NoC.
 """
-from processor import *
 from PyDL import *
+from processor import *
 
 
 @sstlib('memHierarchy.MemNIC')
@@ -91,7 +91,7 @@ class SingleRouter(Device):
 
 
 @sstlib('memHierarchy.DirectoryController')
-@port('direct_link', Port.Single, 'simpleMem', Port.Required)
+@port('direct_link', Port.Single, 'simpleMem', Port.Optional)
 class DirectoryController(Device):
     """DirectoryController."""
 
@@ -109,7 +109,7 @@ class DirectoryController(Device):
 
 
 @sstlib('memHierarchy.MemController')
-@port('direct_link', Port.Single, 'simpleMem', Port.Required)
+@port('direct_link', Port.Single, 'simpleMem', Port.Optional)
 class MemController(Device):
     """MemController."""
 
@@ -226,11 +226,11 @@ class Server(Device):
             L2.add_subcomponent(L1_to_L2, 'cpulink')
             L2.add_subcomponent(L2_to_mem, 'memlink')
 
-            graph.add(cpu)
-            graph.add(L2)
+            # graph.add(cpu)
+            # graph.add(L2)
 
-            graph.link(cpu.low_network(0), L1_to_L2.port('port'), 1000)
-            graph.link(L2_to_mem.port('port'), NoC.port('port', core), 1000)
+            graph.link(cpu.low_network(0), L1_to_L2.port('port'), '1ns')
+            graph.link(L2_to_mem.port('port'), NoC.port('port', core), '1ns')
 
         # Setup the main memory with controllers
         dirctrl = DirectoryController(f"{self.name}.DirectoryController")
@@ -256,14 +256,14 @@ class Server(Device):
         nic.add_subcomponent(mmioIf, 'mmio')
         nic.add_subcomponent(netLink, 'rtrLink')
 
-        graph.add(dirctrl)
-        graph.add(memctrl)
-        graph.add(nic)
+        # graph.add(dirctrl)
+        # graph.add(memctrl)
+        # graph.add(nic)
 
-        graph.link(NoC.port('port', None), dirNIC.port('port'), 1000)
-        graph.link(NoC.port('port', None), mmioNIC.port('port'), 10000)
-        graph.link(dir_to_mem.port('port'), mem_to_dir.port('port'), 1000)
+        graph.link(NoC.port('port', None), dirNIC.port('port'), '1ns')
+        graph.link(NoC.port('port', None), mmioNIC.port('port'), '10ns')
+        graph.link(dir_to_mem.port('port'), mem_to_dir.port('port'), '1ns')
 
         # Our external link is through the RDMA_NIC
-        graph.link(netLink.port('rtr_port'), self.network, 10000)
+        graph.link(netLink.port('rtr_port'), self.network, '10ns')
         return graph

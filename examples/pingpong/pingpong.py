@@ -11,9 +11,10 @@ from PyDL import *
 class Ping(Device):
     """Ping Device: has a Name and a Model type."""
 
-    def __init__(self, name, size, **kwargs):
+    def __init__(self, name: str, size: int = 10,
+                 attr: dict = None) -> 'Device':
         """Size parameter is stored as the model attribute of a device."""
-        super().__init__(name, size, attr=kwargs)
+        super().__init__(name, size, attr)
 
 
 @sstlib("pingpong.Pong")
@@ -21,20 +22,21 @@ class Ping(Device):
 class Pong(Device):
     """Pong Device."""
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name: str, attr: dict = None) -> 'Device':
         """No model for Pong."""
-        super().__init__(name, attr=kwargs)
+        super().__init__(name, attr=attr)
 
 
 @assembly
 class pingpong(Device):
     """Overall architecture layout."""
 
-    def __init__(self, name, size=10, **kwargs):
+    def __init__(self, name: str, size: int = 10,
+                 attr: dict = None) -> 'Device':
         """Size parameter is stored as the model attribute of a device."""
-        super().__init__(name, size, attr=kwargs)
+        super().__init__(name, size, attr)
 
-    def expand(self):
+    def expand(self) -> 'DeviceGraph':
         """Expand the overall architecture into its components."""
         graph = DeviceGraph()  # initialize a Device Graph
         # add myself to the graph, useful if the assembly has ports

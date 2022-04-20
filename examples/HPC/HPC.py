@@ -6,8 +6,8 @@ out of small components.
 This example utilizes sst-elements to start with a processor and memory
 and then build all the way up to a cluster.
 """
-from server import *
 from PyDL import *
+from server import *
 
 
 @sstlib('merlin.torus')
@@ -56,7 +56,7 @@ class Rack(Device):
         topology = TorusTopology(f"{self.name}.TorusTopology",
                                  self.attr['shape'], self.attr['nodes'])
         router.add_subcomponent(topology, "topology")
-        graph.add(router)
+        # graph.add(router)
 
         # make all the torus ports available outside the rack
         for i in range(4):
@@ -68,7 +68,7 @@ class Rack(Device):
                             (self.attr['rack'] * self.attr['nodes']) + node,
                             self.attr['racks'], self.attr['nodes'],
                             self.attr['cores'])
-            graph.add(server)
+            # graph.add(server)
             graph.link(router.port('port', None), server.network)
 
         return graph
@@ -86,7 +86,7 @@ def Cluster(shape: str = '2x2', nodes: int = 1,
         for y in range(dimY):
             racks[f"{x}x{y}"] = Rack(f"Rack{x}x{y}", shape, (x * dimY) + y,
                                      nodes, cores)
-            graph.add(racks[f"{x}x{y}"])
+            # graph.add(racks[f"{x}x{y}"])
 
     # initialize the four torus ports
     # order is 0: north, 1: east, 2: south, 3: west
@@ -136,6 +136,7 @@ if __name__ == "__main__":
 
     graph = Cluster(shape, nodes, cores)
     flat = graph.flatten()
+    flat.verify_links()
 
     builder = BuildSST()
 
@@ -146,4 +147,5 @@ if __name__ == "__main__":
     else:
         # generate a graphviz dot file and json output for demonstration
         graph.write_dot_hierarchy('cluster', draw=True, ports=True)
+        graph.write_dot_file("clusterFlat", draw=True, ports=True)
         builder.write(flat, 'cluster.json')
