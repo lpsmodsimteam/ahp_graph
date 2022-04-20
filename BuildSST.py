@@ -77,7 +77,7 @@ class BuildSST(object):
         else:
             # only import sst when we are going to build the graph
             import sst
-            rank = sst.getSSTMyMPIRank()
+            rank = sst.getMyMPIRank()
 
             rankGraph = graph
             if partialExpand:

@@ -134,7 +134,7 @@ if __name__ == "__main__":
         cores = args.cores
 
     dims = [int(x) for x in shape.split('x')]
-    ranks = dims[0] * dims[1]
+    racks = dims[0] * dims[1]
 
     # Make each rack its own partition (rank)
     graph = Cluster(shape, nodes, cores)
@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
     if SST:
         # If running within SST, generate the SST graph
-        builder.build(graph, nranks=ranks, partialExpand=True)
+        builder.build(graph, nranks=racks, partialExpand=True)
         # We could also build the graph without specifying nranks and let
         # sst do the partitioning:
         # builder.build(graph, partialExpand=True)
