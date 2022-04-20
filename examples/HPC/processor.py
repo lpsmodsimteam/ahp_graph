@@ -225,12 +225,10 @@ class Processor(Device):
     def expand(self) -> 'DeviceGraph':
         """Expand the server into its components."""
         graph = DeviceGraph()  # initialize a Device Graph
-        # add myself to the graph, useful if the assembly has ports
-        graph.add(self)
 
         # Reminder to add subcomponents to the main component BEFORE adding
-        # the main component to the DeviceGraph. The subcomponents will be
-        # automatically added when the main component is added
+        # the main component to the DeviceGraph. You can also link directly
+        # to the subcomponents after they are connected to a parent component
         cpu = VanadisCPU(f"{self.name}.VanadisCPU")
 
         decoder = VanadisMIPSDecoder(f"{self.name}.VanadisMIPSDecoder")
@@ -271,17 +269,7 @@ class Processor(Device):
 
         bus = Bus(f"{self.name}.Bus")
 
-        # Now that the subcomponents have been added, we can add things
-        # to the DeviceGraph and start linking them together.
-        # Only devices that are NOT subcomponents get added to the graph
-        # directly!
-        # graph.add(cpu)
-        # graph.add(nodeOS)
-        # graph.add(nodeOSL1D)
-        # graph.add(cpuL1D)
-        # graph.add(cpuL1I)
-        # graph.add(bus)
-
+        # Linking automatically adds the devices as needed
         graph.link(dcache.port('port'), cpu_to_L1D.port('port'), '1ns')
         graph.link(icache.port('port'), cpu_to_L1I.port('port'), '1ns')
         graph.link(nodeOSmem.port('port'), nodeOSL1D.high_network(0), '1ns')
@@ -291,5 +279,8 @@ class Processor(Device):
         graph.link(osHandler.os_link, nodeOS.core(0), '5ns')
 
         # Our external connection goes through the memHierarchy Bus
-        graph.link(bus.low_network(0), self.low_network(0), '1ns')
+        # Generally you don't want to put latency on the links to assembly
+        # ports (ex: self.port) and allow whatever uses the assembly to
+        # specify latency for the connection (it will get ignored anyway)
+        graph.link(bus.low_network(0), self.low_network(0))
         return graph

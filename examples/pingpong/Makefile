@@ -9,7 +9,7 @@ OBJ = $(SRC:%.cpp=.build/%.o)
 DEP = $(OBJ:%.o=%.d)
 
 # Tell Make that these are NOT files, just targets
-.PHONY: all install uninstall clean test
+.PHONY: all install uninstall clean test sst
 
 # Simply typing "make" calls this by default, so everything gets build and installed
 all: install
@@ -28,8 +28,10 @@ libpingpong.so: $(OBJ)
 install: libpingpong.so
 	sst-register pingpong pingpong_LIBDIR=$(CURDIR)
 
-test: install
+test:
 	python3 pingpong.py
+
+sst: install
 	sst pingpong.py
 
 # Unregister the model with SST

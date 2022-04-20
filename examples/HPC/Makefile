@@ -7,8 +7,8 @@ LIB=$(APPS)/librdma.a
 # Simply typing "make" calls this by default
 all: test
 
-test: $(LIB)
-	python3 HPC.py --shape=3x3 --nodes=16 --cores=8
+test:
+	python3 HPC.py #--shape=3x3 --nodes=16 --cores=8
 
 sst: $(LIB)
 	sst HPC.py #--shape=3x3 --nodes=16 --cores=8

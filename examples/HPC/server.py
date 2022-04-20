@@ -207,14 +207,11 @@ class Server(Device):
     def expand(self) -> 'DeviceGraph':
         """Expand the server into its components."""
         graph = DeviceGraph()  # initialize a Device Graph
-        # add myself to the graph, useful if the assembly has ports
-        graph.add(self)
 
         # Setup the NoC first so we can connect the Processors to it
         NoC = Router(f"{self.name}.NoC", 'NoC', 0, self.attr['cores'] + 2)
         NoC_topo = SingleRouter(f"{self.name}.NoC_topo")
         NoC.add_subcomponent(NoC_topo, 'topology')
-        graph.add(NoC)
 
         # Generate the appropriate number of Processors and L2 Caches
         for core in range(self.attr['cores']):
@@ -225,9 +222,6 @@ class Server(Device):
             L2_to_mem = MemNIC(f"{self.name}.CPU{core}_L1_to_mem", 'Cache')
             L2.add_subcomponent(L1_to_L2, 'cpulink')
             L2.add_subcomponent(L2_to_mem, 'memlink')
-
-            # graph.add(cpu)
-            # graph.add(L2)
 
             graph.link(cpu.low_network(0), L1_to_L2.port('port'), '1ns')
             graph.link(L2_to_mem.port('port'), NoC.port('port', core), '1ns')
@@ -256,14 +250,13 @@ class Server(Device):
         nic.add_subcomponent(mmioIf, 'mmio')
         nic.add_subcomponent(netLink, 'rtrLink')
 
-        # graph.add(dirctrl)
-        # graph.add(memctrl)
-        # graph.add(nic)
-
         graph.link(NoC.port('port', None), dirNIC.port('port'), '1ns')
         graph.link(NoC.port('port', None), mmioNIC.port('port'), '10ns')
         graph.link(dir_to_mem.port('port'), mem_to_dir.port('port'), '1ns')
 
         # Our external link is through the RDMA_NIC
-        graph.link(netLink.port('rtr_port'), self.network, '10ns')
+        # Generally you don't want to put latency on the links to assembly
+        # ports (ex: self.port) and allow whatever uses the assembly to
+        # specify latency for the connection (it will get ignored anyway)
+        graph.link(netLink.port('rtr_port'), self.network)
         return graph

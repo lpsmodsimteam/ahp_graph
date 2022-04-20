@@ -108,7 +108,7 @@ class DevicePort:
 
     def __repr__(self) -> str:
         """Return a string representation of this DevicePort."""
-        return f"{self.device.name}:{self.get_name()}"
+        return f"{self.device.name}.{self.get_name()}"
 
     def __cmp__(self, other: 'DevicePort') -> tuple:
         """Generate tuples to use for comparison."""
@@ -123,10 +123,20 @@ class DevicePort:
         (p0, p1) = self.__cmp__(other)
         return p0 < p1
 
+    def __le__(self, other: 'DevicePort') -> bool:
+        """Compare this DevicePort to another."""
+        (p0, p1) = self.__cmp__(other)
+        return p0 <= p1
+
     def __gt__(self, other: 'DevicePort') -> bool:
         """Compare this DevicePort to another."""
         (p0, p1) = self.__cmp__(other)
         return p0 > p1
+
+    def __ge__(self, other: 'DevicePort') -> bool:
+        """Compare this DevicePort to another."""
+        (p0, p1) = self.__cmp__(other)
+        return p0 >= p1
 
     def __eq__(self, other: 'DevicePort') -> bool:
         """Compare this DevicePort to another."""
@@ -135,7 +145,8 @@ class DevicePort:
 
     def __hash__(self):
         """Need to define a hash function since we defined __eq__."""
-        return id(self)
+        return hash((self.device.name, self.name,
+                     -1 if self.number is None else self.number))
 
 
 class Device:
@@ -150,7 +161,7 @@ class Device:
     Note that successive calls to port() will return the same DevicePort
     object so they can be used in sets and comparisons.
 
-    Each device must have a unique name and model.
+    Each device must have a unique name.
     """
 
     sstlib = None

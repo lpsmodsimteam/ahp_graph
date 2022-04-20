@@ -48,18 +48,18 @@ class Rack(Device):
     def expand(self) -> 'DeviceGraph':
         """Expand the rack into its components."""
         graph = DeviceGraph()  # initialize a Device Graph
-        # add myself to the graph, useful if the assembly has ports
-        graph.add(self)
 
         router = Router(f"{self.name}.Router", 'Interconnect',
                         self.attr['rack'], self.attr['nodes'] + 4)
         topology = TorusTopology(f"{self.name}.TorusTopology",
                                  self.attr['shape'], self.attr['nodes'])
         router.add_subcomponent(topology, "topology")
-        # graph.add(router)
 
         # make all the torus ports available outside the rack
         for i in range(4):
+            # Generally you don't want to put latency on the links to assembly
+            # ports (ex: self.port) and allow whatever uses the assembly to
+            # specify latency for the connection (it will get ignored anyway)
             graph.link(router.port('port', i), self.network(i))
 
         # connect the servers to the router
@@ -68,8 +68,7 @@ class Rack(Device):
                             (self.attr['rack'] * self.attr['nodes']) + node,
                             self.attr['racks'], self.attr['nodes'],
                             self.attr['cores'])
-            # graph.add(server)
-            graph.link(router.port('port', None), server.network)
+            graph.link(router.port('port', None), server.network, '10ns')
 
         return graph
 
@@ -93,10 +92,10 @@ def Cluster(shape: str = '2x2', nodes: int = 1,
     for x in range(dimX):
         for y in range(dimY):
             graph.link(racks[f"{x}x{y}"].network(1),
-                       racks[f"{(x+1) % dimX}x{y}"].network(3))
+                       racks[f"{(x+1) % dimX}x{y}"].network(3), '10ns')
 
             graph.link(racks[f"{x}x{y}"].network(0),
-                       racks[f"{x}x{(y+1) % dimY}"].network(2))
+                       racks[f"{x}x{(y+1) % dimY}"].network(2), '10ns')
 
     return graph
 
@@ -134,18 +133,22 @@ if __name__ == "__main__":
     if args.cores is not None:
         cores = args.cores
 
+    # Make each rack its own partition (rank)
     graph = Cluster(shape, nodes, cores)
-    flat = graph.flatten()
-    flat.verify_links()
+    for rack in graph.devices.values():
+        rack.set_partition(rack.attr['rack'])
 
     builder = BuildSST()
 
     if SST:
         # If running within SST, generate the SST graph
+        flat = graph.flatten()
+        flat.verify_links()
         builder.build(flat)
 
     else:
         # generate a graphviz dot file and json output for demonstration
         graph.write_dot_hierarchy('cluster', draw=True, ports=True)
-        graph.write_dot_file("clusterFlat", draw=True, ports=True)
-        builder.write(flat, 'cluster.json')
+        # partially expanding the graph takes an un-flattened graph
+        # it writes out each json file one at a time to save memory
+        builder.write(graph, 'cluster.json', racks, partialExpand=True)

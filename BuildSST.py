@@ -17,9 +17,9 @@ class BuildSST(object):
     We can build a live graph (build) or write a JSON file (write).
     """
 
-    def __init__(self) -> 'BuildSST':
+    def __init__(self, timebase: str = '1ps') -> 'BuildSST':
         """Create the SST builder object. The default time base is 1ps."""
-        self._TIMEBASE = "1ps"
+        self._TIMEBASE = timebase
 
     def __encode(self, attr, stringify: bool = False) -> dict:
         """

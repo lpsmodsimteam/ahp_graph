@@ -94,11 +94,7 @@ class DeviceGraph:
         self.links[linkName] = (p0, p1, latency)
 
     def verify_links(self) -> None:
-        """
-        Verify that all required ports are linked up.
-
-        Throw an exception if there is an error.
-        """
+        """Verify that all required ports are linked up."""
         # Create a map of devices to all ports linked on those devices.
         d2ports = collections.defaultdict(set)
         for (p0, p1, _) in self.links.values():
@@ -200,17 +196,11 @@ class DeviceGraph:
 
         # Expand the required devices
         for device in assemblies:
-            oldPorts = device.ports
-            device.ports = collections.defaultdict(dict)
             subgraph = device.expand()
 
-            # Update the list of devices from the subgraph.  We
-            # throw away the node we just expanded.  Expanded
-            # devices inherit the partition of the parent.
+            # Expanded devices inherit the partition of the parent.
             for d in subgraph.devices.values():
-                if d != device and d.subOwner is None:
-                    d.rank = device.rank
-                    d.thread = device.thread
+                d.set_partition(device.rank, device.thread)
 
             def find_other_port(port):
                 """
@@ -224,22 +214,22 @@ class DeviceGraph:
                     if p0 == port:
                         links[p0.device].remove((p0, p1, t))
                         links[p1.device].remove((p1, p0, t))
-                        return p1
-                print(f'Not finding port {port}')
-                return None
+                        return (p1, t)
+                return (None, None)
 
-            # Update the links
+            # Update the links. Latency will come from the link defined
+            # higher up in the hierarchy
             for (p0, p1, t) in subgraph.links.values():
                 if p0.device == device:
-                    p2 = find_other_port(p0)
+                    (p2, t2) = find_other_port(p0)
                     if p2 is not None:
-                        links[p1.device].add((p1, p2, t))
-                        links[p2.device].add((p2, p1, t))
+                        links[p1.device].add((p1, p2, t2))
+                        links[p2.device].add((p2, p1, t2))
                 elif p1.device == device:
-                    p2 = find_other_port(p1)
+                    (p2, t2) = find_other_port(p1)
                     if p2 is not None:
-                        links[p0.device].add((p0, p2, t))
-                        links[p2.device].add((p2, p0, t))
+                        links[p0.device].add((p0, p2, t2))
+                        links[p2.device].add((p2, p0, t2))
                 else:
                     links[p0.device].add((p0, p1, t))
                     links[p1.device].add((p1, p0, t))
@@ -313,10 +303,12 @@ class DeviceGraph:
             else:
                 return node
 
+        # Create a list of all of the links
         links = list()
         for (p0, p1, latency) in self.links.values():
             links.append((port2Node(p0), port2Node(p1)))
 
+        # Setup a counter so we can check for duplicates
         duplicates = collections.Counter(links)
         for key in duplicates:
             label = ''
@@ -329,7 +321,7 @@ class DeviceGraph:
                 if type(key[i]) is tuple:
                     graphNodes[i] = key[i][0]
                     graphPorts[i] = key[i][1]
-
+            # Add edges using the number of links as a label
             graph.add_edge(graphNodes[0], graphNodes[1], label=label,
                            tailport=graphPorts[0], headport=graphPorts[1])
 
@@ -396,6 +388,7 @@ class DeviceGraph:
             # no provided assembly, this is most likely the top level
             subgraph = graph
 
+        # Loop through all devices and add them to the graphviz graph
         for dev in self.devices.values():
             if assembly != dev.name:
                 label = dev.name

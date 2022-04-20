@@ -39,17 +39,11 @@ class pingpong(Device):
     def expand(self) -> 'DeviceGraph':
         """Expand the overall architecture into its components."""
         graph = DeviceGraph()  # initialize a Device Graph
-        # add myself to the graph, useful if the assembly has ports
-        graph.add(self)
 
         ping = Ping("Ping", self.attr["model"])  # create a Ping Device
         pong = Pong("Pong")  # create a Pong Device
 
-        # add ping and pong to the graph
-        graph.add(ping)
-        graph.add(pong)
-
-        # link ping and pong
+        # link ping and pong, automatically adds the devices to the graph
         graph.link(ping.inout, pong.inout)
 
         return graph
