@@ -145,7 +145,9 @@ if __name__ == "__main__":
 
     if SST:
         # If running within SST, generate the SST graph
+        # For this to work you need to pass --parallel-load=SINGLE to sst
         builder.build(graph, nranks=racks, partialExpand=True)
+
         # We could also build the graph without specifying nranks and let
         # sst do the partitioning:
         # builder.build(graph, partialExpand=True)

@@ -67,8 +67,8 @@ class BuildSST(object):
         # If this is serial, generate the entire graph
         if nranks == 1:
             return self.__build_model(
-                graph,
-                nranks,
+                graph.attr,
+                False,
                 graph.devices.values(),
                 graph.links.values()
             )
@@ -78,6 +78,7 @@ class BuildSST(object):
             # only import sst when we are going to build the graph
             import sst
             rank = sst.getMyMPIRank()
+            sst.setProgramOption("partitioner", "sst.self")
 
             rankGraph = graph
             if partialExpand:
@@ -89,13 +90,13 @@ class BuildSST(object):
                     raise RuntimeError(f"No rank for component: {d0.name}")
 
             return self.__build_model(
-                rankGraph,
-                nranks,
+                rankGraph.attr,
+                True,
                 partition[rank][0],
                 partition[rank][1]
             )
 
-    def __build_model(self, graph: 'DeviceGraph', nranks: int,
+    def __build_model(self, attr: dict, self_partition: bool,
                       rank_components: set, rank_links: list) -> dict:
         """
         Generate the model for the SST program.
@@ -108,13 +109,9 @@ class BuildSST(object):
         n2c = dict()
 
         # Set up global parameters.
-        global_params = self.__encode(graph.attr)
+        global_params = self.__encode(attr)
         for (key, val) in global_params.items():
             sst.addGlobalParam(key, key, val)
-
-        # If we have multiple ranks, then set up the self partitioner.
-        if nranks != 1:
-            sst.setProgramOption("partitioner", "sst.self")
 
         def recurseSubcomponents(dev: 'Device', comp: 'Component'):
             for (d1, n1, s1) in dev.subs:
@@ -142,7 +139,7 @@ class BuildSST(object):
                 c0 = sst.Component(d0.name, d0.sstlib)
                 c0.addParams(self.__encode(d0.attr))
                 # Set the component rank if we are self-partitioning
-                if nranks != 1:
+                if self_partition:
                     c0.setRank(d0.rank, d0.thread)
                 n2c[d0.name] = c0
                 for key in global_params:
@@ -178,7 +175,7 @@ class BuildSST(object):
         # If this is serial, just dump the whold thing.
         if nranks == 1:
             self.__write_model(
-                graph,
+                graph.attr,
                 filename,
                 nranks,
                 graph.devices.values(),
@@ -198,7 +195,7 @@ class BuildSST(object):
 
             for rank in range(nranks):
                 self.__write_model(
-                    graph,
+                    graph.attr,
                     base + str(rank) + ext,
                     nranks,
                     partition[rank][0],
@@ -219,7 +216,7 @@ class BuildSST(object):
                         raise RuntimeError(f"No rank for component: {d.name}")
 
                 self.__write_model(
-                    rankGraph,
+                    rankGraph.attr,
                     base + str(rank) + ext,
                     nranks,
                     partition[rank][0],
@@ -266,7 +263,7 @@ class BuildSST(object):
 
         return partition
 
-    def __write_model(self, graph: 'DeviceGraph', filename: str, nranks: int,
+    def __write_model(self, attr: dict, filename: str, nranks: int,
                       rank_components: set, rank_links: list,
                       program_options: dict) -> None:
         """
@@ -288,7 +285,7 @@ class BuildSST(object):
             model["program_options"]["partitioner"] = "sst.self"
 
         # Set up global parameters.
-        global_params = self.__encode(graph.attr, True)
+        global_params = self.__encode(attr, True)
         model["global_params"] = dict()
         for (key, val) in global_params.items():
             model["global_params"][key] = dict({key: val})
