@@ -143,6 +143,9 @@ if __name__ == "__main__":
 
     # Create a cluster with the given parameters
     graph = Cluster(shape, nodes, cores)
+    # Make each rack its own partition (rank)
+    for rack in graph.devices.values():
+        rack.set_partition(rack.attr['rack'])
 
     builder = BuildSST()
 
@@ -150,28 +153,21 @@ if __name__ == "__main__":
         # If running within SST, generate the SST graph
         # There are multiple ways to run, below are a few common examples
 
-        # SST partitioner, flatten the whole graph and then run it in sst
+        # SST partitioner
         # This will work in serial or running SST with MPI in parallel
         if partitioner.lower() == 'sst':
-            flat = graph.flatten()
-            flat.verify_links()
-            builder.build(flat)
+            builder.build(graph)
 
         # MPI mode with PyDL graph partitioning. Specifying nranks tells
-        # BuildSST that it is doing the partitioning, not SST. If we are
-        # doing the partitioning, we need the un-flattened graph so that
-        # we can partially expand it and only instantiate the devices
-        # for this particular rank
+        # BuildSST that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
         elif partitioner.lower() == 'pydl':
-            # Make each rack its own partition (rank)
-            for rack in graph.devices.values():
-                rack.set_partition(rack.attr['rack'])
             builder.build(graph, nranks=racks)
 
     else:
         # generate a graphviz dot file and json output for demonstration
         graph.write_dot_hierarchy('cluster', draw=True, ports=True)
-        # partially expanding the graph takes an un-flattened graph
-        # it writes out each json file one at a time to save memory
+        # partially expanding the graph only expands the portions of the graph
+        # relevant to the rank being output at that time, therefore saving
+        # memory by not flattening the entire graph all at once
         builder.write(graph, 'cluster.json', racks, partialExpand=True)

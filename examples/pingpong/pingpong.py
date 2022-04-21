@@ -93,7 +93,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # read in the variables if provided
-    num = 1
+    num = 2
     partitioner = 'sst'
     if args.num is not None:
         num = args.num
@@ -102,8 +102,9 @@ if __name__ == "__main__":
 
     # Construct a DeviceGraph with the specified architecture
     graph = architecture(5, num)
-    flat = graph.flatten()
-    flat.verify_links()
+    # partition the graph
+    for p in graph.devices.values():
+        p.set_partition(int(p.name.split('PingPong')[1]))
 
     builder = BuildSST()
 
@@ -111,23 +112,23 @@ if __name__ == "__main__":
         # If running within SST, generate the SST graph
         # There are multiple ways to run, below are a few common examples
 
-        # SST partitioner, use the flattened graph and pass to sst
+        # SST partitioner
         # This will work in serial or running SST with MPI in parallel
         if partitioner.lower() == 'sst':
-            builder.build(flat)
+            builder.build(graph)
 
         # MPI mode with PyDL graph partitioning. Specifying nranks tells
-        # BuildSST that it is doing the partitioning, not SST. If we are
-        # doing the partitioning, we need the un-flattened graph so that
-        # we can partially expand it and only instantiate the devices
-        # for this particular rank
+        # BuildSST that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
         elif partitioner.lower() == 'pydl':
-            # first we need to partition the graph
-            for p in graph.devices.values():
-                p.set_partition(int(p.name.split('PingPong')[1]))
             builder.build(graph, nranks=num)
+
     else:
         # generate a graphviz dot file and json output for demonstration
-        flat.write_dot_file("pingpong", draw=True, ports=True)
-        builder.write(flat, "pingpong.json")
+        graph.write_dot_file("pingpongFlat", draw=True, ports=True)
+        builder.write(graph, "pingpongFlat.json")
+
+        # generate a different view including the hierarchy, and write out
+        # the PyDL partitioned graph
+        graph.write_dot_hierarchy("pingpong", draw=True, ports=True)
+        builder.write(graph, "pingpong.json", nranks=num)

@@ -62,9 +62,16 @@ class BuildSST(object):
         Build the SST graph.
 
         Return a dictionary of component names to SST component objects.
+        If you have an extremely large graph, it is recommended that you use
+        PyDL to do the graph partitioning instead of letting SST do it. You
+        can do this by using the Device.set_partition() function and then
+        setting nranks in this function to the total number of ranks used
         """
-        # If this is serial, generate the entire graph
+        # If this is serial or sst is doing the partitioning,
+        # generate the entire graph
         if nranks == 1:
+            graph = graph.flatten()
+            graph.verify_links()
             return self.__build_model(
                 graph.attr,
                 False,
@@ -84,12 +91,13 @@ class BuildSST(object):
 
             sst.setProgramOption("partitioner", "sst.self")
 
+            # check to make sure the graph has ranks specified for all devices
+            for d in graph.devices.values():
+                if d.rank is None:
+                    raise RuntimeError(f"No rank for component: {d.name}")
+
             rankGraph = graph.flatten(rank=rank).follow_links(rank)
             partition = self.__partition_graph(rankGraph, nranks)
-
-            for d0 in graph.devices.values():
-                if d0.rank is None:
-                    raise RuntimeError(f"No rank for component: {d0.name}")
 
             return self.__build_model(
                 rankGraph.attr,
@@ -170,10 +178,22 @@ class BuildSST(object):
 
         The program_options dictionary provides a way to pass SST
         prograph options, such as stopAtCycle.
-        If partialExpand is set to True, then the graph will be flattened per
-        rank and links followed across ranks but the entire graph will not
-        necessarily be expanded all at once
+
+        If you have an extremely large graph, it is recommended that you use
+        PyDL to do the graph partitioning instead of letting SST do it. You
+        can do this by using the Device.set_partition() function and then
+        setting nranks in this function to the total number of ranks used
+
+        If you have an extremely large graph, it is recommended that you set
+        partialExpand to True. If partialExpand is set to True, then the graph
+        will be flattened per rank and links followed across ranks but the
+        entire graph will not necessarily be expanded all at once
         """
+        # If we aren't partiallyExpanding, flatten the graph completely
+        if not partialExpand or nranks == 1:
+            graph = graph.flatten()
+            graph.verify_links()
+
         # If this is serial, just dump the whold thing.
         if nranks == 1:
             self.__write_model(
@@ -182,40 +202,26 @@ class BuildSST(object):
                 nranks,
                 graph.devices.values(),
                 graph.links.values(),
-                program_options,
+                program_options
             )
 
-        # Graph has already been expanded.  Find the partition
-        # information and write out the models.
-        elif not partialExpand:
-            (base, ext) = os.path.splitext(filename)
-            partition = self.__partition_graph(graph, nranks)
-
-            for d0 in graph.devices.values():
-                if d0.rank is None:
-                    raise RuntimeError(f"No rank for component: {d0.name}")
-
-            for rank in range(nranks):
-                self.__write_model(
-                    graph.attr,
-                    base + str(rank) + ext,
-                    nranks,
-                    partition[rank][0],
-                    partition[rank][1],
-                    program_options,
-                )
-
-        # Perform a partial expansion.
+        # Find the partition information and write out the models.
         else:
             (base, ext) = os.path.splitext(filename)
 
-            for rank in range(nranks):
-                rankGraph = graph.flatten(rank=rank).follow_links(rank)
-                partition = self.__partition_graph(rankGraph, nranks)
+            # check to make sure the graph has ranks specified for all devices
+            for d in graph.devices.values():
+                if d.rank is None:
+                    raise RuntimeError(f"No rank for component: {d.name}")
 
-                for d in rankGraph.devices.values():
-                    if d.rank is None:
-                        raise RuntimeError(f"No rank for component: {d.name}")
+            if not partialExpand:
+                partition = self.__partition_graph(graph, nranks)
+                rankGraph = graph
+
+            for rank in range(nranks):
+                if partialExpand:
+                    rankGraph = graph.flatten(rank=rank).follow_links(rank)
+                    partition = self.__partition_graph(rankGraph, nranks)
 
                 self.__write_model(
                     rankGraph.attr,
@@ -223,13 +229,14 @@ class BuildSST(object):
                     nranks,
                     partition[rank][0],
                     partition[rank][1],
-                    program_options,
+                    program_options
                 )
 
                 # Manually remove each graph to make sure we don't overflow
-                del rankGraph
-                del partition
-                gc.collect()
+                if partialExpand:
+                    del rankGraph
+                    del partition
+                    gc.collect()
 
     def __partition_graph(self, graph: 'DeviceGraph', nranks: int) -> list:
         """

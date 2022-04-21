@@ -343,7 +343,7 @@ class DeviceGraph:
                             draw: bool = False, ports: bool = False,
                             assembly: str = None, types: set = None) -> set:
         """
-        Take an un-flattened DeviceGraph and write dot files for each assembly.
+        Take a DeviceGraph and write dot files for each assembly.
 
         Write a graphviz dot file for each unique assembly (type, model) in the
         graph
@@ -429,7 +429,15 @@ class DeviceGraph:
 
     def write_dot_file(self, name: str,
                        draw: bool = False, ports: bool = False) -> None:
-        """Write the device graph as a DOT file."""
+        """
+        Write the device graph as a DOT file.
+
+        This function will flatten the graph so it is not recommended for using
+        on large graphs. It is suggested that you use write_dot_hierarchy for
+        large graphs
+        """
+        self = self.flatten()
+        self.verify_links()
         graph = self.__format_graph(name, ports)
 
         for dev in self.devices.values():
