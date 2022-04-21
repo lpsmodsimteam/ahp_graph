@@ -77,6 +77,11 @@ class BuildSST(object):
             # only import sst when we are going to build the graph
             import sst
             rank = sst.getMyMPIRank()
+
+            # If this is an extra rank, don't do anything
+            if rank >= nranks:
+                return dict()
+
             sst.setProgramOption("partitioner", "sst.self")
 
             rankGraph = graph.flatten(rank=rank).follow_links(rank)

@@ -7,7 +7,8 @@ from PyDL import *
 
 
 @sstlib("pingpong.Ping")
-@port("inout", Port.Single)
+@port("input", Port.Single, 'StringEvent', Port.Required)
+@port("output", Port.Single, 'StringEvent', Port.Required)
 class Ping(Device):
     """Ping Device: has a Name and a Model type."""
 
@@ -18,7 +19,8 @@ class Ping(Device):
 
 
 @sstlib("pingpong.Pong")
-@port("inout", Port.Single)
+@port("input", Port.Single, 'StringEvent', Port.Required)
+@port("output", Port.Single, 'StringEvent', Port.Required)
 class Pong(Device):
     """Pong Device."""
 
@@ -28,8 +30,10 @@ class Pong(Device):
 
 
 @assembly
+@port("input", Port.Single, 'StringEvent', Port.Optional)
+@port("output", Port.Single, 'StringEvent', Port.Optional)
 class pingpong(Device):
-    """Overall architecture layout."""
+    """Assembly of a ping and pong device with connections outside."""
 
     def __init__(self, name: str, size: int = 10,
                  attr: dict = None) -> 'Device':
@@ -40,13 +44,33 @@ class pingpong(Device):
         """Expand the overall architecture into its components."""
         graph = DeviceGraph()  # initialize a Device Graph
 
-        ping = Ping("Ping", self.attr["model"])  # create a Ping Device
-        pong = Pong("Pong")  # create a Pong Device
+        # create a Ping Device
+        ping = Ping(f"{self.name}.Ping", self.attr["model"])
+        pong = Pong(f"{self.name}.Pong")  # create a Pong Device
 
         # link ping and pong, automatically adds the devices to the graph
-        graph.link(ping.inout, pong.inout)
+        graph.link(ping.output, pong.input)
+
+        # Connect pingpong's input to ping's input
+        graph.link(ping.input, self.input)
+        # Connect pingpong's output to pong's output
+        graph.link(pong.output, self.output)
 
         return graph
+
+
+def architecture(repeats: int = 10, num: int = 1) -> 'DeviceGraph':
+    """Create pingpong(s) and link them together in a loop."""
+    graph = DeviceGraph()
+    pingpongs = dict()
+
+    for i in range(num):
+        pingpongs[i] = pingpong(f"PingPong{i}", repeats)
+
+    for i in range(num):
+        graph.link(pingpongs[i].output, pingpongs[(i+1) % num].input)
+
+    return graph
 
 
 if __name__ == "__main__":
@@ -54,26 +78,56 @@ if __name__ == "__main__":
     If we are running as a script (either via Python or from SST), then
     proceed.  Check if we are running with SST or from Python.
     """
+    import argparse
     try:
         import sst
-
         SST = True
     except ImportError:
         SST = False
 
-    # Construct a DeviceGraph and put pingpong into it, then flatten the graph
-    # and make sure the connections are valid
-    graph = DeviceGraph()
-    graph.add(pingpong("PingPong", 5))
-    graph = graph.flatten()
-    graph.verify_links()
+    parser = argparse.ArgumentParser(description='PingPong')
+    parser.add_argument('--num', type=int,
+                        help='how many pingpongs to include')
+    parser.add_argument('--partitioner', type=str,
+                        help='which partitioner to use: pydl, sst')
+    args = parser.parse_args()
+
+    # read in the variables if provided
+    num = 1
+    partitioner = 'sst'
+    if args.num is not None:
+        num = args.num
+    if args.partitioner is not None:
+        partitioner = args.partitioner
+
+    # Construct a DeviceGraph with the specified architecture
+    graph = architecture(5, num)
+    flat = graph.flatten()
+    flat.verify_links()
 
     builder = BuildSST()
 
     if SST:
         # If running within SST, generate the SST graph
-        builder.build(graph)
+        # There are multiple ways to run, below are a few common examples
+
+        # SST partitioner, use the flattened graph and pass to sst
+        # This will work in serial or running SST with MPI in parallel
+        if partitioner.lower() == 'sst':
+            builder.build(flat)
+
+        # MPI mode with PyDL graph partitioning. Specifying nranks tells
+        # BuildSST that it is doing the partitioning, not SST. If we are
+        # doing the partitioning, we need the un-flattened graph so that
+        # we can partially expand it and only instantiate the devices
+        # for this particular rank
+        # For this to work you need to pass --parallel-load=SINGLE to sst
+        elif partitioner.lower() == 'pydl':
+            # first we need to partition the graph
+            for p in graph.devices.values():
+                p.set_partition(int(p.name.split('PingPong')[1]))
+            builder.build(graph, nranks=num)
     else:
         # generate a graphviz dot file and json output for demonstration
-        graph.write_dot_file("pingpong", draw=True, ports=True)
-        builder.write(graph, "pingpong.json")
+        flat.write_dot_file("pingpong", draw=True, ports=True)
+        builder.write(flat, "pingpong.json")

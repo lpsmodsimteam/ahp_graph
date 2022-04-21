@@ -114,14 +114,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description='HPC Cluster Simulation')
-    parser.add_argument('--partitioner', type=str,
-                        help='which partitioner to use: pydl, sst')
     parser.add_argument('--shape', type=str,
                         help='optional shape to use for the topology')
     parser.add_argument('--nodes', type=int,
                         help='optional number of nodes per rack')
     parser.add_argument('--cores', type=int,
                         help='optional number of cores per server')
+    parser.add_argument('--partitioner', type=str,
+                        help='which partitioner to use: pydl, sst')
     args = parser.parse_args()
 
     # read in the variables if provided
@@ -141,10 +141,8 @@ if __name__ == "__main__":
     dims = [int(x) for x in shape.split('x')]
     racks = dims[0] * dims[1]
 
-    # Make each rack its own partition (rank)
+    # Create a cluster with the given parameters
     graph = Cluster(shape, nodes, cores)
-    for rack in graph.devices.values():
-        rack.set_partition(rack.attr['rack'])
 
     builder = BuildSST()
 
@@ -166,6 +164,9 @@ if __name__ == "__main__":
         # for this particular rank
         # For this to work you need to pass --parallel-load=SINGLE to sst
         elif partitioner.lower() == 'pydl':
+            # Make each rack its own partition (rank)
+            for rack in graph.devices.values():
+                rack.set_partition(rack.attr['rack'])
             builder.build(graph, nranks=racks)
 
     else:
