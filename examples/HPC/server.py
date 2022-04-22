@@ -209,6 +209,8 @@ class Server(Device):
         graph = DeviceGraph()  # initialize a Device Graph
 
         # Setup the NoC first so we can connect the Processors to it
+        # Device names created by an assembly will automatically have the
+        # assembly name prefixed to the name provided.
         NoC = Router("NoC", 'NoC', 0, self.attr['cores'] + 2)
         NoC_topo = SingleRouter("NoC_topo")
         NoC.add_subcomponent(NoC_topo, 'topology')

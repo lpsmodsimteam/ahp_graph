@@ -49,6 +49,8 @@ class Rack(Device):
         """Expand the rack into its components."""
         graph = DeviceGraph()  # initialize a Device Graph
 
+        # Device names created by an assembly will automatically have the
+        # assembly name prefixed to the name provided.
         router = Router("Router", 'Interconnect',
                         self.attr['rack'], self.attr['nodes'] + 4)
         topology = TorusTopology("TorusTopology",

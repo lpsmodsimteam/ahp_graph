@@ -229,6 +229,8 @@ class Processor(Device):
         # Reminder to add subcomponents to the main component BEFORE adding
         # the main component to the DeviceGraph. You can also link directly
         # to the subcomponents after they are connected to a parent component
+        # Device names created by an assembly will automatically have the
+        # assembly name prefixed to the name provided.
         cpu = VanadisCPU("VanadisCPU")
 
         decoder = VanadisMIPSDecoder("VanadisMIPSDecoder")

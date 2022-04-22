@@ -45,6 +45,8 @@ class pingpong(Device):
         graph = DeviceGraph()  # initialize a Device Graph
 
         # create a Ping Device
+        # Device names created by an assembly will automatically have the
+        # assembly name prefixed to the name provided.
         ping = Ping("Ping", self.attr["model"])
         pong = Pong("Pong")  # create a Pong Device
 
