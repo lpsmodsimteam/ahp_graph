@@ -658,12 +658,13 @@ class DeviceGraph:
 
         # Second, link the component ports using graph links.
         for (name, (p0, p1, t)) in self.links.items():
-            c0 = n2c[p0.device.name]
-            c1 = n2c[p1.device.name]
-            s0 = p0.get_name()
-            s1 = p1.get_name()
-            link = sst.Link(name)
-            link.connect((c0, s0, t), (c1, s1, t))
+            if p0.device.sstlib is not None and p1.device.sstlib is not None:
+                c0 = n2c[p0.device.name]
+                c1 = n2c[p1.device.name]
+                s0 = p0.get_name()
+                s1 = p1.get_name()
+                link = sst.Link(name)
+                link.connect((c0, s0, t), (c1, s1, t))
 
         # Return a map of component names to components.
         return n2c
@@ -736,21 +737,22 @@ class DeviceGraph:
         # Now define the links between components.
         links = list()
         for (name, (p0, p1, t)) in self.links.items():
-            links.append(
-                {
-                    "name": name,
-                    "left": {
-                        "component": p0.device.name,
-                        "port": p0.get_name(),
-                        "latency": t,
-                    },
-                    "right": {
-                        "component": p1.device.name,
-                        "port": p1.get_name(),
-                        "latency": t,
-                    },
-                }
-            )
+            if p0.device.sstlib is not None and p1.device.sstlib is not None:
+                links.append(
+                    {
+                        "name": name,
+                        "left": {
+                            "component": p0.device.name,
+                            "port": p0.get_name(),
+                            "latency": t,
+                        },
+                        "right": {
+                            "component": p1.device.name,
+                            "port": p1.get_name(),
+                            "latency": t,
+                        },
+                    }
+                )
 
         model["links"] = links
 
