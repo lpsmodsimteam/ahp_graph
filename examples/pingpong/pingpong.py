@@ -45,8 +45,8 @@ class pingpong(Device):
         graph = DeviceGraph()  # initialize a Device Graph
 
         # create a Ping Device
-        ping = Ping(f"{self.name}.Ping", self.attr["model"])
-        pong = Pong(f"{self.name}.Pong")  # create a Pong Device
+        ping = Ping("Ping", self.attr["model"])
+        pong = Pong("Pong")  # create a Pong Device
 
         # link ping and pong, automatically adds the devices to the graph
         graph.link(ping.output, pong.input)

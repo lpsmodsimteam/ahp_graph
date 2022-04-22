@@ -229,45 +229,44 @@ class Processor(Device):
         # Reminder to add subcomponents to the main component BEFORE adding
         # the main component to the DeviceGraph. You can also link directly
         # to the subcomponents after they are connected to a parent component
-        cpu = VanadisCPU(f"{self.name}.VanadisCPU")
+        cpu = VanadisCPU("VanadisCPU")
 
-        decoder = VanadisMIPSDecoder(f"{self.name}.VanadisMIPSDecoder")
-        osHandler = VanadisMIPSOSHandler(f"{self.name}.VanadisMIPSOSHandler")
-        branch = VanadisBasicBranchUnit(f"{self.name}.VanadisBasicBranchUnit")
+        decoder = VanadisMIPSDecoder("VanadisMIPSDecoder")
+        osHandler = VanadisMIPSOSHandler("VanadisMIPSOSHandler")
+        branch = VanadisBasicBranchUnit("VanadisBasicBranchUnit")
         decoder.add_subcomponent(osHandler, "os_handler")
         decoder.add_subcomponent(branch, "branch_unit")
         cpu.add_subcomponent(decoder, 'decoder0')
 
-        icache = memInterface(f"{self.name}.ICache", self.attr['core'])
+        icache = memInterface("ICache", self.attr['core'])
         cpu.add_subcomponent(icache, 'mem_interface_inst')
 
         lsq = VanadisSequentialLoadStoreQueue(
-            f"{self.name}.VanadisSequentialLoadStoreQueue")
+            "VanadisSequentialLoadStoreQueue")
         cpu.add_subcomponent(lsq, 'lsq')
 
-        dcache = memInterface(f"{self.name}.DCache", self.attr['core'])
+        dcache = memInterface("DCache", self.attr['core'])
         lsq.add_subcomponent(dcache, 'memory_interface')
 
-        nodeOS = VanadisNodeOS(f"{self.name}.VanadisNodeOS",
-                               self.attr['cores'])
-        nodeOSmem = memInterface(f"{self.name}.NodeOSMemIF", self.attr['core'])
+        nodeOS = VanadisNodeOS("VanadisNodeOS", self.attr['cores'])
+        nodeOSmem = memInterface("NodeOSMemIF", self.attr['core'])
         nodeOS.add_subcomponent(nodeOSmem, 'mem_interface')
 
-        nodeOSL1D = Cache(f"{self.name}.nodeOSL1D", 'L1')
+        nodeOSL1D = Cache("nodeOSL1D", 'L1')
 
-        cpuL1D = Cache(f"{self.name}.cpuL1D", 'L1')
-        cpu_to_L1D = MemLink(f"{self.name}.cpu_to_L1D")
-        L1D_to_L2 = MemLink(f"{self.name}.L1D_to_L2")
+        cpuL1D = Cache("cpuL1D", 'L1')
+        cpu_to_L1D = MemLink("cpu_to_L1D")
+        L1D_to_L2 = MemLink("L1D_to_L2")
         cpuL1D.add_subcomponent(cpu_to_L1D, 'cpulink')
         cpuL1D.add_subcomponent(L1D_to_L2, 'memlink')
 
-        cpuL1I = Cache(f"{self.name}.cpuL1I", 'L1')
-        cpu_to_L1I = MemLink(f"{self.name}.cpu_to_L1I")
-        L1I_to_L2 = MemLink(f"{self.name}.L1I_to_L2")
+        cpuL1I = Cache("cpuL1I", 'L1')
+        cpu_to_L1I = MemLink("cpu_to_L1I")
+        L1I_to_L2 = MemLink("L1I_to_L2")
         cpuL1I.add_subcomponent(cpu_to_L1I, 'cpulink')
         cpuL1I.add_subcomponent(L1I_to_L2, 'memlink')
 
-        bus = Bus(f"{self.name}.Bus")
+        bus = Bus("Bus")
 
         # Linking automatically adds the devices as needed
         graph.link(dcache.port('port'), cpu_to_L1D.port('port'), '1ns')

@@ -215,8 +215,11 @@ class DeviceGraph:
             subgraph = device.expand()
 
             # Expanded devices inherit the partition of the parent.
+            # Also prepend the assembly's name to the names of the new devices
             for d in subgraph.devices.values():
-                d.partition = device.partition
+                if d != device:
+                    d.partition = device.partition
+                    d.name = f"{device.name}.{d.name}"
 
             def find_other_port(port):
                 """

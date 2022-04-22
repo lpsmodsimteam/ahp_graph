@@ -49,9 +49,9 @@ class Rack(Device):
         """Expand the rack into its components."""
         graph = DeviceGraph()  # initialize a Device Graph
 
-        router = Router(f"{self.name}.Router", 'Interconnect',
+        router = Router("Router", 'Interconnect',
                         self.attr['rack'], self.attr['nodes'] + 4)
-        topology = TorusTopology(f"{self.name}.TorusTopology",
+        topology = TorusTopology("TorusTopology",
                                  self.attr['shape'], self.attr['nodes'])
         router.add_subcomponent(topology, "topology")
 
@@ -64,7 +64,7 @@ class Rack(Device):
 
         # connect the servers to the router
         for node in range(self.attr['nodes']):
-            server = Server(f"{self.name}.Server{node}",
+            server = Server(f"Server{node}",
                             (self.attr['rack'] * self.attr['nodes']) + node,
                             self.attr['racks'], self.attr['nodes'],
                             self.attr['cores'])

@@ -20,6 +20,7 @@ python3 -m pip install pygraphviz orjson
 ```
 
 ## Useful Tips
+- Assembly names are automatically prefixed to the expanded devices names when the graph is flattened
 - Besides graph construction, the main features that PyDL provides are several outputs
   - DeviceGraph.build_sst() will immediately turn your graph into SST components and begin a simulation
   - DeviceGraph.write_json() will output the graph along with parameters in JSON format

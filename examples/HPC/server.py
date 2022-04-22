@@ -209,17 +209,17 @@ class Server(Device):
         graph = DeviceGraph()  # initialize a Device Graph
 
         # Setup the NoC first so we can connect the Processors to it
-        NoC = Router(f"{self.name}.NoC", 'NoC', 0, self.attr['cores'] + 2)
-        NoC_topo = SingleRouter(f"{self.name}.NoC_topo")
+        NoC = Router("NoC", 'NoC', 0, self.attr['cores'] + 2)
+        NoC_topo = SingleRouter("NoC_topo")
         NoC.add_subcomponent(NoC_topo, 'topology')
 
         # Generate the appropriate number of Processors and L2 Caches
         for core in range(self.attr['cores']):
-            cpu = Processor(f"{self.name}.CPU{core}", core, self.attr['cores'])
+            cpu = Processor(f"CPU{core}", core, self.attr['cores'])
 
-            L2 = Cache(f"{self.name}.CPU{core}_L2", 'L2')
-            L1_to_L2 = MemLink(f"{self.name}.CPU{core}_L1_to_L2")
-            L2_to_mem = MemNIC(f"{self.name}.CPU{core}_L1_to_mem", 'Cache')
+            L2 = Cache(f"CPU{core}_L2", 'L2')
+            L1_to_L2 = MemLink(f"CPU{core}_L1_to_L2")
+            L2_to_mem = MemNIC(f"CPU{core}_L1_to_mem", 'Cache')
             L2.add_subcomponent(L1_to_L2, 'cpulink')
             L2.add_subcomponent(L2_to_mem, 'memlink')
 
@@ -227,25 +227,25 @@ class Server(Device):
             graph.link(L2_to_mem.port('port'), NoC.port('port', core), '1ns')
 
         # Setup the main memory with controllers
-        dirctrl = DirectoryController(f"{self.name}.DirectoryController")
-        dir_to_mem = MemLink(f"{self.name}.dir_to_mem")
-        dirNIC = MemNIC(f"{self.name}.dirNIC", 'DirCtrl')
+        dirctrl = DirectoryController("DirectoryController")
+        dir_to_mem = MemLink("dir_to_mem")
+        dirNIC = MemNIC("dirNIC", 'DirCtrl')
         dirctrl.add_subcomponent(dir_to_mem, 'memlink')
         dirctrl.add_subcomponent(dirNIC, 'cpulink')
 
-        memctrl = MemController(f"{self.name}.MemController")
-        mem_to_dir = MemLink(f"{self.name}.mem_to_dir")
-        memory = simpleMem(f"{self.name}.simpleMem")
+        memctrl = MemController("MemController")
+        mem_to_dir = MemLink("mem_to_dir")
+        memory = simpleMem("simpleMem")
         memctrl.add_subcomponent(mem_to_dir, 'cpulink')
         memctrl.add_subcomponent(memory, 'backend')
 
         # Initialize the RDMA_NIC and its interfaces
-        nic = RDMA_NIC(f"{self.name}.NIC", self.attr['node'],
+        nic = RDMA_NIC("NIC", self.attr['node'],
                        self.attr['racks'] * self.attr['nodes'],
                        self.attr['cores'])
-        mmioIf = memInterface(f"{self.name}.MMIO_IF")
-        mmioNIC = MemNIC(f"{self.name}.MMIO_NIC", 'SHMEMNIC')
-        netLink = LinkControl(f"{self.name}.netLink")
+        mmioIf = memInterface("MMIO_IF")
+        mmioNIC = MemNIC("MMIO_NIC", 'SHMEMNIC')
+        netLink = LinkControl("netLink")
         mmioIf.add_subcomponent(mmioNIC, 'memlink')
         nic.add_subcomponent(mmioIf, 'mmio')
         nic.add_subcomponent(netLink, 'rtrLink')
