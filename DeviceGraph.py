@@ -7,6 +7,9 @@ represented by a hierarchical graph (aka an assembly).
 All links are unidirectional.
 """
 
+import os
+import gc
+import orjson
 import collections
 import pygraphviz
 from .Device import *
@@ -40,21 +43,6 @@ class DeviceGraph:
         for (p0, p1, _) in self.links.values():
             lines.append(f"{p0} <---> {p1}")
         return "\n".join(lines)
-
-    def add(self, device: 'Device') -> None:
-        """
-        Add a Device to the graph.
-
-        The device must be a PyDL Device. The name must be unique.
-        If the device has sub-components, then we add those, as well.
-        Do NOT add sub-components to a device after you have added it using
-        this function. Add sub-components first, then add the parent.
-        """
-        if device.name in self.devices:
-            raise RuntimeError(f"Name already in graph: {device.name}")
-        self.devices[device.name] = device
-        for (dev, _, _) in device.subs:
-            self.add(dev)
 
     def link(self, p0: 'DevicePort', p1: 'DevicePort',
              latency: str = '1ps') -> None:
@@ -92,6 +80,33 @@ class DeviceGraph:
                 f"{devs[0].name} and {devs[1].name}"
             )
         self.links[linkName] = (p0, p1, latency)
+
+    def add(self, device: 'Device') -> None:
+        """
+        Add a Device to the graph.
+
+        The device must be a PyDL Device. The name must be unique.
+        If the device has sub-components, then we add those, as well.
+        Do NOT add sub-components to a device after you have added it using
+        this function. Add sub-components first, then add the parent.
+        """
+        if device.name in self.devices:
+            raise RuntimeError(f"Name already in graph: {device.name}")
+        self.devices[device.name] = device
+        for (dev, _, _) in device.subs:
+            self.add(dev)
+
+    def count_devices(self) -> dict:
+        """
+        Count the devices in a graph.
+
+        Return a map of components to integer counts. The keys are of the
+        form "CLASS_MODEL".
+        """
+        counter = collections.defaultdict(int)
+        for device in self.devices():
+            counter[device.get_category()] += 1
+        return counter
 
     def verify_links(self) -> None:
         """Verify that all required ports are linked up."""
@@ -250,17 +265,259 @@ class DeviceGraph:
         return graph.flatten(None if levels is None else levels - 1,
                              name, rank, expand)
 
-    def count_devices(self) -> dict:
+    def build_sst(self, nranks: int = 1, program_options: dict = None) -> dict:
         """
-        Count the devices in a graph.
+        Build the SST graph.
 
-        Return a map of components to integer counts. The keys are of the
-        form "CLASS_MODEL".
+        The program_options dictionary provides a way to pass SST
+        prograph options, such as timebase and stopAtCycle.
+
+        Return a dictionary of component names to SST component objects.
+        If you have an extremely large graph, it is recommended that you use
+        PyDL to do the graph partitioning instead of letting SST do it. You
+        can do this by using the Device.set_partition() function and then
+        setting nranks in this function to the total number of ranks used
         """
-        counter = collections.defaultdict(int)
-        for device in self.devices():
-            counter[device.get_category()] += 1
-        return counter
+        # only import sst when we are going to build the graph
+        import sst
+        if program_options is not None:
+            for option in program_options:
+                sst.setProgramOption(option, program_options[option])
+
+        # If this is serial or sst is doing the partitioning,
+        # generate the entire graph
+        if nranks == 1:
+            self = self.flatten()
+            self.verify_links()
+            return self.__build_model(self.attr, False, self.devices.values(),
+                                      self.links.values())
+
+        # Find the partition information and build the model for this rank
+        else:
+            sst.setProgramOption("partitioner", "sst.self")
+            rank = sst.getMyMPIRank()
+            # If this is an extra rank, don't do anything
+            if rank >= nranks:
+                return dict()
+
+            # check to make sure the graph has ranks specified for all devices
+            for d in self.devices.values():
+                if d.rank is None:
+                    raise RuntimeError(f"No rank for component: {d.name}")
+
+            rankGraph = self.flatten(rank=rank).follow_links(rank)
+            partition = rankGraph.__partition_graph(nranks)
+
+            return self.__build_model(rankGraph.attr, True, partition[rank][0],
+                                      partition[rank][1])
+
+    def write_json(self, filename: str, nranks: int = 1,
+                   partialExpand: bool = False,
+                   program_options: dict = None) -> None:
+        """
+        Generate the JSON and write it to the specified filename.
+
+        All output will be stored in a folder called output
+
+        The program_options dictionary provides a way to pass SST
+        prograph options, such as timebase and stopAtCycle.
+
+        If you have an extremely large graph, it is recommended that you use
+        PyDL to do the graph partitioning instead of letting SST do it. You
+        can do this by using the Device.set_partition() function and then
+        setting nranks in this function to the total number of ranks used
+
+        If you have an extremely large graph, it is recommended that you set
+        partialExpand to True. If partialExpand is set to True, then the graph
+        will be flattened per rank and links followed across ranks but the
+        entire graph will not necessarily be expanded all at once
+        """
+        if not os.path.exists('output'):
+            os.makedirs('output')
+
+        # If we aren't partiallyExpanding, flatten the graph completely
+        if not partialExpand or nranks == 1:
+            self = self.flatten()
+            self.verify_links()
+
+        # If this is serial, just dump the whold thing.
+        if nranks == 1:
+            self.__write_model(self.attr, f"output/{filename}", nranks,
+                               self.devices.values(), self.links.values(),
+                               program_options)
+
+        # Find the partition information and write out the models.
+        else:
+            (base, ext) = os.path.splitext(f"output/{filename}")
+
+            # check to make sure the graph has ranks specified for all devices
+            for d in self.devices.values():
+                if d.rank is None:
+                    raise RuntimeError(f"No rank for component: {d.name}")
+
+            if not partialExpand:
+                partition = self.__partition_graph(nranks)
+                rankGraph = self
+
+            for rank in range(nranks):
+                if partialExpand:
+                    rankGraph = self.flatten(rank=rank).follow_links(rank)
+                    partition = rankGraph.__partition_graph(nranks)
+
+                self.__write_model(rankGraph.attr, base + str(rank) + ext,
+                                   nranks, partition[rank][0],
+                                   partition[rank][1], program_options)
+
+                # Manually remove each graph to make sure we don't overflow
+                if partialExpand:
+                    del rankGraph
+                    del partition
+                    gc.collect()
+
+    def write_dot(self, name: str, draw: bool = False, ports: bool = False,
+                  hierarchy: bool = True) -> None:
+        """
+        Take a DeviceGraph and write it as a graphviz dot graph.
+
+        All output will be stored in a folder called output
+
+        The draw parameter will automatically generate SVGs if set to True
+        The ports parameter will display ports on the graph if set to True
+
+        The hierarchy parameter specifies whether you would like to view the
+        graph as a hierarchy of assemblies or if you would like to flatten
+        the entire graph and view it as a single file
+        hierarchy is True by default, and highly recommended for large graphs
+        """
+        if not os.path.exists('output'):
+            os.makedirs('output')
+
+        if hierarchy:
+            self.__write_dot_hierarchy(name, draw, ports)
+        else:
+            self.__write_dot_flat(name, draw, ports)
+
+    def __write_dot_hierarchy(self, name: str,
+                              draw: bool = False, ports: bool = False,
+                              assembly: str = None, types: set = None) -> set:
+        """
+        Take a DeviceGraph and write dot files for each assembly.
+
+        Write a graphviz dot file for each unique assembly (type, model) in the
+        graph
+        The draw parameter will automatically generate SVGs if set to True
+        The ports parameter will display ports on the graph if set to True
+        assembly and types should NOT be specified by the user, they are
+        soley used for recursion of this function
+        """
+        graph = self.__format_graph(name, ports)
+        if types is None:
+            types = set()
+
+        if assembly is not None:
+            splitName = assembly.split('.')
+            splitNameLen = len(splitName)
+
+        # expand all unique assembly types and write separate graphviz files
+        for dev in self.devices.values():
+            if dev.assembly:
+                category = dev.get_category()
+                if category not in types:
+                    types.add(category)
+                    expanded = dev.expand()
+                    types = expanded.__write_dot_hierarchy(category, draw,
+                                                           ports, dev.name,
+                                                           types)
+
+        # graph the current graph
+        # need to check if the provided assembly name is in the graph
+        # and if so make that our cluster
+        if assembly is not None:
+            for dev in self.devices.values():
+                if assembly == dev.name:
+                    # this device is the PyDL assembly that we just expanded
+                    # make this a cluster and add its ports as nodes
+                    clusterName = f"cluster_{dev.attr['type']}"
+                    subgraph = graph.subgraph(name=clusterName, color='green')
+                    for port in dev.ports:
+                        graph.add_node(f"{dev.attr['type']}:{port}",
+                                       shape='diamond', label=port,
+                                       color='green', fontcolor='green')
+        else:
+            # no provided assembly, this is most likely the top level
+            subgraph = graph
+
+        # Loop through all devices and add them to the graphviz graph
+        for dev in self.devices.values():
+            if assembly != dev.name:
+                label = dev.name
+                nodeName = dev.name
+                if assembly is not None:
+                    if splitName == dev.name.split('.')[0:splitNameLen]:
+                        nodeName = '.'.join(dev.name.split('.')[splitNameLen:])
+                        label = nodeName
+                if 'model' in dev.attr:
+                    label += f"\\nmodel={dev.attr['model']}"
+                if ports:
+                    portLabels = dev.label_ports()
+                    if portLabels != '':
+                        label += f"|{portLabels}"
+
+                # if the device is an assembly, put a link to its SVG
+                if dev.assembly:
+                    subgraph.add_node(nodeName, label=label,
+                                      href=f"{dev.get_category()}.svg",
+                                      color='blue', fontcolor='blue')
+                elif dev.subOwner is not None:
+                    subgraph.add_node(nodeName, label=label,
+                                      color='purple', fontcolor='purple')
+                else:
+                    subgraph.add_node(nodeName, label=label)
+
+        if assembly is not None:
+            self.__dot_add_links(graph, ports, assembly,
+                                 splitName, splitNameLen)
+        else:
+            self.__dot_add_links(graph, ports)
+
+        graph.write(f"output/{name}.dot")
+        if draw:
+            graph.draw(f"output/{name}.svg", format='svg', prog='dot')
+
+        return types
+
+    def __write_dot_flat(self, name: str, draw: bool = False,
+                         ports: bool = False) -> None:
+        """
+        Write the device graph as a DOT file.
+
+        This function will flatten the graph so it is not recommended for using
+        on large graphs. It is suggested that you use write_dot_hierarchy for
+        large graphs
+        """
+        self = self.flatten()
+        self.verify_links()
+        graph = self.__format_graph(name, ports)
+
+        for dev in self.devices.values():
+            label = dev.name
+            if 'model' in dev.attr:
+                label += f"\\nmodel={dev.attr['model']}"
+            if ports:
+                portLabels = dev.label_ports()
+                if portLabels != '':
+                    label += f"|{portLabels}"
+            if dev.subOwner is not None:
+                graph.add_node(dev.name, label=label,
+                               color='purple', fontcolor='purple')
+            else:
+                graph.add_node(dev.name, label=label)
+
+        self.__dot_add_links(graph, ports)
+
+        graph.write(f"output/{name}.dot")
+        if draw:
+            graph.draw(f"output/{name}.svg", format='svg', prog='dot')
 
     @staticmethod
     def __format_graph(name: str, record: bool = False) -> pygraphviz.AGraph:
@@ -272,8 +529,12 @@ class DeviceGraph:
              '\tstroke: red;\n'
              '\tstroke-width: 10;\n'
              '}')
-        with open('highlightStyle.css', 'w') as f:
-            f.write(h)
+        if not os.path.exists('output'):
+            os.makedirs('output')
+
+        if not os.path.exists('output/highlightStyle.css'):
+            with open('output/highlightStyle.css', 'w') as f:
+                f.write(h)
 
         graph = pygraphviz.AGraph(strict=False, name=name)
         graph.graph_attr['stylesheet'] = 'highlightStyle.css'
@@ -339,123 +600,236 @@ class DeviceGraph:
                 graph.add_edge(device2Node(dev), device2Node(dev.subOwner),
                                color='purple', style='dashed')
 
-    def write_dot_hierarchy(self, name: str,
-                            draw: bool = False, ports: bool = False,
-                            assembly: str = None, types: set = None) -> set:
+    def __encode(self, attr, stringify: bool = False) -> dict:
         """
-        Take a DeviceGraph and write dot files for each assembly.
+        Convert attributes into SST Params.
 
-        Write a graphviz dot file for each unique assembly (type, model) in the
-        graph
-        The draw parameter will automatically generate SVGs if set to True
-        The ports parameter will display ports on the graph if set to True
-        assembly and types should NOT be specified by the user, they are
-        soley used for recursion of this function
+        SST only supports primitive types (bool, int, float) and lists of those
+        types as parameters; everything else we will convert via JSON.
+        If the attribute contains a __to_json__ method, then we will call it.
+        Ignore bad conversions.
         """
-        graph = self.__format_graph(name, ports)
-        if types is None:
-            types = set()
 
-        if assembly is not None:
-            splitName = assembly.split('.')
-            splitNameLen = len(splitName)
+        def supported_f(x) -> bool:
+            """Return whether the type is supported by SST."""
+            return isinstance(x, (bool, float, int, str))
 
-        # expand all unique assembly types and write separate graphviz files
-        for dev in self.devices.values():
-            if dev.assembly:
-                category = dev.get_category()
-                if category not in types:
-                    types.add(category)
-                    expanded = dev.expand()
-                    types = expanded.write_dot_hierarchy(category, draw, ports,
-                                                         dev.name, types)
+        params = dict()
+        for (key, val) in attr.items():
+            native = supported_f(val)
+            if not native and isinstance(val, list):
+                native = all(map(supported_f, val))
 
-        # graph the current graph
-        # need to check if the provided assembly name is in the graph
-        # and if so make that our cluster
-        if assembly is not None:
-            for dev in self.devices.values():
-                if assembly == dev.name:
-                    # this device is the PyDL assembly that we just expanded
-                    # make this a cluster and add its ports as nodes
-                    clusterName = f"cluster_{dev.attr['type']}"
-                    subgraph = graph.subgraph(name=clusterName, color='green')
-                    for port in dev.ports:
-                        graph.add_node(f"{dev.attr['type']}:{port}",
-                                       shape='diamond', label=port,
-                                       color='green', fontcolor='green')
-        else:
-            # no provided assembly, this is most likely the top level
-            subgraph = graph
-
-        # Loop through all devices and add them to the graphviz graph
-        for dev in self.devices.values():
-            if assembly != dev.name:
-                label = dev.name
-                nodeName = dev.name
-                if assembly is not None:
-                    if splitName == dev.name.split('.')[0:splitNameLen]:
-                        nodeName = '.'.join(dev.name.split('.')[splitNameLen:])
-                        label = nodeName
-                if 'model' in dev.attr:
-                    label += f"\\nmodel={dev.attr['model']}"
-                if ports:
-                    portLabels = dev.label_ports()
-                    if portLabels != '':
-                        label += f"|{portLabels}"
-
-                # if the device is an assembly, put a link to its SVG
-                if dev.assembly:
-                    subgraph.add_node(nodeName, label=label,
-                                      href=f"{dev.get_category()}.svg",
-                                      color='blue', fontcolor='blue')
-                elif dev.subOwner is not None:
-                    subgraph.add_node(nodeName, label=label,
-                                      color='purple', fontcolor='purple')
-                else:
-                    subgraph.add_node(nodeName, label=label)
-
-        if assembly is not None:
-            self.__dot_add_links(graph, ports, assembly,
-                                 splitName, splitNameLen)
-        else:
-            self.__dot_add_links(graph, ports)
-
-        graph.write(f"{name}.dot")
-        if draw:
-            graph.draw(f"{name}.svg", format='svg', prog='dot')
-
-        return types
-
-    def write_dot_file(self, name: str,
-                       draw: bool = False, ports: bool = False) -> None:
-        """
-        Write the device graph as a DOT file.
-
-        This function will flatten the graph so it is not recommended for using
-        on large graphs. It is suggested that you use write_dot_hierarchy for
-        large graphs
-        """
-        self = self.flatten()
-        self.verify_links()
-        graph = self.__format_graph(name, ports)
-
-        for dev in self.devices.values():
-            label = dev.name
-            if 'model' in dev.attr:
-                label += f"\\nmodel={dev.attr['model']}"
-            if ports:
-                portLabels = dev.label_ports()
-                if portLabels != '':
-                    label += f"|{portLabels}"
-            if dev.subOwner is not None:
-                graph.add_node(dev.name, label=label,
-                               color='purple', fontcolor='purple')
+            if native:
+                params[key] = val if not stringify else str(val)
+            elif hasattr(val, "__to_json__"):
+                params[key] = val.__to_json__()
             else:
-                graph.add_node(dev.name, label=label)
+                try:
+                    # serialize the value to json bytes,
+                    # then deserialize into a python dict
+                    params[key] = orjson.loads(
+                        orjson.dumps(val, option=orjson.OPT_INDENT_2)
+                    )
+                except Exception:
+                    pass
 
-        self.__dot_add_links(graph, ports)
+        return params
 
-        graph.write(f"{name}.dot")
-        if draw:
-            graph.draw(f"{name}.svg", format='svg', prog='dot')
+    def __partition_graph(self, nranks: int) -> list:
+        """
+        Partition the graph based on ranks.
+
+        Return a list of pairs of the form (component-set, link-list),
+        where each list entry corresponds to a particular processor rank.
+        It is faster to partition the graph once rather than search it
+        O(p) times.
+        """
+        partition = [(set(), list()) for p in range(nranks)]
+
+        for (p0, p1, dt) in self.links.values():
+            d0 = p0.device
+            d1 = p1.device
+
+            while d0.subOwner is not None:
+                d0 = d0.subOwner
+            while d1.subOwner is not None:
+                d1 = d1.subOwner
+
+            r0 = d0.rank
+            r1 = d1.rank
+
+            partition[r0][0].add(d0)
+            partition[r0][0].add(d1)
+            partition[r0][1].append((p0, p1, dt))
+
+            if r0 != r1:
+                partition[r1][0].add(d0)
+                partition[r1][0].add(d1)
+                partition[r1][1].append((p0, p1, dt))
+
+        return partition
+
+    def __build_model(self, attr: dict, self_partition: bool,
+                      rank_components: set, rank_links: list) -> dict:
+        """
+        Generate the model for the SST program.
+
+        If rank is None, then we are not running in parallel.
+        Otherwise only grab the components and links associated with this rank.
+        """
+        # only import sst when we are going to build the graph inside of sst
+        import sst
+        n2c = dict()
+
+        # Set up global parameters.
+        global_params = self.__encode(attr)
+        for (key, val) in global_params.items():
+            sst.addGlobalParam(key, key, val)
+
+        def recurseSubcomponents(dev: 'Device', comp: 'Component'):
+            """Add subcomponents to the Device."""
+            for (d1, n1, s1) in dev.subs:
+                if d1.sstlib is None:
+                    raise RuntimeError(f"No SST library: {d1.name}")
+                if s1 is None:
+                    c1 = comp.setSubComponent(n1, d1.sstlib)
+                else:
+                    c1 = comp.setSubComponent(n1, d1.sstlib, s1)
+                c1.addParams(self.__encode(d1.attr))
+                n2c[d1.name] = c1
+                for key in global_params:
+                    c1.addGlobalParamSet(key)
+                if len(d1.subs) > 0:
+                    recurseSubcomponents(d1, c1)
+
+        # First, we instantiate all of the components with
+        # their attributes.  Raise an exception if a particular
+        # device has no SST component implementation.
+        for d0 in rank_components:
+            if d0.sstlib is None:
+                raise RuntimeError(f"No SST library for device: {d0.name}")
+
+            if d0.subOwner is None:
+                c0 = sst.Component(d0.name, d0.sstlib)
+                c0.addParams(self.__encode(d0.attr))
+                # Set the component rank if we are self-partitioning
+                if self_partition:
+                    c0.setRank(d0.rank, d0.thread)
+                n2c[d0.name] = c0
+                for key in global_params:
+                    c0.addGlobalParamSet(key)
+                if d0.rank is not None:
+                    c0.setRank(d0.rank, d0.thread)
+                recurseSubcomponents(d0, c0)
+
+        # Second, link the component ports using graph links.
+        for (p0, p1, t) in rank_links:
+            c0 = n2c[p0.device.name]
+            c1 = n2c[p1.device.name]
+            s0 = p0.get_name()
+            s1 = p1.get_name()
+            link = sst.Link(f"{p0}__{t}__{p1}")
+            link.connect((c0, s0, t), (c1, s1, t))
+
+        # Return a map of component names to components.
+        return n2c
+
+    def __write_model(self, attr: dict, filename: str, nranks: int,
+                      rank_components: set, rank_links: list,
+                      program_options: dict) -> None:
+        """
+        Generate the model for the SST program.
+
+        If rank is None, then we are not running in parallel.
+        Otherwise only grab the components and links associated with this rank.
+        """
+        model = dict()
+
+        # Write the program options to the model.
+        if program_options is None:
+            model["program_options"] = dict()
+        else:
+            model["program_options"] = dict(program_options)
+
+        # If running in parallel, then set up the SST SELF partitioner.
+        if nranks > 1:
+            model["program_options"]["partitioner"] = "sst.self"
+
+        # Set up global parameters.
+        global_params = self.__encode(attr, True)
+        model["global_params"] = dict()
+        for (key, val) in global_params.items():
+            model["global_params"][key] = dict({key: val})
+        global_set = list(global_params.keys())
+
+        def recurseSubcomponents(dev: 'Device') -> list:
+            """Add subcomponents to the Device."""
+            subcomponents = list()
+            for (d1, n1, s1) in dev.subs:
+                if d1.sstlib is None:
+                    raise RuntimeError(f"No SST library: {d1.name}")
+
+                item = {
+                        "slot_name": n1,
+                        "type": d1.sstlib,
+                        "slot_number": s1,
+                        "params": self.__encode(d1.attr, True),
+                        "params_global_sets": global_set,
+                    }
+                if len(d1.subs) > 0:
+                    item["subcomponents"] = recurseSubcomponents(d1)
+                subcomponents.append(item)
+            return subcomponents
+
+        # Define all the components.  We define the name, type,
+        # parameters, and global parameters.  Raise an exception
+        # if a particular device has no SST component implementation.
+        components = list()
+        for d0 in rank_components:
+            if d0.subOwner is None:
+                if d0.sstlib is None:
+                    raise RuntimeError(f"No SST library for device: {d0.name}")
+
+                component = {
+                    "name": d0.name,
+                    "type": d0.sstlib,
+                    "params": self.__encode(d0.attr, True),
+                    "params_global_sets": global_set,
+                }
+                if nranks > 1:
+                    component["partition"] = {
+                        "rank": d0.rank,
+                        "thread": d0.thread,
+                    }
+
+                subcomponents = recurseSubcomponents(d0)
+                if len(subcomponents) > 0:
+                    component["subcomponents"] = subcomponents
+                components.append(component)
+
+        model["components"] = components
+
+        # Now define the links between components.
+        links = list()
+        for (p0, p1, t) in rank_links:
+            links.append(
+                {
+                    "name": f"{p0}__{t}__{p1}",
+                    "left": {
+                        "component": p0.device.name,
+                        "port": p0.get_name(),
+                        "latency": t,
+                    },
+                    "right": {
+                        "component": p1.device.name,
+                        "port": p1.get_name(),
+                        "latency": t,
+                    },
+                }
+            )
+
+        model["links"] = links
+
+        with open(filename, "wb") as jfile:
+            jfile.write(orjson.dumps(model, option=orjson.OPT_INDENT_2))

@@ -27,4 +27,4 @@ $(LIB):
 
 # Remove the files
 clean:
-	rm -rf __pycache__ *.json *.dot *.svg *.png *.css *.VanadisNodeOS
+	rm -rf __pycache__ output *.VanadisNodeOS

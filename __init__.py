@@ -7,6 +7,5 @@ descriptions can then be converted to SST component graphs or analyzed by other
 tools.
 """
 
-from .BuildSST import *
 from .Device import *
 from .DeviceGraph import *

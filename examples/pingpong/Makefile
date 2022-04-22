@@ -57,4 +57,4 @@ uninstall:
 
 # Remove the build files and the library
 clean: uninstall
-	rm -rf .build libpingpong.so *.json *.dot *.svg *.css
+	rm -rf .build *.so output

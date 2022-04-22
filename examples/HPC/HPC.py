@@ -147,8 +147,6 @@ if __name__ == "__main__":
     for rack in graph.devices.values():
         rack.set_partition(rack.attr['rack'])
 
-    builder = BuildSST()
-
     if SST:
         # If running within SST, generate the SST graph
         # There are multiple ways to run, below are a few common examples
@@ -156,18 +154,18 @@ if __name__ == "__main__":
         # SST partitioner
         # This will work in serial or running SST with MPI in parallel
         if partitioner.lower() == 'sst':
-            builder.build(graph)
+            graph.build_sst()
 
         # MPI mode with PyDL graph partitioning. Specifying nranks tells
         # BuildSST that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
         elif partitioner.lower() == 'pydl':
-            builder.build(graph, nranks=racks)
+            graph.build_sst(racks)
 
     else:
         # generate a graphviz dot file and json output for demonstration
-        graph.write_dot_hierarchy('cluster', draw=True, ports=True)
+        graph.write_dot('cluster', draw=True, ports=True)
         # partially expanding the graph only expands the portions of the graph
         # relevant to the rank being output at that time, therefore saving
         # memory by not flattening the entire graph all at once
-        builder.write(graph, 'cluster.json', racks, partialExpand=True)
+        graph.write_json('cluster.json', racks, partialExpand=True)

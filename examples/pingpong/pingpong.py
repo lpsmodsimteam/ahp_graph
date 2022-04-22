@@ -106,8 +106,6 @@ if __name__ == "__main__":
     for p in graph.devices.values():
         p.set_partition(int(p.name.split('PingPong')[1]))
 
-    builder = BuildSST()
-
     if SST:
         # If running within SST, generate the SST graph
         # There are multiple ways to run, below are a few common examples
@@ -115,20 +113,20 @@ if __name__ == "__main__":
         # SST partitioner
         # This will work in serial or running SST with MPI in parallel
         if partitioner.lower() == 'sst':
-            builder.build(graph)
+            graph.build_sst()
 
         # MPI mode with PyDL graph partitioning. Specifying nranks tells
-        # BuildSST that it is doing the partitioning, not SST
+        # PyDL that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
         elif partitioner.lower() == 'pydl':
-            builder.build(graph, nranks=num)
+            graph.build_sst(num)
 
     else:
         # generate a graphviz dot file and json output for demonstration
-        graph.write_dot_file("pingpongFlat", draw=True, ports=True)
-        builder.write(graph, "pingpongFlat.json")
+        graph.write_dot("pingpongFlat", draw=True, ports=True, hierarchy=False)
+        graph.write_json("pingpongFlat.json")
 
         # generate a different view including the hierarchy, and write out
         # the PyDL partitioned graph
-        graph.write_dot_hierarchy("pingpong", draw=True, ports=True)
-        builder.write(graph, "pingpong.json", nranks=num)
+        graph.write_dot("pingpong", draw=True, ports=True)
+        graph.write_json("pingpong.json", nranks=num)
