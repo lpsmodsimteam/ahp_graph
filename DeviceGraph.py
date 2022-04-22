@@ -266,12 +266,9 @@ class DeviceGraph:
         return graph.flatten(None if levels is None else levels - 1,
                              name, rank, expand)
 
-    def build_sst(self, nranks: int = 1, program_options: dict = None) -> dict:
+    def build_sst(self, nranks: int = 1) -> dict:
         """
         Build the SST graph.
-
-        The program_options dictionary provides a way to pass SST
-        program options, such as timebase and stopAtCycle.
 
         Return a dictionary of component names to SST component objects.
         If you have an extremely large graph, it is recommended that you use
@@ -281,9 +278,6 @@ class DeviceGraph:
         """
         # only import sst when we are going to build the graph
         import sst
-        if program_options is not None:
-            for option in program_options:
-                sst.setProgramOption(option, program_options[option])
 
         # If this is serial or sst is doing the partitioning,
         # generate the entire graph
