@@ -51,7 +51,11 @@ class pingpong(Device):
         pong = Pong("Pong")  # create a Pong Device
 
         # link ping and pong, automatically adds the devices to the graph
-        graph.link(ping.output, pong.input)
+        graph.link(ping.output, pong.input, '1s')
+
+        # Generally you don't want to put latency on the links to assembly
+        # ports (ex: self.port) and allow whatever uses the assembly to
+        # specify latency for the connection (it will get ignored anyway)
 
         # Connect pingpong's input to ping's input
         graph.link(ping.input, self.input)
@@ -70,7 +74,7 @@ def architecture(repeats: int = 10, num: int = 1) -> 'DeviceGraph':
         pingpongs[i] = pingpong(f"PingPong{i}", repeats)
 
     for i in range(num):
-        graph.link(pingpongs[i].output, pingpongs[(i+1) % num].input)
+        graph.link(pingpongs[i].output, pingpongs[(i+1) % num].input, '2s')
 
     return graph
 
