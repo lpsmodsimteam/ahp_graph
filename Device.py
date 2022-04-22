@@ -180,16 +180,14 @@ class Device:
         self.ports = collections.defaultdict(dict)
         self.subs = set()
         self.subOwner = None
-        self.rank = None
-        self.thread = None
+        self.partition = None
         self.attr["type"] = self.__class__.__name__
         if model is not None:
             self.attr["model"] = model
 
     def set_partition(self, rank: int, thread: int = 0) -> None:
         """Assign a rank and optional thread to this device."""
-        self.rank = rank
-        self.thread = thread
+        self.partition = (rank, thread)
 
     def add_subcomponent(self, device: 'Device', name: str,
                          slotIndex: int = None) -> None:

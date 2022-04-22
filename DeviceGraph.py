@@ -137,7 +137,8 @@ class DeviceGraph:
             for (p0, p1, _) in graph.links.values():
                 # one of the devices is on the rank that we are
                 # following links on
-                if p0.device.rank == rank or p1.device.rank == rank:
+                if (p0.device.partition[0] == rank
+                        or p1.device.partition[0] == rank):
                     for p in [p0, p1]:
                         if p.device.sstlib is None:
                             # link on the rank we want, device needs expanded
@@ -190,7 +191,7 @@ class DeviceGraph:
                 assembly &= splitName == dev.name.split(".")[0: len(splitName)]
             # rank to check
             if rank is not None:
-                assembly &= rank == dev.rank
+                assembly &= rank == dev.partition[0]
             # check to see if the device is in the expand set
             if expand is not None:
                 assembly &= dev in expand
@@ -215,7 +216,7 @@ class DeviceGraph:
 
             # Expanded devices inherit the partition of the parent.
             for d in subgraph.devices.values():
-                d.set_partition(device.rank, device.thread)
+                d.partition = device.partition
 
             def find_other_port(port):
                 """
@@ -270,7 +271,7 @@ class DeviceGraph:
         Build the SST graph.
 
         The program_options dictionary provides a way to pass SST
-        prograph options, such as timebase and stopAtCycle.
+        program options, such as timebase and stopAtCycle.
 
         Return a dictionary of component names to SST component objects.
         If you have an extremely large graph, it is recommended that you use
@@ -289,8 +290,7 @@ class DeviceGraph:
         if nranks == 1:
             self = self.flatten()
             self.verify_links()
-            return self.__build_model(self.attr, False, self.devices.values(),
-                                      self.links.values())
+            return self.__build_model(False)
 
         # Find the partition information and build the model for this rank
         else:
@@ -302,17 +302,14 @@ class DeviceGraph:
 
             # check to make sure the graph has ranks specified for all devices
             for d in self.devices.values():
-                if d.rank is None:
-                    raise RuntimeError(f"No rank for component: {d.name}")
+                if d.partition is None:
+                    raise RuntimeError(f"No partition for component: {d.name}")
 
             rankGraph = self.flatten(rank=rank).follow_links(rank)
-            partition = rankGraph.__partition_graph(nranks)
-
-            return self.__build_model(rankGraph.attr, True, partition[rank][0],
-                                      partition[rank][1])
+            rankGraph.verify_links()
+            return rankGraph.__build_model(True)
 
     def write_json(self, filename: str, nranks: int = 1,
-                   partialExpand: bool = False,
                    program_options: dict = None) -> None:
         """
         Generate the JSON and write it to the specified filename.
@@ -320,59 +317,41 @@ class DeviceGraph:
         All output will be stored in a folder called output
 
         The program_options dictionary provides a way to pass SST
-        prograph options, such as timebase and stopAtCycle.
+        program options, such as timebase and stopAtCycle.
 
         If you have an extremely large graph, it is recommended that you use
         PyDL to do the graph partitioning instead of letting SST do it. You
         can do this by using the Device.set_partition() function and then
         setting nranks in this function to the total number of ranks used
-
-        If you have an extremely large graph, it is recommended that you set
-        partialExpand to True. If partialExpand is set to True, then the graph
-        will be flattened per rank and links followed across ranks but the
-        entire graph will not necessarily be expanded all at once
         """
         if not os.path.exists('output'):
             os.makedirs('output')
 
-        # If we aren't partiallyExpanding, flatten the graph completely
-        if not partialExpand or nranks == 1:
+        # If this is serial or sst is doing the partitioning,
+        # just write the whole thing
+        if nranks == 1:
             self = self.flatten()
             self.verify_links()
+            self.__write_model(f"output/{filename}", nranks, program_options)
 
-        # If this is serial, just dump the whold thing.
-        if nranks == 1:
-            self.__write_model(self.attr, f"output/{filename}", nranks,
-                               self.devices.values(), self.links.values(),
-                               program_options)
-
-        # Find the partition information and write out the models.
+        # Write a JSON file for each rank
         else:
             (base, ext) = os.path.splitext(f"output/{filename}")
 
             # check to make sure the graph has ranks specified for all devices
             for d in self.devices.values():
-                if d.rank is None:
-                    raise RuntimeError(f"No rank for component: {d.name}")
-
-            if not partialExpand:
-                partition = self.__partition_graph(nranks)
-                rankGraph = self
+                if d.partition is None:
+                    raise RuntimeError(f"No partition for component: {d.name}")
 
             for rank in range(nranks):
-                if partialExpand:
-                    rankGraph = self.flatten(rank=rank).follow_links(rank)
-                    partition = rankGraph.__partition_graph(nranks)
-
-                self.__write_model(rankGraph.attr, base + str(rank) + ext,
-                                   nranks, partition[rank][0],
-                                   partition[rank][1], program_options)
+                rankGraph = self.flatten(rank=rank).follow_links(rank)
+                rankGraph.verify_links()
+                rankGraph.__write_model(base + str(rank) + ext,
+                                        nranks, program_options)
 
                 # Manually remove each graph to make sure we don't overflow
-                if partialExpand:
-                    del rankGraph
-                    del partition
-                    gc.collect()
+                del rankGraph
+                gc.collect()
 
     def write_dot(self, name: str, draw: bool = False, ports: bool = False,
                   hierarchy: bool = True) -> None:
@@ -636,54 +615,14 @@ class DeviceGraph:
 
         return params
 
-    def __partition_graph(self, nranks: int) -> list:
-        """
-        Partition the graph based on ranks.
-
-        Return a list of pairs of the form (component-set, link-list),
-        where each list entry corresponds to a particular processor rank.
-        It is faster to partition the graph once rather than search it
-        O(p) times.
-        """
-        partition = [(set(), list()) for p in range(nranks)]
-
-        for (p0, p1, dt) in self.links.values():
-            d0 = p0.device
-            d1 = p1.device
-
-            while d0.subOwner is not None:
-                d0 = d0.subOwner
-            while d1.subOwner is not None:
-                d1 = d1.subOwner
-
-            r0 = d0.rank
-            r1 = d1.rank
-
-            partition[r0][0].add(d0)
-            partition[r0][0].add(d1)
-            partition[r0][1].append((p0, p1, dt))
-
-            if r0 != r1:
-                partition[r1][0].add(d0)
-                partition[r1][0].add(d1)
-                partition[r1][1].append((p0, p1, dt))
-
-        return partition
-
-    def __build_model(self, attr: dict, self_partition: bool,
-                      rank_components: set, rank_links: list) -> dict:
-        """
-        Generate the model for the SST program.
-
-        If rank is None, then we are not running in parallel.
-        Otherwise only grab the components and links associated with this rank.
-        """
+    def __build_model(self, self_partition: bool) -> dict:
+        """Generate the model for the SST program."""
         # only import sst when we are going to build the graph inside of sst
         import sst
         n2c = dict()
 
         # Set up global parameters.
-        global_params = self.__encode(attr)
+        global_params = self.__encode(self.attr)
         for (key, val) in global_params.items():
             sst.addGlobalParam(key, key, val)
 
@@ -704,46 +643,34 @@ class DeviceGraph:
                     recurseSubcomponents(d1, c1)
 
         # First, we instantiate all of the components with
-        # their attributes.  Raise an exception if a particular
-        # device has no SST component implementation.
-        for d0 in rank_components:
-            if d0.sstlib is None:
-                raise RuntimeError(f"No SST library for device: {d0.name}")
-
-            if d0.subOwner is None:
+        # their attributes. Ignore Devices that have no sstlib defined
+        for d0 in self.devices.values():
+            if d0.subOwner is None and d0.sstlib is not None:
                 c0 = sst.Component(d0.name, d0.sstlib)
                 c0.addParams(self.__encode(d0.attr))
-                # Set the component rank if we are self-partitioning
+                # Set the component partition if we are self-partitioning
                 if self_partition:
-                    c0.setRank(d0.rank, d0.thread)
+                    c0.setRank(d0.partition[0], d0.partition[1])
                 n2c[d0.name] = c0
                 for key in global_params:
                     c0.addGlobalParamSet(key)
-                if d0.rank is not None:
-                    c0.setRank(d0.rank, d0.thread)
                 recurseSubcomponents(d0, c0)
 
         # Second, link the component ports using graph links.
-        for (p0, p1, t) in rank_links:
+        for (name, (p0, p1, t)) in self.links.items():
             c0 = n2c[p0.device.name]
             c1 = n2c[p1.device.name]
             s0 = p0.get_name()
             s1 = p1.get_name()
-            link = sst.Link(f"{p0}__{t}__{p1}")
+            link = sst.Link(name)
             link.connect((c0, s0, t), (c1, s1, t))
 
         # Return a map of component names to components.
         return n2c
 
-    def __write_model(self, attr: dict, filename: str, nranks: int,
-                      rank_components: set, rank_links: list,
+    def __write_model(self, filename: str, nranks: int,
                       program_options: dict) -> None:
-        """
-        Generate the model for the SST program.
-
-        If rank is None, then we are not running in parallel.
-        Otherwise only grab the components and links associated with this rank.
-        """
+        """Write this DeviceGraph out as JSON."""
         model = dict()
 
         # Write the program options to the model.
@@ -757,7 +684,7 @@ class DeviceGraph:
             model["program_options"]["partitioner"] = "sst.self"
 
         # Set up global parameters.
-        global_params = self.__encode(attr, True)
+        global_params = self.__encode(self.attr, True)
         model["global_params"] = dict()
         for (key, val) in global_params.items():
             model["global_params"][key] = dict({key: val})
@@ -782,25 +709,21 @@ class DeviceGraph:
                 subcomponents.append(item)
             return subcomponents
 
-        # Define all the components.  We define the name, type,
-        # parameters, and global parameters.  Raise an exception
-        # if a particular device has no SST component implementation.
+        # Define all the components. We define the name, type, parameters,
+        # and global parameters. Ignore Devices that have no sstlib defined
         components = list()
-        for d0 in rank_components:
-            if d0.subOwner is None:
-                if d0.sstlib is None:
-                    raise RuntimeError(f"No SST library for device: {d0.name}")
-
+        for d0 in self.devices.values():
+            if d0.subOwner is None and d0.sstlib is not None:
                 component = {
                     "name": d0.name,
                     "type": d0.sstlib,
                     "params": self.__encode(d0.attr, True),
                     "params_global_sets": global_set,
                 }
-                if nranks > 1:
+                if d0.partition is not None:
                     component["partition"] = {
-                        "rank": d0.rank,
-                        "thread": d0.thread,
+                        "rank": d0.partition[0],
+                        "thread": d0.partition[1],
                     }
 
                 subcomponents = recurseSubcomponents(d0)
@@ -812,10 +735,10 @@ class DeviceGraph:
 
         # Now define the links between components.
         links = list()
-        for (p0, p1, t) in rank_links:
+        for (name, (p0, p1, t)) in self.links.items():
             links.append(
                 {
-                    "name": f"{p0}__{t}__{p1}",
+                    "name": name,
                     "left": {
                         "component": p0.device.name,
                         "port": p0.get_name(),

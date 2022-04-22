@@ -168,4 +168,4 @@ if __name__ == "__main__":
         # partially expanding the graph only expands the portions of the graph
         # relevant to the rank being output at that time, therefore saving
         # memory by not flattening the entire graph all at once
-        graph.write_json('cluster.json', racks, partialExpand=True)
+        graph.write_json('cluster.json', racks)
