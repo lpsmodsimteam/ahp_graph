@@ -87,7 +87,7 @@ def Cluster(shape: str = '2x2', nodes: int = 1,
         for y in range(dimY):
             racks[f"{x}x{y}"] = Rack(f"Rack{x}x{y}", shape, (x * dimY) + y,
                                      nodes, cores)
-            # graph.add(racks[f"{x}x{y}"])
+            racks[f"{x}x{y}"].set_partition((x * dimY) + y)
 
     # initialize the four torus ports
     # order is 0: north, 1: east, 2: south, 3: west
@@ -145,9 +145,6 @@ if __name__ == "__main__":
 
     # Create a cluster with the given parameters
     graph = Cluster(shape, nodes, cores)
-    # Make each rack its own partition (rank)
-    for rack in graph.devices.values():
-        rack.set_partition(rack.attr['rack'])
 
     if SST:
         # If running within SST, generate the SST graph

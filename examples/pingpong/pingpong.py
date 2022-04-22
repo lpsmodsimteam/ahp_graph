@@ -72,6 +72,7 @@ def architecture(repeats: int = 10, num: int = 1) -> 'DeviceGraph':
 
     for i in range(num):
         pingpongs[i] = pingpong(f"PingPong{i}", repeats)
+        pingpongs[i].set_partition(i)
 
     for i in range(num):
         graph.link(pingpongs[i].output, pingpongs[(i+1) % num].input, '2s')
@@ -108,9 +109,6 @@ if __name__ == "__main__":
 
     # Construct a DeviceGraph with the specified architecture
     graph = architecture(5, num)
-    # partition the graph
-    for p in graph.devices.values():
-        p.set_partition(int(p.name.split('PingPong')[1]))
 
     if SST:
         # If running within SST, generate the SST graph
