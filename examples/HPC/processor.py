@@ -4,7 +4,7 @@ Vanadis Processor assembly.
 Constructed from Vanadis components along with various L1 Caches.
 Processor connects via a memHierarchy Bus.
 """
-from PyDL import *
+from AHPGraph import *
 import os
 
 

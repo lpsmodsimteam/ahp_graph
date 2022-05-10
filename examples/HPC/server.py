@@ -3,7 +3,7 @@ Server assembly.
 
 Constructed from Processors and main memory using a NoC.
 """
-from PyDL import *
+from AHPGraph import *
 from processor import *
 
 

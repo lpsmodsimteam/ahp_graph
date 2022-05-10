@@ -1,13 +1,13 @@
 # https://hub.docker.com/_/centos?tab=tags
 FROM centos:7
 
-MAINTAINER LPSmodsim 
+MAINTAINER lpsmodsim
 
-LABEL remarks="PyDL"
+LABEL remarks="AHPGraph"
 
 RUN yum -y install python3 \
                    centos-release-scl \
-                   python3-pip \ 
+                   python3-pip \
                    python3-devel \
                    graphviz \
                    graphviz-devel \

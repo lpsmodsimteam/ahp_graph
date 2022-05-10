@@ -3,7 +3,7 @@
 import os
 import sys
 
-from PyDL import *
+from AHPGraph import *
 
 
 @sstlib("pingpong.Ping")
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     parser.add_argument('--num', type=int,
                         help='how many pingpongs to include')
     parser.add_argument('--partitioner', type=str,
-                        help='which partitioner to use: pydl, sst')
+                        help='which partitioner to use: ahpgraph, sst')
     args = parser.parse_args()
 
     # read in the variables if provided
@@ -119,10 +119,10 @@ if __name__ == "__main__":
         if partitioner.lower() == 'sst':
             graph.build_sst()
 
-        # MPI mode with PyDL graph partitioning. Specifying nranks tells
-        # PyDL that it is doing the partitioning, not SST
+        # MPI mode with AHPGraph graph partitioning. Specifying nranks tells
+        # AHPGraph that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
-        elif partitioner.lower() == 'pydl':
+        elif partitioner.lower() == 'ahpgraph':
             graph.build_sst(num)
 
     else:
@@ -131,6 +131,6 @@ if __name__ == "__main__":
         graph.write_json("pingpongFlat.json")
 
         # generate a different view including the hierarchy, and write out
-        # the PyDL partitioned graph
+        # the AHPGraph partitioned graph
         graph.write_dot("pingpong", draw=True, ports=True)
         graph.write_json("pingpong.json", nranks=num)

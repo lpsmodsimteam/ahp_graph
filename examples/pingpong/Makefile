@@ -9,7 +9,7 @@ OBJ = $(SRC:%.cpp=.build/%.o)
 DEP = $(OBJ:%.o=%.d)
 
 # Tell Make that these are NOT files, just targets
-.PHONY: all install uninstall clean test sst mpi-sst mpi-pydl
+.PHONY: all install uninstall clean test sst mpi-sst mpi-ahpgraph
 
 # Simply typing "make" calls this by default, so everything gets build and installed
 all: install
@@ -48,8 +48,8 @@ mpi-sst: install
 # to be greater than or equal to the number of ranks that we partition
 # In this case each pingpong assembly is placed on a rank meaning there
 # will be a Ping AND Pong on each rank
-mpi-pydl: install
-	mpirun -np 8 sst --parallel-load=SINGLE pingpong.py -- --num=4 --partitioner=pydl
+mpi-ahpgraph: install
+	mpirun -np 8 sst --parallel-load=SINGLE pingpong.py -- --num=4 --partitioner=ahpgraph
 
 # Unregister the model with SST
 uninstall:

@@ -19,8 +19,8 @@ mpi-sst: $(LIB)
 	mpirun -np 4 sst HPC.py -- --partitioner=sst
 
 # arguments after '-- ' are passed to the sst model instead of taken by sst
-mpi-pydl: $(LIB)
-	mpirun -np 4 sst --parallel-load=SINGLE HPC.py -- --partitioner=pydl
+mpi-ahpgraph: $(LIB)
+	mpirun -np 4 sst --parallel-load=SINGLE HPC.py -- --partitioner=ahpgraph
 
 $(LIB):
 	make -C $(APPS) all

@@ -1,7 +1,7 @@
-mytag=pydl
+mytag=AHPGraph
 
 #
-.PHONY: help clean 
+.PHONY: help clean
 
 help:
 	@echo "make help"
@@ -22,4 +22,3 @@ docker_build:
 
 docker_live:
 	docker run -it --rm -v`pwd`:/scratch -w/scratch $(mytag) /bin/bash
-

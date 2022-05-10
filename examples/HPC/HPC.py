@@ -1,12 +1,12 @@
 """
 Abstract HPC cluster.
 
-This demonstrates how assemblies in PyDL can be used to build systems
+This demonstrates how assemblies in AHPGraph can be used to build systems
 out of small components.
 This example utilizes sst-elements to start with a processor and memory
 and then build all the way up to a cluster.
 """
-from PyDL import *
+from AHPGraph import *
 from server import *
 
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     parser.add_argument('--cores', type=int,
                         help='optional number of cores per server')
     parser.add_argument('--partitioner', type=str,
-                        help='which partitioner to use: pydl, sst')
+                        help='which partitioner to use: ahpgraph, sst')
     args = parser.parse_args()
 
     # read in the variables if provided
@@ -155,10 +155,10 @@ if __name__ == "__main__":
         if partitioner.lower() == 'sst':
             graph.build_sst()
 
-        # MPI mode with PyDL graph partitioning. Specifying nranks tells
+        # MPI mode with AHPGraph graph partitioning. Specifying nranks tells
         # BuildSST that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
-        elif partitioner.lower() == 'pydl':
+        elif partitioner.lower() == 'ahpgraph':
             graph.build_sst(racks)
 
     else:

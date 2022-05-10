@@ -85,7 +85,7 @@ class DeviceGraph:
         """
         Add a Device to the graph.
 
-        The device must be a PyDL Device. The name must be unique.
+        The device must be a AHPGraph Device. The name must be unique.
         If the device has sub-components, then we add those, as well.
         Do NOT add sub-components to a device after you have added it using
         this function. Add sub-components first, then add the parent.
@@ -275,7 +275,7 @@ class DeviceGraph:
 
         Return a dictionary of component names to SST component objects.
         If you have an extremely large graph, it is recommended that you use
-        PyDL to do the graph partitioning instead of letting SST do it. You
+        AHPGraph to do the graph partitioning instead of letting SST do it. You
         can do this by using the Device.set_partition() function and then
         setting nranks in this function to the total number of ranks used
         """
@@ -317,7 +317,7 @@ class DeviceGraph:
         program options, such as timebase and stopAtCycle.
 
         If you have an extremely large graph, it is recommended that you use
-        PyDL to do the graph partitioning instead of letting SST do it. You
+        AHPGraph to do the graph partitioning instead of letting SST do it. You
         can do this by using the Device.set_partition() function and then
         setting nranks in this function to the total number of ranks used
         """
@@ -411,7 +411,7 @@ class DeviceGraph:
         if assembly is not None:
             for dev in self.devices.values():
                 if assembly == dev.name:
-                    # this device is the PyDL assembly that we just expanded
+                    # this device is the assembly that we just expanded
                     # make this a cluster and add its ports as nodes
                     clusterName = f"cluster_{dev.attr['type']}"
                     subgraph = graph.subgraph(name=clusterName, color='green')

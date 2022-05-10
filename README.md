@@ -1,5 +1,6 @@
 # AHPGraph - Python Attributed Hierarchical Port Graph
 AHP Graphs - https://arxiv.org/pdf/1802.06492.pdf
+
 In order to use AHPGraph you will need to add to the python path so
 that the files can be located
 
@@ -38,6 +39,6 @@ python3 -m pip install pygraphviz orjson
   - You can use this to enable statistics for devices after they are created
 - If you plan to build the graph with AHPGraph partitioning and run with MPI, remember to include the '--parallel-load=SINGLE' flag to sst
   - '--parallel-load' by default will work with multiple unique files
-  - PyDL can generate the graph for each rank using a single file, so it needs the value 'SINGLE'
+  - AHPGraph can generate the graph for each rank using a single file, so it needs the value 'SINGLE'
 - By default sst grabs all command line parameters
   - You can pass parameters to the python script by putting '-- ' before your script parameters
