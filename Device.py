@@ -12,17 +12,6 @@ hierarchical representations of a graph.
 import collections
 import types
 
-# The Port namespace defines constants used to describe ports.
-Port = types.SimpleNamespace(
-    # Port cardinality: single, multi, or bounded(N).
-    Single=-1,
-    Multi=0,
-    Bounded=lambda x: x,
-    # Whether the port is optional or required.
-    Optional=False,
-    Required=True
-)
-
 
 def sstlib(name: str) -> 'Device':
     """
@@ -50,20 +39,27 @@ def assembly(cls: 'Device') -> 'Device':
     return cls
 
 
-def port(name: str, card, ptype: str = None,
-         need: bool = Port.Optional, format: str = '.#') -> 'Device':
+def port(name: str, ptype: str = None, limit: int = 1,
+         required: bool = True, format: str = '.#') -> 'Device':
     """
     Python decorator to define the ports for a particular device.
 
-    A port is defined by a name, cardinality (single, multiple, or bounded),
-    a port type (a string or None), and whether it is required.
-    Can also have an optional format for how to handle Multi connections
+    A port has a name, a port type which is used to verify connections are
+    between ports of the same type, whether the port is required to be
+    connected or if it is an optional connection, and a limit on the number of
+    connections. If you want unlimited connections, set this to None
+    Can also have an optional format for how to format port numbers
     """
 
     def wrapper(cls: 'Device') -> 'Device':
         if cls._portinfo is None:
-            cls._portinfo = dict()
-        cls._portinfo[name] = (card, ptype, need, format)
+            cls._portinfo = collections.defaultdict(dict)
+        cls._portinfo[name] = {
+            'limit': limit,
+            'type': ptype,
+            'required': required,
+            'format': format
+        }
         return cls
     return wrapper
 
@@ -93,10 +89,6 @@ class DevicePort:
         self.name = name
         self.number = number
         self.format = format
-
-    def is_single(self) -> bool:
-        """Return whether this is a single port or not."""
-        return self.number is None
 
     def get_name(self) -> str:
         """Return a string representation of the port name and number."""
@@ -217,7 +209,7 @@ class Device:
 
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
-        elif info[0] == Port.Single:
+        elif info['limit'] == 1:
             return self.port(port)
         else:
             return lambda x: self.port(port, x)
@@ -239,21 +231,26 @@ class Device:
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
 
-        elif info[0] == Port.Single:
+        elif info['limit'] == 1:
+            # Single Port, don't use port numbers
             if number is not None:
-                raise RuntimeError(f"Port supports one connection: {port}")
+                print(f"WARNING! Single port ({port}) being provided a port"
+                      f" number ({number})")
             if port not in self.ports:
-                self.ports[port] = DevicePort(self, port, format=info[3])
+                self.ports[port] = DevicePort(self, port)
             return self.ports[port]
 
         else:
+            # Multi Port, use port numbers and check the provided limit
             if number is None:
                 number = len(self.ports[port])
-            if info[0] != Port.Multi and number >= info[0]:
-                raise RuntimeError(f"Too many connections: {port}")
+            if info['limit'] is not None:
+                if number >= info['limit']:
+                    raise RuntimeError(f"Too many connections ({number}):"
+                                       f" {port} (limit {info['limit']})")
             if number not in self.ports[port]:
                 self.ports[port][number] = DevicePort(self, port, number,
-                                                      format=info[3])
+                                                      format=info['format'])
             return self.ports[port][number]
 
     def get_portinfo(self) -> dict:

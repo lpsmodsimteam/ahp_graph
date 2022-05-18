@@ -8,7 +8,7 @@ from processor import *
 
 
 @sstlib('memHierarchy.MemNIC')
-@port('port', Port.Single, 'simpleNet', Port.Required)
+@port('port', 'simpleNet')
 class MemNIC(Device):
     """MemNIC."""
 
@@ -42,7 +42,7 @@ class MemNIC(Device):
 
 
 @sstlib('merlin.hr_router')
-@port('port', Port.Multi, 'simpleNet', Port.Optional, '#')
+@port('port', 'simpleNet', None, False, '#')
 class Router(Device):
     """Router."""
 
@@ -91,7 +91,7 @@ class SingleRouter(Device):
 
 
 @sstlib('memHierarchy.DirectoryController')
-@port('direct_link', Port.Single, 'simpleMem', Port.Optional)
+@port('direct_link', 'simpleMem', required=False)
 class DirectoryController(Device):
     """DirectoryController."""
 
@@ -109,7 +109,7 @@ class DirectoryController(Device):
 
 
 @sstlib('memHierarchy.MemController')
-@port('direct_link', Port.Single, 'simpleMem', Port.Optional)
+@port('direct_link', 'simpleMem', required=False)
 class MemController(Device):
     """MemController."""
 
@@ -143,7 +143,7 @@ class simpleMem(Device):
 
 
 @sstlib('rdmaNic.nic')
-@port('port', Port.Multi, 'simpleNet', Port.Optional, '#')
+@port('port', 'simpleNet', None, False, '#')
 class RDMA_NIC(Device):
     """RDMA_NIC."""
 
@@ -173,7 +173,7 @@ class RDMA_NIC(Device):
 
 
 @sstlib('merlin.linkcontrol')
-@port('rtr_port', Port.Single, 'simpleNet', Port.Required)
+@port('rtr_port', 'simpleNet')
 class LinkControl(Device):
     """LinkControl."""
 
@@ -190,7 +190,7 @@ class LinkControl(Device):
 
 
 @assembly
-@port('network', Port.Single, 'simpleNet', Port.Optional)
+@port('network', 'simpleNet')
 class Server(Device):
     """Server constructed of a processor and some memory."""
 

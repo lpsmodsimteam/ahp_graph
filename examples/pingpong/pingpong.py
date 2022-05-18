@@ -6,9 +6,9 @@ import sys
 from AHPGraph import *
 
 
-@sstlib("pingpong.Ping")
-@port("input", Port.Single, 'StringEvent', Port.Required)
-@port("output", Port.Single, 'StringEvent', Port.Required)
+@sstlib('pingpong.Ping')
+@port('input', 'StringEvent')
+@port('output', 'StringEvent')
 class Ping(Device):
     """Ping Device: has a Name and a Model type."""
 
@@ -18,9 +18,9 @@ class Ping(Device):
         super().__init__(name, size, attr)
 
 
-@sstlib("pingpong.Pong")
-@port("input", Port.Single, 'StringEvent', Port.Required)
-@port("output", Port.Single, 'StringEvent', Port.Required)
+@sstlib('pingpong.Pong')
+@port('input', 'StringEvent')
+@port('output', 'StringEvent')
 class Pong(Device):
     """Pong Device."""
 
@@ -30,8 +30,8 @@ class Pong(Device):
 
 
 @assembly
-@port("input", Port.Single, 'StringEvent', Port.Optional)
-@port("output", Port.Single, 'StringEvent', Port.Optional)
+@port('input', 'StringEvent')
+@port('output', 'StringEvent')
 class pingpong(Device):
     """Assembly of a ping and pong device with connections outside."""
 
@@ -47,8 +47,8 @@ class pingpong(Device):
         # create a Ping Device
         # Device names created by an assembly will automatically have the
         # assembly name prefixed to the name provided.
-        ping = Ping("Ping", self.attr["model"])
-        pong = Pong("Pong")  # create a Pong Device
+        ping = Ping('Ping', self.attr['model'])
+        pong = Pong('Pong')  # create a Pong Device
 
         # link ping and pong, automatically adds the devices to the graph
         graph.link(ping.output, pong.input, '1s')
@@ -127,10 +127,10 @@ if __name__ == "__main__":
 
     else:
         # generate a graphviz dot file and json output for demonstration
-        graph.write_dot("pingpongFlat", draw=True, ports=True, hierarchy=False)
-        graph.write_json("pingpongFlat.json")
+        graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
+        graph.write_json('pingpongFlat.json')
 
         # generate a different view including the hierarchy, and write out
         # the AHPGraph partitioned graph
-        graph.write_dot("pingpong", draw=True, ports=True)
-        graph.write_json("pingpong.json", nranks=num)
+        graph.write_dot('pingpong', draw=True, ports=True)
+        graph.write_json('pingpong.json', nranks=num)

@@ -8,7 +8,8 @@ from AHPGraph import *
 import os
 
 
-@sstlib('vanadisdbg.VanadisCPU')
+@sstlib('vanadis.dbg_VanadisCPU')
+@port('os_link', 'os')
 class VanadisCPU(Device):
     """VanadisCPU."""
 
@@ -16,16 +17,6 @@ class VanadisCPU(Device):
         """Initialize using the msg executable."""
         parameters = {
             "clock": "1GHz",
-            "executable": (f"{os.getenv('SST_ELEMENTS_HOME')}"
-                           "/src/sst/elements/rdmaNic/tests/app/rdma/msg"),
-            "app.argc": 4,
-            "app.arg0": "IMB",
-            "app.arg1": "PingPong",
-            "app.arg2": "-iter",
-            "app.arg3": "3",
-            "app.env_count": 1,
-            "app.env0": f"HOME={os.getenv('HOME')}",
-            "app.env1": "VANADIS_THREAD_NUM=0",
             "verbose": 0,
             "physical_fp_registers": 168,
             "physical_int_registers": 180,
@@ -63,7 +54,6 @@ class VanadisMIPSDecoder(Device):
 
 
 @sstlib('vanadis.VanadisMIPSOSHandler')
-@port('os_link', Port.Single, 'os', Port.Required)
 class VanadisMIPSOSHandler(Device):
     """VanadisMIPSOSHandler."""
 
@@ -112,7 +102,7 @@ class VanadisSequentialLoadStoreQueue(Device):
 
 
 @sstlib('vanadis.VanadisNodeOS')
-@port('core', Port.Multi, 'os', Port.Required, '#')
+@port('core', 'os', limit=None, format='#')
 class VanadisNodeOS(Device):
     """VanadisNodeOS."""
 
@@ -125,7 +115,17 @@ class VanadisNodeOS(Device):
             "heap_start": 512 * 1024 * 1024,
             "heap_end": (2 * 1024 * 1024 * 1024) - 4096,
             "page_size": 4096,
-            "heap_verbose": 0
+            "heap_verbose": 0,
+            "executable": (f"{os.getenv('SST_ELEMENTS_HOME')}"
+                           "/src/sst/elements/rdmaNic/tests/app/rdma/msg"),
+            "app.argc": 4,
+            "app.arg0": "IMB",
+            "app.arg1": "PingPong",
+            "app.arg2": "-iter",
+            "app.arg3": "3",
+            "app.env_count": 1,
+            "app.env0": f"HOME={os.getenv('HOME')}",
+            "app.env1": "VANADIS_THREAD_NUM=0"
         }
         if attr is not None:
             parameters.update(attr)
@@ -133,7 +133,7 @@ class VanadisNodeOS(Device):
 
 
 @sstlib('memHierarchy.standardInterface')
-@port('port', Port.Single, 'simpleMem', Port.Optional)
+@port('port', 'simpleMem', required=False)
 class memInterface(Device):
     """memInterface."""
 
@@ -149,8 +149,8 @@ class memInterface(Device):
 
 
 @sstlib('memHierarchy.Cache')
-@port('high_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
-@port('low_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
+@port('high_network', 'simpleMem', None, False, '_#')
+@port('low_network', 'simpleMem', None, False, '_#')
 class Cache(Device):
     """Cache."""
 
@@ -185,8 +185,8 @@ class Cache(Device):
 
 
 @sstlib('memHierarchy.Bus')
-@port('high_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
-@port('low_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
+@port('high_network', 'simpleMem', None, False, '_#')
+@port('low_network', 'simpleMem', None, False, '_#')
 class Bus(Device):
     """Bus."""
 
@@ -201,7 +201,7 @@ class Bus(Device):
 
 
 @sstlib('memHierarchy.MemLink')
-@port('port', Port.Single, 'simpleMem', Port.Required)
+@port('port', 'simpleMem')
 class MemLink(Device):
     """MemLink."""
 
@@ -211,7 +211,7 @@ class MemLink(Device):
 
 
 @assembly
-@port('low_network', Port.Multi, 'simpleMem', Port.Optional, '_#')
+@port('low_network', 'simpleMem', None, False, '_#')
 class Processor(Device):
     """Processor assembly made of various Vanadis components and Caches."""
 
@@ -277,7 +277,7 @@ class Processor(Device):
         graph.link(L1D_to_L2.port('port'), bus.high_network(0), '1ns')
         graph.link(L1I_to_L2.port('port'), bus.high_network(1), '1ns')
         graph.link(nodeOSL1D.low_network(0), bus.high_network(2), '1ns')
-        graph.link(osHandler.os_link, nodeOS.core(0), '5ns')
+        graph.link(cpu.os_link, nodeOS.core(0), '5ns')
 
         # Our external connection goes through the memHierarchy Bus
         # Generally you don't want to put latency on the links to assembly

@@ -28,7 +28,7 @@ class TorusTopology(Device):
 
 
 @assembly
-@port('network', Port.Multi, 'simpleNet', Port.Optional)
+@port('network', 'simpleNet', None, False)
 class Rack(Device):
     """Rack constructed of a router and some servers."""
 

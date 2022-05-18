@@ -71,8 +71,8 @@ class DeviceGraph:
                 self.add(dev)
 
         # Check to make sure the port types match
-        t0 = devs[0].get_portinfo()[p0.name][1]
-        t1 = devs[1].get_portinfo()[p1.name][1]
+        t0 = devs[0].get_portinfo()[p0.name]['type']
+        t1 = devs[1].get_portinfo()[p1.name]['type']
 
         if t0 != t1:
             raise RuntimeError(
@@ -120,7 +120,7 @@ class DeviceGraph:
         for device in self.devices.values():
             portinfo = device.get_portinfo()
             for name in portinfo:
-                if portinfo[name][2] and name not in d2ports[device]:
+                if portinfo[name]['required'] and name not in d2ports[device]:
                     raise RuntimeError(f"{device.name} requires port {name}")
 
     def follow_links(self, rank: int) -> 'DeviceGraph':
