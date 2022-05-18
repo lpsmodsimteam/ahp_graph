@@ -123,9 +123,15 @@ class DeviceGraph:
                 if portinfo[name]['required'] and name not in d2ports[device]:
                     raise RuntimeError(f"{device.name} requires port {name}")
 
+    def check_partition(self) -> None:
+        """Check to make sure the graph has ranks specified for all devices."""
+        for d in self.devices.values():
+            if d.partition is None:
+                raise RuntimeError(f"No partition for component: {d.name}")
+
     def follow_links(self, rank: int) -> 'DeviceGraph':
         """
-        Chase links betweeen ranks.
+        Chase links between ranks.
 
         Given a graph, follow links from the specified rank and expand
         assemblies until links are fully defined (links touch sstlib
@@ -178,8 +184,10 @@ class DeviceGraph:
         # Devices must have a matching name if provided, a matching
         # rank if provided, and be within the expand set if provided
         # if they are to be added to the assemblies list of devices to expand
-        assemblies = list()
+        if levels == 0:
+            return self
 
+        assemblies = list()
         if name is not None:
             splitName = name.split(".")
 
@@ -199,7 +207,7 @@ class DeviceGraph:
             if assembly:
                 assemblies.append(dev)
 
-        if levels == 0 or not assemblies:
+        if not assemblies:
             return self
 
         # Start by creating a link map.  This will allow us quick lookup
@@ -297,11 +305,7 @@ class DeviceGraph:
             if rank >= nranks:
                 return dict()
 
-            # check to make sure the graph has ranks specified for all devices
-            for d in self.devices.values():
-                if d.partition is None:
-                    raise RuntimeError(f"No partition for component: {d.name}")
-
+            self.check_partition()
             rankGraph = self.flatten(rank=rank).follow_links(rank)
             rankGraph.verify_links()
             return rankGraph.__build_model(True)
@@ -334,11 +338,7 @@ class DeviceGraph:
         # Write a JSON file for each rank
         else:
             (base, ext) = os.path.splitext(f"output/{filename}")
-
-            # check to make sure the graph has ranks specified for all devices
-            for d in self.devices.values():
-                if d.partition is None:
-                    raise RuntimeError(f"No partition for component: {d.name}")
+            self.check_partition()
 
             for rank in range(nranks):
                 rankGraph = self.flatten(rank=rank).follow_links(rank)
