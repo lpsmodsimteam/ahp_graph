@@ -413,10 +413,10 @@ class DeviceGraph:
                 if assembly == dev.name:
                     # this device is the assembly that we just expanded
                     # make this a cluster and add its ports as nodes
-                    clusterName = f"cluster_{dev.attr['type']}"
+                    clusterName = f"cluster_{dev.type}"
                     subgraph = graph.subgraph(name=clusterName, color='green')
                     for port in dev.ports:
-                        graph.add_node(f"{dev.attr['type']}:{port}",
+                        graph.add_node(f"{dev.type}:{port}",
                                        shape='diamond', label=port,
                                        color='green', fontcolor='green')
         else:
@@ -432,8 +432,8 @@ class DeviceGraph:
                     if splitName == dev.name.split('.')[0:splitNameLen]:
                         nodeName = '.'.join(dev.name.split('.')[splitNameLen:])
                         label = nodeName
-                if 'model' in dev.attr:
-                    label += f"\\nmodel={dev.attr['model']}"
+                if dev.model is not None:
+                    label += f"\\nmodel={dev.model}"
                 if ports:
                     portLabels = dev.label_ports()
                     if portLabels != '':
@@ -477,8 +477,8 @@ class DeviceGraph:
 
         for dev in self.devices.values():
             label = dev.name
-            if 'model' in dev.attr:
-                label += f"\\nmodel={dev.attr['model']}"
+            if dev.model is not None:
+                label += f"\\nmodel={dev.model}"
             if ports:
                 portLabels = dev.label_ports()
                 if portLabels != '':
@@ -531,7 +531,7 @@ class DeviceGraph:
             """Return a node name given a DevicePort."""
             node = port.device.name
             if node == assembly:
-                return f"{port.device.attr['type']}:{port.name}"
+                return f"{port.device.type}:{port.name}"
             elif assembly is not None:
                 if splitName == node.split('.')[0:splitNameLen]:
                     node = '.'.join(node.split('.')[splitNameLen:])

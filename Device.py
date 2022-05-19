@@ -135,7 +135,7 @@ class DevicePort:
         (p0, p1) = self.__cmp__(other)
         return p0 == p1
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """Need to define a hash function since we defined __eq__."""
         return hash((self.device.name, self.name,
                      -1 if self.number is None else self.number))
@@ -160,22 +160,22 @@ class Device:
     assembly = False
     _portinfo = None
 
-    def __init__(self, name: str, model=None, attr=None) -> 'Device':
+    def __init__(self, name: str, model: str = None,
+                 attr: dict = None) -> 'Device':
         """
         Initialize the device.
 
         Initialize with the unique name, model, and optional
-        dictionary of attributes.
+        dictionary of attributes which are used as SST parameters.
         """
         self.name = name
-        self.attr = dict(attr) if attr is not None else dict()
+        self.attr = attr if attr is not None else dict()
         self.ports = collections.defaultdict(dict)
         self.subs = set()
         self.subOwner = None
         self.partition = None
-        self.attr["type"] = self.__class__.__name__
-        if model is not None:
-            self.attr["model"] = model
+        self.type = self.__class__.__name__
+        self.model = model
 
     def set_partition(self, rank: int, thread: int = 0) -> None:
         """Assign a rank and optional thread to this device."""
@@ -261,10 +261,10 @@ class Device:
 
     def get_category(self) -> str:
         """Return the category for this Device (type, model)."""
-        if 'model' in self.attr:
-            return f"{self.attr['type']}_{self.attr['model']}"
+        if self.model is not None:
+            return f"{self.type}_{self.model}"
         else:
-            return f"{self.attr['type']}"
+            return self.type
 
     def label_ports(self) -> str:
         """Return the port labels for a graphviz record style node."""
@@ -278,13 +278,23 @@ class Device:
     def __repr__(self) -> str:
         """Return a description of the Device."""
         lines = list()
-        lines.append(f"Device={self.__class__.__name__}")
+        lines.append(f"Device={self.type}")
         lines.append(f"    name={self.name}")
-        lines.append(f"    is-assembly={self.assembly}")
+        lines.append(f"    model={self.model}")
+        lines.append(f"    assembly={self.assembly}")
+        lines.append(f"    sstlib={self.sstlib}")
+        lines.append(f"    partition={self.partition}")
+        lines.append(f"    subcomponentParent={self.subOwner}")
 
-        if self.sstlib is not None:
-            lines.append(f"    sstlib={self.sstlib}")
-
+        lines.append(f"    Ports:")
+        portinfo = self.get_portinfo()
+        for port in sorted(portinfo):
+            lines.append(f"        {port}={portinfo[port]}")
+        lines.append(f"    Attributes:")
         for key in sorted(self.attr):
-            lines.append(f"    {key}={self.attr[key]}")
+            lines.append(f"        {key}={self.attr[key]}")
+        lines.append(f"    Subcomponents:")
+        for sub in sorted(self.subs, key=lambda x: (x[1], x[2])):
+            lines.append(f"        {sub[1]}:{sub[2]} -> {sub[0].name}")
+
         return "\n".join(lines)

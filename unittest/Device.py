@@ -49,14 +49,6 @@ class RecursiveAssemblyTestDevice(Device):
         return graph
 
 
-class NoNameDeviceTestDevice(Device):
-    """Unit test for Device with no name."""
-
-    def __init__(self) -> 'Device':
-        """Test Device with no name."""
-        super().__init__()
-
-
 class ModelTestDevice(Device):
     """Unit test for Device with model."""
 
@@ -75,12 +67,13 @@ class AttributeTestDevice(Device):
 
 def LibraryTest():
     """Test of Device with SST Library."""
-    ltd = LibraryTestDevice()
-    str = f"LibraryTest: {ltd.sstlib}"
-    assert (ltd.sstlib == 'ElementLibrary.Component'), str
+    ltd = LibraryTestDevice().sstlib
+    str = f"LibraryTest: {ltd}"
+    assert (ltd == 'ElementLibrary.Component'), str
     print(f"Pass - {str}")
 
 
+# TODO
 def PortTest():
     """Test of Device with various ports."""
     ptd = PortTestDevice()
@@ -115,10 +108,68 @@ def AssemblyNoExpandTest():
         print(f"Pass - {name}")
 
 
+def AssemblyTest():
+    """Test of Device that is an assembly."""
+    rat = RecursiveAssemblyTestDevice().assembly
+    assert rat, 'AssemblyTest'
+    print('Pass - AssemblyTest')
+
+
+def NoNameTest():
+    """Test of device with no name provided."""
+    class NoNameTestDevice(Device):
+        """Unit test for Device with no name."""
+
+        def __init__(self) -> 'Device':
+            """Test Device with no name."""
+            super().__init__()
+
+    try:
+        nntd = NoNameTestDevice()
+        raise AssertionError('NoNameTest')
+    except TypeError:
+        print('Pass - NoNameTest')
+
+
+def ModelTest():
+    """Test of device with model."""
+    mt = ModelTestDevice('model0')
+    ltd = LibraryTestDevice()
+    assert (mt.model == 'model0'), 'model'
+    assert (ltd.model is None), 'None model'
+    print('Pass - ModelTest')
+
+
+def AttributeTest():
+    """Test of Device with attributes."""
+    attr = {'a1': 1, 'a2': 'blue', 'a3': False}
+    at = AttributeTestDevice(attr)
+    assert (at.attr == attr), 'attr'
+    print('Pass - AttributeTest')
+
+
+def SubcomponentTest():
+    """Test for adding subcomponent to a component."""
+    ltd0 = LibraryTestDevice()
+    ltd1 = LibraryTestDevice()
+    ltd0.add_subcomponent(ltd1, 'slotName')
+    pop = ltd0.subs.pop()
+    assert (ltd1.subOwner == ltd0), 'subOwner'
+    assert (pop[0] == ltd1), 'subs'
+    assert (pop[1] == 'slotName'), 'slotName'
+    assert (pop[2] is None), 'slotIndex'
+    print('Pass - SubcomponentTest')
+
+
 if __name__ == "__main__":
     LibraryTest()
     PortTest()
-
     AssemblyNoExpandTest()
+    AssemblyTest()
+    NoNameTest()
+    ModelTest()
+    AttributeTest()
+
+    SubcomponentTest()
 
     print('All tests passed')
