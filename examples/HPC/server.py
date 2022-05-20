@@ -7,7 +7,7 @@ from AHPGraph import *
 from processor import *
 
 
-@sstlib('memHierarchy.MemNIC')
+@library('memHierarchy.MemNIC')
 @port('port', 'simpleNet')
 class MemNIC(Device):
     """MemNIC."""
@@ -41,7 +41,7 @@ class MemNIC(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('merlin.hr_router')
+@library('merlin.hr_router')
 @port('port', 'simpleNet', None, False, '#')
 class Router(Device):
     """Router."""
@@ -81,7 +81,7 @@ class Router(Device):
         super().__init__(name, model, parameters)
 
 
-@sstlib('merlin.singlerouter')
+@library('merlin.singlerouter')
 class SingleRouter(Device):
     """Single Router Topology."""
 
@@ -90,7 +90,7 @@ class SingleRouter(Device):
         super().__init__(name, attr=attr)
 
 
-@sstlib('memHierarchy.DirectoryController')
+@library('memHierarchy.DirectoryController')
 @port('direct_link', 'simpleMem', required=False)
 class DirectoryController(Device):
     """DirectoryController."""
@@ -108,7 +108,7 @@ class DirectoryController(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('memHierarchy.MemController')
+@library('memHierarchy.MemController')
 @port('direct_link', 'simpleMem', required=False)
 class MemController(Device):
     """MemController."""
@@ -127,7 +127,7 @@ class MemController(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('memHierarchy.simpleMem')
+@library('memHierarchy.simpleMem')
 class simpleMem(Device):
     """simpleMem."""
 
@@ -142,7 +142,7 @@ class simpleMem(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('rdmaNic.nic')
+@library('rdmaNic.nic')
 @port('port', 'simpleNet', None, False, '#')
 class RDMA_NIC(Device):
     """RDMA_NIC."""
@@ -172,7 +172,7 @@ class RDMA_NIC(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('merlin.linkcontrol')
+@library('merlin.linkcontrol')
 @port('rtr_port', 'simpleNet')
 class LinkControl(Device):
     """LinkControl."""
@@ -213,7 +213,7 @@ class Server(Device):
         # assembly name prefixed to the name provided.
         NoC = Router("NoC", 'NoC', 0, self.attr['cores'] + 2)
         NoC_topo = SingleRouter("NoC_topo")
-        NoC.add_subcomponent(NoC_topo, 'topology')
+        NoC.add_submodule(NoC_topo, 'topology')
 
         # Generate the appropriate number of Processors and L2 Caches
         for core in range(self.attr['cores']):
@@ -222,8 +222,8 @@ class Server(Device):
             L2 = Cache(f"CPU{core}_L2", 'L2')
             L1_to_L2 = MemLink(f"CPU{core}_L1_to_L2")
             L2_to_mem = MemNIC(f"CPU{core}_L1_to_mem", 'Cache')
-            L2.add_subcomponent(L1_to_L2, 'cpulink')
-            L2.add_subcomponent(L2_to_mem, 'memlink')
+            L2.add_submodule(L1_to_L2, 'cpulink')
+            L2.add_submodule(L2_to_mem, 'memlink')
 
             graph.link(cpu.low_network(0), L1_to_L2.port('port'), '1ns')
             graph.link(L2_to_mem.port('port'), NoC.port('port', core), '1ns')
@@ -232,14 +232,14 @@ class Server(Device):
         dirctrl = DirectoryController("DirectoryController")
         dir_to_mem = MemLink("dir_to_mem")
         dirNIC = MemNIC("dirNIC", 'DirCtrl')
-        dirctrl.add_subcomponent(dir_to_mem, 'memlink')
-        dirctrl.add_subcomponent(dirNIC, 'cpulink')
+        dirctrl.add_submodule(dir_to_mem, 'memlink')
+        dirctrl.add_submodule(dirNIC, 'cpulink')
 
         memctrl = MemController("MemController")
         mem_to_dir = MemLink("mem_to_dir")
         memory = simpleMem("simpleMem")
-        memctrl.add_subcomponent(mem_to_dir, 'cpulink')
-        memctrl.add_subcomponent(memory, 'backend')
+        memctrl.add_submodule(mem_to_dir, 'cpulink')
+        memctrl.add_submodule(memory, 'backend')
 
         # Initialize the RDMA_NIC and its interfaces
         nic = RDMA_NIC("NIC", self.attr['node'],
@@ -248,9 +248,9 @@ class Server(Device):
         mmioIf = memInterface("MMIO_IF")
         mmioNIC = MemNIC("MMIO_NIC", 'SHMEMNIC')
         netLink = LinkControl("netLink")
-        mmioIf.add_subcomponent(mmioNIC, 'memlink')
-        nic.add_subcomponent(mmioIf, 'mmio')
-        nic.add_subcomponent(netLink, 'rtrLink')
+        mmioIf.add_submodule(mmioNIC, 'memlink')
+        nic.add_submodule(mmioIf, 'mmio')
+        nic.add_submodule(netLink, 'rtrLink')
 
         graph.link(NoC.port('port', None), dirNIC.port('port'), '1ns')
         graph.link(NoC.port('port', None), mmioNIC.port('port'), '10ns')

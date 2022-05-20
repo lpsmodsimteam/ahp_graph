@@ -6,7 +6,7 @@ import sys
 from AHPGraph import *
 
 
-@sstlib('pingpong.Ping')
+@library('pingpong.Ping')
 @port('input', 'StringEvent')
 @port('output', 'StringEvent')
 class Ping(Device):
@@ -18,7 +18,7 @@ class Ping(Device):
         super().__init__(name, size, attr)
 
 
-@sstlib('pingpong.Pong')
+@library('pingpong.Pong')
 @port('input', 'StringEvent')
 @port('output', 'StringEvent')
 class Pong(Device):
@@ -109,6 +109,7 @@ if __name__ == "__main__":
 
     # Construct a DeviceGraph with the specified architecture
     graph = architecture(5, num)
+    sstgraph = SSTGraph(graph)
 
     if SST:
         # If running within SST, generate the SST graph
@@ -117,20 +118,20 @@ if __name__ == "__main__":
         # SST partitioner
         # This will work in serial or running SST with MPI in parallel
         if partitioner.lower() == 'sst':
-            graph.build_sst()
+            sstgraph.build()
 
         # MPI mode with AHPGraph graph partitioning. Specifying nranks tells
         # AHPGraph that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
         elif partitioner.lower() == 'ahpgraph':
-            graph.build_sst(num)
+            sstgraph.build(num)
 
     else:
         # generate a graphviz dot file and json output for demonstration
         graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
-        graph.write_json('pingpongFlat.json')
+        sstgraph.write_json('pingpongFlat.json')
 
         # generate a different view including the hierarchy, and write out
         # the AHPGraph partitioned graph
         graph.write_dot('pingpong', draw=True, ports=True)
-        graph.write_json('pingpong.json', nranks=num)
+        sstgraph.write_json('pingpong.json', nranks=num)

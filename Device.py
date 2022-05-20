@@ -1,7 +1,7 @@
 """
-This module represents a Device which can be thought of as an SST component.
+This module represents a Device.
 
-There are decorators for annotating which SST library the device can be found
+There are decorators for annotating which library the device can be found
 in along with port labels.
 
 The most important feature is that a Device can be an assembly, meaning is is
@@ -10,19 +10,20 @@ hierarchical representations of a graph.
 """
 
 import collections
-import types
 
 
-def sstlib(name: str) -> 'Device':
+def library(name: str) -> 'Device':
     """
-    Python decorator to define the SST component associated with this Device.
+    Python decorator to define library associated with this Device.
 
-    Note that a node may have an SST attribute and also
-    be an assembly (e.g., a multi-resolution model of a component).
+    For example, this represents the SST Element Library and Component used to
+    simulate the device ('element.component')
+    Note that a device may have a model library defined and also
+    be an assembly (e.g., a multi-resolution model).
     """
 
     def wrapper(cls: 'Device') -> 'Device':
-        cls.sstlib = name
+        cls.library = name
         return cls
     return wrapper
 
@@ -70,32 +71,21 @@ class DevicePort:
 
     DevicePort contains a device reference, a port name, and an
     optional port number.
-    Optional format parameter for how to format a port number.
-    This allows for ports to mimic the format of certain SST elements
     """
 
     def __init__(self, device: 'Device', name: str,
-                 number: int = None, format: str = '.#') -> 'DevicePort':
-        """
-        Initialize the device, name, port number, and format.
-
-        The DevicePort has the typical format of name.portNum
-        If this doesn't work, you can specify the format to include a '#'
-        to indicate where the portNum is placed after name.
-        For example: format = '(#)' will result in name(portNum)
-                     format = '_#'  will result in name_portNum
-        """
+                 number: int = None) -> 'DevicePort':
+        """Initialize the device, name, port number."""
         self.device = device
         self.name = name
         self.number = number
-        self.format = format
 
     def get_name(self) -> str:
         """Return a string representation of the port name and number."""
         if self.number is None:
             return self.name
         else:
-            sf = self.format.split('#')
+            sf = self.device.get_portinfo()[self.name]['format'].split('#')
             return f"{self.name}{sf[0]}{self.number}{sf[1]}"
 
     def __repr__(self) -> str:
@@ -146,9 +136,14 @@ class Device:
     Device is the base class for a node in the AHP graph.
 
     This object is immutable. Each device exports several ports.
-    A device may be represented by an SST component, may be an assembly
+    A device may be represented by an model, may be an assembly
     of other devices, or both. If an assembly, then the device must define
     an expand() method that returns a device graph that implements the device.
+
+    Devices may contain submodules which allow for parameterization of
+    functionality similar to a lambda function (ex. SST subcomponents). This
+    is done by creating a Device to represent the submodule and then adding
+    it into another device.
 
     Note that successive calls to port() will return the same DevicePort
     object so they can be used in sets and comparisons.
@@ -156,7 +151,7 @@ class Device:
     Each device must have a unique name.
     """
 
-    sstlib = None
+    library = None
     assembly = False
     _portinfo = None
 
@@ -166,7 +161,7 @@ class Device:
         Initialize the device.
 
         Initialize with the unique name, model, and optional
-        dictionary of attributes which are used as SST parameters.
+        dictionary of attributes which are used as model parameters.
         """
         self.name = name
         self.attr = attr if attr is not None else dict()
@@ -181,21 +176,19 @@ class Device:
         """Assign a rank and optional thread to this device."""
         self.partition = (rank, thread)
 
-    def add_subcomponent(self, device: 'Device', name: str,
-                         slotIndex: int = None) -> None:
+    def add_submodule(self, device: 'Device', slotName: str,
+                      slotIndex: int = None) -> None:
         """
-        Add a subcomponent to this component.
+        Add a submodule to this component.
 
-        Both the subcomponent and this component must be SST classes.
-        Note that all subcomponents must be added to the device before
+        Both the submodule and this device must have libraries.
+        Note that all submodules must be added to the device before
         the device is added to the graph.
         """
-        if self.sstlib is None:
-            raise RuntimeError(f"Parent of sub-component must be an SST class")
-        if device.sstlib is None:
-            raise RuntimeError(f"A sub-component must be an SST class")
+        if self.library is None or device.library is None:
+            raise RuntimeError(f"Submodule and parent must have libraries")
         device.subOwner = self
-        self.subs.add((device, name, slotIndex))
+        self.subs.add((device, slotName, slotIndex))
 
     def __getattr__(self, port: str) -> 'DevicePort':
         """
@@ -249,8 +242,7 @@ class Device:
                     raise RuntimeError(f"Too many connections ({number}):"
                                        f" {port} (limit {info['limit']})")
             if number not in self.ports[port]:
-                self.ports[port][number] = DevicePort(self, port, number,
-                                                      format=info['format'])
+                self.ports[port][number] = DevicePort(self, port, number)
             return self.ports[port][number]
 
     def get_portinfo(self) -> dict:
@@ -280,11 +272,11 @@ class Device:
         lines = list()
         lines.append(f"Device={self.type}")
         lines.append(f"    name={self.name}")
-        lines.append(f"    model={self.model}")
+        lines.append(f"    library={self.library}")
         lines.append(f"    assembly={self.assembly}")
-        lines.append(f"    sstlib={self.sstlib}")
+        lines.append(f"    model={self.model}")
         lines.append(f"    partition={self.partition}")
-        lines.append(f"    subcomponentParent={self.subOwner}")
+        lines.append(f"    submoduleParent={self.subOwner}")
 
         lines.append(f"    Ports:")
         portinfo = self.get_portinfo()
@@ -293,7 +285,7 @@ class Device:
         lines.append(f"    Attributes:")
         for key in sorted(self.attr):
             lines.append(f"        {key}={self.attr[key]}")
-        lines.append(f"    Subcomponents:")
+        lines.append(f"    Submodules:")
         for sub in sorted(self.subs, key=lambda x: (x[1], x[2])):
             lines.append(f"        {sub[1]}:{sub[2]} -> {sub[0].name}")
 

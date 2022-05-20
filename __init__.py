@@ -9,3 +9,4 @@ tools.
 
 from .Device import *
 from .DeviceGraph import *
+from .SSTGraph import *

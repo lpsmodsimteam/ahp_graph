@@ -8,7 +8,7 @@ from AHPGraph import *
 import os
 
 
-@sstlib('vanadis.dbg_VanadisCPU')
+@library('vanadis.dbg_VanadisCPU')
 @port('os_link', 'os')
 class VanadisCPU(Device):
     """VanadisCPU."""
@@ -38,7 +38,7 @@ class VanadisCPU(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('vanadis.VanadisMIPSDecoder')
+@library('vanadis.VanadisMIPSDecoder')
 class VanadisMIPSDecoder(Device):
     """VanadisMIPSDecoder."""
 
@@ -53,7 +53,7 @@ class VanadisMIPSDecoder(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('vanadis.VanadisMIPSOSHandler')
+@library('vanadis.VanadisMIPSOSHandler')
 class VanadisMIPSOSHandler(Device):
     """VanadisMIPSOSHandler."""
 
@@ -68,7 +68,7 @@ class VanadisMIPSOSHandler(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('vanadis.VanadisBasicBranchUnit')
+@library('vanadis.VanadisBasicBranchUnit')
 class VanadisBasicBranchUnit(Device):
     """VanadisBasicBranchUnit."""
 
@@ -82,7 +82,7 @@ class VanadisBasicBranchUnit(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('vanadis.VanadisSequentialLoadStoreQueue')
+@library('vanadis.VanadisSequentialLoadStoreQueue')
 class VanadisSequentialLoadStoreQueue(Device):
     """VanadisSequentialLoadStoreQueue."""
 
@@ -101,7 +101,7 @@ class VanadisSequentialLoadStoreQueue(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('vanadis.VanadisNodeOS')
+@library('vanadis.VanadisNodeOS')
 @port('core', 'os', limit=None, format='#')
 class VanadisNodeOS(Device):
     """VanadisNodeOS."""
@@ -132,7 +132,7 @@ class VanadisNodeOS(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('memHierarchy.standardInterface')
+@library('memHierarchy.standardInterface')
 @port('port', 'simpleMem', required=False)
 class memInterface(Device):
     """memInterface."""
@@ -148,7 +148,7 @@ class memInterface(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('memHierarchy.Cache')
+@library('memHierarchy.Cache')
 @port('high_network', 'simpleMem', None, False, '_#')
 @port('low_network', 'simpleMem', None, False, '_#')
 class Cache(Device):
@@ -184,7 +184,7 @@ class Cache(Device):
         super().__init__(name, model, parameters)
 
 
-@sstlib('memHierarchy.Bus')
+@library('memHierarchy.Bus')
 @port('high_network', 'simpleMem', None, False, '_#')
 @port('low_network', 'simpleMem', None, False, '_#')
 class Bus(Device):
@@ -200,7 +200,7 @@ class Bus(Device):
         super().__init__(name, attr=parameters)
 
 
-@sstlib('memHierarchy.MemLink')
+@library('memHierarchy.MemLink')
 @port('port', 'simpleMem')
 class MemLink(Device):
     """MemLink."""
@@ -236,37 +236,37 @@ class Processor(Device):
         decoder = VanadisMIPSDecoder("VanadisMIPSDecoder")
         osHandler = VanadisMIPSOSHandler("VanadisMIPSOSHandler")
         branch = VanadisBasicBranchUnit("VanadisBasicBranchUnit")
-        decoder.add_subcomponent(osHandler, "os_handler")
-        decoder.add_subcomponent(branch, "branch_unit")
-        cpu.add_subcomponent(decoder, 'decoder0')
+        decoder.add_submodule(osHandler, "os_handler")
+        decoder.add_submodule(branch, "branch_unit")
+        cpu.add_submodule(decoder, 'decoder0')
 
         icache = memInterface("ICache", self.attr['core'])
-        cpu.add_subcomponent(icache, 'mem_interface_inst')
+        cpu.add_submodule(icache, 'mem_interface_inst')
 
         lsq = VanadisSequentialLoadStoreQueue(
             "VanadisSequentialLoadStoreQueue")
-        cpu.add_subcomponent(lsq, 'lsq')
+        cpu.add_submodule(lsq, 'lsq')
 
         dcache = memInterface("DCache", self.attr['core'])
-        lsq.add_subcomponent(dcache, 'memory_interface')
+        lsq.add_submodule(dcache, 'memory_interface')
 
         nodeOS = VanadisNodeOS("VanadisNodeOS", self.attr['cores'])
         nodeOSmem = memInterface("NodeOSMemIF", self.attr['core'])
-        nodeOS.add_subcomponent(nodeOSmem, 'mem_interface')
+        nodeOS.add_submodule(nodeOSmem, 'mem_interface')
 
         nodeOSL1D = Cache("nodeOSL1D", 'L1')
 
         cpuL1D = Cache("cpuL1D", 'L1')
         cpu_to_L1D = MemLink("cpu_to_L1D")
         L1D_to_L2 = MemLink("L1D_to_L2")
-        cpuL1D.add_subcomponent(cpu_to_L1D, 'cpulink')
-        cpuL1D.add_subcomponent(L1D_to_L2, 'memlink')
+        cpuL1D.add_submodule(cpu_to_L1D, 'cpulink')
+        cpuL1D.add_submodule(L1D_to_L2, 'memlink')
 
         cpuL1I = Cache("cpuL1I", 'L1')
         cpu_to_L1I = MemLink("cpu_to_L1I")
         L1I_to_L2 = MemLink("L1I_to_L2")
-        cpuL1I.add_subcomponent(cpu_to_L1I, 'cpulink')
-        cpuL1I.add_subcomponent(L1I_to_L2, 'memlink')
+        cpuL1I.add_submodule(cpu_to_L1I, 'cpulink')
+        cpuL1I.add_submodule(L1I_to_L2, 'memlink')
 
         bus = Bus("Bus")
 

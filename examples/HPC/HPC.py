@@ -10,7 +10,7 @@ from AHPGraph import *
 from server import *
 
 
-@sstlib('merlin.torus')
+@library('merlin.torus')
 class TorusTopology(Device):
     """Torus Topology."""
 
@@ -55,7 +55,7 @@ class Rack(Device):
                         self.attr['rack'], self.attr['nodes'] + 4)
         topology = TorusTopology("TorusTopology",
                                  self.attr['shape'], self.attr['nodes'])
-        router.add_subcomponent(topology, "topology")
+        router.add_submodule(topology, "topology")
         router.set_partition(self.partition[0], 0)
 
         # make all the torus ports available outside the rack
@@ -147,6 +147,7 @@ if __name__ == "__main__":
 
     # Create a cluster with the given parameters
     graph = Cluster(shape, nodes, cores)
+    sstgraph = SSTGraph(graph)
 
     if SST:
         # If running within SST, generate the SST graph
@@ -155,13 +156,13 @@ if __name__ == "__main__":
         # SST partitioner
         # This will work in serial or running SST with MPI in parallel
         if partitioner.lower() == 'sst':
-            graph.build_sst()
+            sstgraph.build()
 
         # MPI mode with AHPGraph graph partitioning. Specifying nranks tells
         # BuildSST that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
         elif partitioner.lower() == 'ahpgraph':
-            graph.build_sst(racks)
+            sstgraph.build(racks)
 
     else:
         # generate a graphviz dot file and json output for demonstration
@@ -169,4 +170,4 @@ if __name__ == "__main__":
         # partially expanding the graph only expands the portions of the graph
         # relevant to the rank being output at that time, therefore saving
         # memory by not flattening the entire graph all at once
-        graph.write_json('cluster.json', racks)
+        sstgraph.write_json('cluster.json', racks)
