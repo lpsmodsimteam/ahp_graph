@@ -177,7 +177,7 @@ class Device:
         self.type = self.__class__.__name__
         self.model = model
 
-    def set_partition(self, rank: int, thread: int = 0) -> None:
+    def set_partition(self, rank: int, thread: int = None) -> None:
         """Assign a rank and optional thread to this device."""
         self.partition = (rank, thread)
 

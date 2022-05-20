@@ -226,7 +226,9 @@ class DeviceGraph:
             # Also prepend the assembly's name to the names of the new devices
             for d in subgraph.devices.values():
                 if d != device:
-                    d.partition = device.partition
+                    if device.partition is not None and d.partition is None:
+                        d.partition = device.partition
+
                     d.name = f"{device.name}.{d.name}"
 
             def find_other_port(port):
@@ -632,7 +634,8 @@ class DeviceGraph:
                     c1 = comp.setSubComponent(n1, d1.sstlib)
                 else:
                     c1 = comp.setSubComponent(n1, d1.sstlib, s1)
-                c1.addParams(self.__encode(d1.attr))
+                c1.addParams(self.__encode(
+                    {'type': d1.type, 'model': d1.model} | d1.attr))
                 n2c[d1.name] = c1
                 for key in global_params:
                     c1.addGlobalParamSet(key)
@@ -644,10 +647,12 @@ class DeviceGraph:
         for d0 in self.devices.values():
             if d0.subOwner is None and d0.sstlib is not None:
                 c0 = sst.Component(d0.name, d0.sstlib)
-                c0.addParams(self.__encode(d0.attr))
+                c0.addParams(self.__encode(
+                    {'type': d0.type, 'model': d0.model} | d0.attr))
                 # Set the component partition if we are self-partitioning
                 if self_partition:
-                    c0.setRank(d0.partition[0], d0.partition[1])
+                    thread = 0 if d0.partition[1] is None else d0.partition[1]
+                    c0.setRank(d0.partition[0], thread)
                 n2c[d0.name] = c0
                 for key in global_params:
                     c0.addGlobalParamSet(key)
@@ -699,7 +704,9 @@ class DeviceGraph:
                         "slot_name": n1,
                         "type": d1.sstlib,
                         "slot_number": s1,
-                        "params": self.__encode(d1.attr, True),
+                        "params": self.__encode(
+                            {'type': d1.type, 'model': d1.model} | d1.attr,
+                            True),
                         "params_global_sets": global_set,
                     }
                 if len(d1.subs) > 0:
@@ -715,13 +722,16 @@ class DeviceGraph:
                 component = {
                     "name": d0.name,
                     "type": d0.sstlib,
-                    "params": self.__encode(d0.attr, True),
+                    "params": self.__encode(
+                        {'type': d0.type, 'model': d0.model} | d0.attr,
+                        True),
                     "params_global_sets": global_set,
                 }
-                if d0.partition is not None:
+                if nranks > 1:
                     component["partition"] = {
                         "rank": d0.partition[0],
-                        "thread": d0.partition[1],
+                        "thread": (0 if d0.partition[1] is None
+                                   else d0.partition[1]),
                     }
 
                 subcomponents = recurseSubcomponents(d0)

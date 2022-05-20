@@ -56,6 +56,7 @@ class Rack(Device):
         topology = TorusTopology("TorusTopology",
                                  self.attr['shape'], self.attr['nodes'])
         router.add_subcomponent(topology, "topology")
+        router.set_partition(self.partition[0], 0)
 
         # make all the torus ports available outside the rack
         for i in range(4):
@@ -70,6 +71,7 @@ class Rack(Device):
                             (self.attr['rack'] * self.attr['nodes']) + node,
                             self.attr['racks'], self.attr['nodes'],
                             self.attr['cores'])
+            server.set_partition(self.partition[0], node+1)
             graph.link(router.port('port', None), server.network, '10ns')
 
         return graph
