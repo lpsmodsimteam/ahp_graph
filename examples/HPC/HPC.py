@@ -118,35 +118,21 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description='HPC Cluster Simulation')
-    parser.add_argument('--shape', type=str,
+    parser.add_argument('--shape', type=str, default='2x2',
                         help='optional shape to use for the topology')
-    parser.add_argument('--nodes', type=int,
+    parser.add_argument('--nodes', type=int, default=1,
                         help='optional number of nodes per rack')
-    parser.add_argument('--cores', type=int,
+    parser.add_argument('--cores', type=int, default=1,
                         help='optional number of cores per server')
-    parser.add_argument('--partitioner', type=str,
+    parser.add_argument('--partitioner', type=str, default='sst',
                         help='which partitioner to use: ahpgraph, sst')
     args = parser.parse_args()
 
-    # read in the variables if provided
-    shape = '2x2'
-    nodes = 1
-    cores = 1
-    partitioner = 'sst'
-    if args.partitioner is not None:
-        partitioner = args.partitioner
-    if args.shape is not None:
-        shape = args.shape
-    if args.nodes is not None:
-        nodes = args.nodes
-    if args.cores is not None:
-        cores = args.cores
-
-    dims = [int(x) for x in shape.split('x')]
+    dims = [int(x) for x in args.shape.split('x')]
     racks = dims[0] * dims[1]
 
     # Create a cluster with the given parameters
-    graph = Cluster(shape, nodes, cores)
+    graph = Cluster(args.shape, args.nodes, args.cores)
     sstgraph = SSTGraph(graph)
 
     if SST:
@@ -155,13 +141,13 @@ if __name__ == "__main__":
 
         # SST partitioner
         # This will work in serial or running SST with MPI in parallel
-        if partitioner.lower() == 'sst':
+        if args.partitioner.lower() == 'sst':
             sstgraph.build()
 
         # MPI mode with AHPGraph graph partitioning. Specifying nranks tells
         # BuildSST that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
-        elif partitioner.lower() == 'ahpgraph':
+        elif args.partitioner.lower() == 'ahpgraph':
             sstgraph.build(racks)
 
     else:

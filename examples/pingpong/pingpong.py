@@ -93,22 +93,14 @@ if __name__ == "__main__":
         SST = False
 
     parser = argparse.ArgumentParser(description='PingPong')
-    parser.add_argument('--num', type=int,
+    parser.add_argument('--num', type=int, default=2,
                         help='how many pingpongs to include')
-    parser.add_argument('--partitioner', type=str,
+    parser.add_argument('--partitioner', type=str, default='sst',
                         help='which partitioner to use: ahpgraph, sst')
     args = parser.parse_args()
 
-    # read in the variables if provided
-    num = 2
-    partitioner = 'sst'
-    if args.num is not None:
-        num = args.num
-    if args.partitioner is not None:
-        partitioner = args.partitioner
-
     # Construct a DeviceGraph with the specified architecture
-    graph = architecture(5, num)
+    graph = architecture(5, args.num)
     sstgraph = SSTGraph(graph)
 
     if SST:
@@ -117,14 +109,14 @@ if __name__ == "__main__":
 
         # SST partitioner
         # This will work in serial or running SST with MPI in parallel
-        if partitioner.lower() == 'sst':
+        if args.partitioner.lower() == 'sst':
             sstgraph.build()
 
         # MPI mode with AHPGraph graph partitioning. Specifying nranks tells
         # AHPGraph that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
-        elif partitioner.lower() == 'ahpgraph':
-            sstgraph.build(num)
+        elif args.partitioner.lower() == 'ahpgraph':
+            sstgraph.build(args.num)
 
     else:
         # generate a graphviz dot file and json output for demonstration
@@ -134,4 +126,4 @@ if __name__ == "__main__":
         # generate a different view including the hierarchy, and write out
         # the AHPGraph partitioned graph
         graph.write_dot('pingpong', draw=True, ports=True)
-        sstgraph.write_json('pingpong.json', nranks=num)
+        sstgraph.write_json('pingpong.json', nranks=args.num)

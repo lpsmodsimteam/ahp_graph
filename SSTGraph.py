@@ -1,4 +1,4 @@
-"""This module extends a DeviceGraph to add SST Simulation output."""
+"""This module extends a DeviceGraph to enables SST Simulation output."""
 
 import os
 import gc
