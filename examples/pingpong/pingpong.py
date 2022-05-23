@@ -1,4 +1,4 @@
-"""Simple example of two SST components playing pingpong with messages."""
+"""Simple example of two Python functions playing pingpong with messages."""
 
 import os
 import sys
@@ -6,9 +6,41 @@ import sys
 from AHPGraph import *
 
 
-@library('pingpong.Ping')
-@port('input', 'StringEvent')
-@port('output', 'StringEvent')
+class PingFunction():
+    def __init__(self, name: str, repeats: int):
+        self.name = name
+        self.max = repeats
+        self.repeats = 0
+        self.output = None
+
+    def start(self):
+        print(f'{self.name}: Sending Ping')
+        self.output(f'{self.name}: Ping')
+
+    def input(self, string: str):
+        print(f'{self.name}: Received {string}')
+        self.repeats += 1
+        if self.repeats < self.max:
+            print(f'{self.name}: Sending Ping')
+            self.output(f'{self.name}: Ping')
+        else:
+            print(f'{self.name}: Done')
+
+
+class PongFunction():
+    def __init__(self, name: str):
+        self.name = name
+        self.output = None
+
+    def input(self, string: str):
+        print(f'{self.name}: Received {string}')
+        print(f'{self.name}: Sending Pong')
+        self.output(f'{self.name}: Pong')
+
+
+@library('pingpong.PingFunction')
+@port('input', 'str')
+@port('output', 'str')
 class Ping(Device):
     """Ping Device: has a Name and a Model type."""
 
@@ -18,9 +50,9 @@ class Ping(Device):
         super().__init__(name, size, attr)
 
 
-@library('pingpong.Pong')
-@port('input', 'StringEvent')
-@port('output', 'StringEvent')
+@library('pingpong.PongFunction')
+@port('input', 'str')
+@port('output', 'str')
 class Pong(Device):
     """Pong Device."""
 
@@ -30,8 +62,8 @@ class Pong(Device):
 
 
 @assembly
-@port('input', 'StringEvent')
-@port('output', 'StringEvent')
+@port('input', 'str')
+@port('output', 'str')
 class pingpong(Device):
     """Assembly of a ping and pong device with connections outside."""
 
@@ -81,49 +113,60 @@ def architecture(repeats: int = 10, num: int = 1) -> 'DeviceGraph':
 
 
 if __name__ == "__main__":
-    """
-    If we are running as a script (either via Python or from SST), then
-    proceed.  Check if we are running with SST or from Python.
-    """
     import argparse
-    try:
-        import sst
-        SST = True
-    except ImportError:
-        SST = False
-
     parser = argparse.ArgumentParser(description='PingPong')
     parser.add_argument('--num', type=int, default=2,
                         help='how many pingpongs to include')
-    parser.add_argument('--partitioner', type=str, default='sst',
-                        help='which partitioner to use: ahpgraph, sst')
+    parser.add_argument('--repeats', type=int, default=5,
+                        help='how many message volleys to run')
     args = parser.parse_args()
 
     # Construct a DeviceGraph with the specified architecture
-    graph = architecture(5, args.num)
-    sstgraph = SSTGraph(graph)
+    graph = architecture(args.repeats, args.num)
 
-    if SST:
-        # If running within SST, generate the SST graph
-        # There are multiple ways to run, below are a few common examples
+    # generate a graphviz dot file and json output for demonstration
+    graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
 
-        # SST partitioner
-        # This will work in serial or running SST with MPI in parallel
-        if args.partitioner.lower() == 'sst':
-            sstgraph.build()
+    # generate a different view including the hierarchy, and write out
+    # the AHPGraph partitioned graph
+    graph.write_dot('pingpong', draw=True, ports=True)
 
-        # MPI mode with AHPGraph graph partitioning. Specifying nranks tells
-        # AHPGraph that it is doing the partitioning, not SST
-        # For this to work you need to pass --parallel-load=SINGLE to sst
-        elif args.partitioner.lower() == 'ahpgraph':
-            sstgraph.build(args.num)
+    # run the example 'simulation' using the two classes
+    # need to manually build the graph since AHPGraph doesn't support this
+    flat = graph.flatten()
+    instances = dict()
+    print('Devices:')
+    for device in flat.devices:
+        print(device)
+        if flat.devices[device].type == 'Ping':
+            instances[device] = PingFunction(device, args.repeats)
+        elif flat.devices[device].type == 'Pong':
+            instances[device] = PongFunction(device)
+        else:
+            print('ERROR, should only have Ping or Pong Devices')
+            exit()
 
+    print('Links:')
+    if args.num <= 1:
+        pi = instances['PingPong0.Ping']
+        po = instances['PingPong0.Pong']
+        print('PingPong0.Ping --> PingPong0.Pong')
+        pi.output = lambda x: po.input(x)
+        print('PingPong0.Pong --> PingPong0.Ping')
+        po.output = lambda x: pi.input(x)
     else:
-        # generate a graphviz dot file and json output for demonstration
-        graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
-        sstgraph.write_json('pingpongFlat.json')
+        for link in flat.links.values():
+            n0 = link[0].device.name
+            n1 = link[1].device.name
+            if n0 == 'PingPong0.Ping' and n1 == f'PingPong{args.num-1}.Pong':
+                print(f'{n1} --> {n0}')
+                instances[n1].output = lambda x: instances[n0].input(x)
+            else:
+                print(f'{n0} --> {n1}')
+                instances[n0].output = lambda x: instances[n1].input(x)
 
-        # generate a different view including the hierarchy, and write out
-        # the AHPGraph partitioned graph
-        graph.write_dot('pingpong', draw=True, ports=True)
-        sstgraph.write_json('pingpong.json', nranks=args.num)
+    print('Running:')
+    for device in flat.devices:
+        if flat.devices[device].type == 'Ping':
+            instances[device].start()
+            break
