@@ -4,8 +4,8 @@
 class test():
     """Class to format test output."""
 
-    FAIL = f'\033[0;31mFAIL\033[0m'
-    PASS = f'\033[0;32mPASS\033[0m'
+    FAIL = '\033[0;31mFAIL\033[0m'
+    PASS = '\033[0;32mPASS\033[0m'
     verbose = False
 
     def __init__(self, name: str) -> None:
@@ -25,9 +25,10 @@ class test():
             if self.verbose:
                 print(f'\t{self.FAIL} - {string}')
 
-    def finish(self) -> None:
+    def finish(self) -> bool:
         """Print final test results and return any failures."""
         if self.fail:
             print(f'{self.name} - {self.FAIL}')
         else:
             print(f'{self.name} - {self.PASS}')
+        return self.fail

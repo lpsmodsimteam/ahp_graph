@@ -5,184 +5,160 @@ from AHPGraph.unittest.test import *
 from AHPGraph.unittest.Devices import *
 
 
-class LibraryTest(test):
+def LibraryTest() -> bool:
     """Test of Device with Library."""
+    t = test('LibraryTest')
 
-    def __init__(self, verbose: bool = False) -> None:
-        """Run the test."""
-        super().__init__(self.__class__.__name__)
+    ltd = LibraryTestDevice().library
+    t.test(ltd == 'ElementLibrary.Component', ltd)
 
-        ltd = LibraryTestDevice().library
-        self.test(ltd == 'ElementLibrary.Component', ltd)
-
-        self.finish()
+    return t.finish()
 
 
-class PortTest(test):
+def PortTest() -> bool:
     """Test of Device with various ports."""
+    t = test('PortTest')
 
-    def __init__(self, verbose: bool = False) -> None:
-        """Run the test."""
-        super().__init__(self.__class__.__name__)
+    ptd = PortTestDevice()
+    portinfo = ptd.get_portinfo()
 
-        ptd = PortTestDevice()
-        portinfo = ptd.get_portinfo()
+    t.test(portinfo['default']['type'] is None, 'default type')
+    t.test(portinfo['default']['limit'] == 1, 'default limit')
+    t.test(portinfo['default']['required'] is True, 'default required')
+    t.test(portinfo['default']['format'] == '.#', 'default format')
 
-        self.test(portinfo['default']['type'] is None, 'default type')
-        self.test(portinfo['default']['limit'] == 1, 'default limit')
-        self.test(portinfo['default']['required'] is True, 'default required')
-        self.test(portinfo['default']['format'] == '.#', 'default format')
+    t.test(portinfo['type']['type'] == 'test', 'type')
+    t.test(portinfo['no_limit']['limit'] is None, 'No limit')
+    t.test(portinfo['limit']['limit'] == 2, 'limit')
+    t.test(portinfo['optional']['required'] is False, 'optional')
+    t.test(portinfo['format']['format'] == '(#)', 'format')
 
-        self.test(portinfo['type']['type'] == 'test', 'type')
-        self.test(portinfo['no_limit']['limit'] is None, 'No limit')
-        self.test(portinfo['limit']['limit'] == 2, 'limit')
-        self.test(portinfo['optional']['required'] is False, 'optional')
-        self.test(portinfo['format']['format'] == '(#)', 'format')
+    t.test(ptd.default == ptd.port('default'), '__getattr__')
+    t.test(ptd.default.device == ptd, 'device')
+    t.test(ptd.default.name == 'default', 'name')
+    t.test(ptd.default.number is None, 'No port number')
+    notDefinedTest = None
+    try:
+        ptd.portNotDefined
+        notDefinedTest = False
+    except RuntimeError:
+        notDefinedTest = True
+    t.test(notDefinedTest, 'port not defined')
 
-        self.test(ptd.default == ptd.port('default'), '__getattr__')
-        self.test(ptd.default.device == ptd, 'device')
-        self.test(ptd.default.name == 'default', 'name')
-        self.test(ptd.default.number is None, 'No port number')
-        notDefinedTest = None
-        try:
-            ptd.portNotDefined
-            notDefinedTest = False
-        except RuntimeError:
-            notDefinedTest = True
-        self.test(notDefinedTest, 'port not defined')
+    noLimitTest = None
+    try:
+        for i in range(1000):
+            ptd.no_limit(None)
+        ptd.no_limit(3004823048)
+        noLimitTest = True
+    except RuntimeError:
+        noLimitTest = False
+    t.test(noLimitTest, 'no limit instantiation')
 
-        noLimitTest = None
-        try:
-            for i in range(1000):
-                ptd.no_limit(None)
-            ptd.no_limit(3004823048)
-            noLimitTest = True
-        except RuntimeError:
-            noLimitTest = False
-        self.test(noLimitTest, 'no limit instantiation')
+    limitTest = None
+    try:
+        ptd.limit(2)
+        limitTest = False
+    except RuntimeError:
+        limitTest = True
+    t.test(limitTest, 'limit instantiation')
 
-        limitTest = None
-        try:
-            ptd.limit(2)
-            limitTest = False
-        except RuntimeError:
-            limitTest = True
-        self.test(limitTest, 'limit instantiation')
+    t.test(ptd.format(0).get_name() == 'format(0)', 'format incorrect')
+    t.test(ptd.port('port').name == 'port', 'port named port')
 
-        self.test(ptd.format(0).get_name() == 'format(0)', 'format incorrect')
-        self.test(ptd.port('port').name == 'port', 'port named port')
-
-        self.finish()
+    return t.finish()
 
 
-class AssemblyTest(test):
+def AssemblyTest() -> bool:
     """Test of Device that is an assembly."""
+    t = test('AssemblyTest')
 
-    def __init__(self, verbose: bool = False) -> None:
-        """Run the test."""
-        super().__init__(self.__class__.__name__)
+    try:
+        ratd = RecursiveAssemblyTestDevice().assembly
+        t.test(ratd, 'assembly')
 
-        try:
-            ratd = RecursiveAssemblyTestDevice().assembly
-            self.test(ratd, 'assembly')
+        results = None
 
-            results = None
+        @assembly
+        class AssemblyNoExpandTestDevice(Device):
+            """Assembly that doesn't define the expand function."""
 
-            @assembly
-            class AssemblyNoExpandTestDevice(Device):
-                """Assembly that doesn't define the expand function."""
+            def __init__(self) -> 'Device':
+                """Test Device for assembly with no expand function."""
+                super().__init__(t.__class__.__name__)
 
-                def __init__(self) -> 'Device':
-                    """Test Device for assembly with no expand function."""
-                    super().__init__(self.__class__.__name__)
+        results = False
+    except RuntimeError:
+        results = True
+    t.test(results, 'no expand method')
 
-            results = False
-        except RuntimeError:
-            results = True
-        self.test(results, 'no expand method')
-
-        self.finish()
+    return t.finish()
 
 
-class ModelTest(test):
+def ModelTest() -> bool:
     """Test of device with model."""
+    t = test('ModelTest')
 
-    def __init__(self, verbose: bool = False) -> None:
-        """Run the test."""
-        super().__init__(self.__class__.__name__)
+    mtd = ModelTestDevice('model0')
+    ltd = LibraryTestDevice()
+    t.test(mtd.model == 'model0', 'model')
+    t.test(ltd.model is None, 'None model')
 
-        mtd = ModelTestDevice('model0')
-        ltd = LibraryTestDevice()
-        self.test(mtd.model == 'model0', 'model')
-        self.test(ltd.model is None, 'None model')
-
-        self.finish()
+    return t.finish()
 
 
-class AttributeTest(test):
+def AttributeTest() -> bool:
     """Test of Device with attributes."""
+    t = test('AttributeTest')
 
-    def __init__(self, verbose: bool = False) -> None:
-        """Run the test."""
-        super().__init__(self.__class__.__name__)
+    attr = {'a1': 1, 'a2': 'blue', 'a3': False}
+    atd = AttributeTestDevice(attr)
+    t.test(atd.attr == attr, 'attr')
 
-        attr = {'a1': 1, 'a2': 'blue', 'a3': False}
-        atd = AttributeTestDevice(attr)
-        self.test(atd.attr == attr, 'attr')
-
-        self.finish()
+    return t.finish()
 
 
-class PartitionTest(test):
+def PartitionTest() -> bool:
     """Test of partitioning a device."""
+    t = test('PartitionTest')
 
-    def __init__(self, verbose: bool = False) -> None:
-        """Run the test."""
-        super().__init__(self.__class__.__name__)
+    ratd = RecursiveAssemblyTestDevice()
+    ratd.set_partition(1)
+    t.test(ratd.partition[0] == 1, 'rank')
+    t.test(ratd.partition[1] is None, 'thread None')
+    ratd.set_partition(2, 3)
+    t.test(ratd.partition[0] == 2, 'rank')
+    t.test(ratd.partition[1] == 3, 'thread')
 
-        ratd = RecursiveAssemblyTestDevice()
-        ratd.set_partition(1)
-        self.test(ratd.partition[0] == 1, 'rank')
-        self.test(ratd.partition[1] is None, 'thread None')
-        ratd.set_partition(2, 3)
-        self.test(ratd.partition[0] == 2, 'rank')
-        self.test(ratd.partition[1] == 3, 'thread')
-
-        self.finish()
+    return t.finish()
 
 
-class CategoryTest(test):
+def CategoryTest() -> bool:
     """Test of device category output."""
+    t = test('CategoryTest')
 
-    def __init__(self, verbose: bool = False) -> None:
-        """Run the test."""
-        super().__init__(self.__class__.__name__)
+    ltd = LibraryTestDevice()
+    mtd = ModelTestDevice('model')
+    t.test(ltd.get_category() == ltd.name, 'No model')
+    t.test(mtd.get_category() == f'{mtd.name}_{mtd.model}', 'model')
 
-        ltd = LibraryTestDevice()
-        mtd = ModelTestDevice('model')
-        self.test(ltd.get_category() == ltd.name, 'No model')
-        self.test(mtd.get_category() == f'{mtd.name}_{mtd.model}', 'model')
-
-        self.finish()
+    return t.finish()
 
 
-class SubmoduleTest(test):
+def SubmoduleTest() -> bool:
     """Test for adding a submodule to a device."""
+    t = test('SubmoduleTest')
 
-    def __init__(self, verbose: bool = False) -> None:
-        """Run the test."""
-        super().__init__(self.__class__.__name__)
+    ltd0 = LibraryTestDevice()
+    ltd1 = LibraryTestDevice()
+    ltd0.add_submodule(ltd1, 'slotName')
+    pop = ltd0.subs.pop()
+    t.test(ltd1.subOwner == ltd0, 'subOwner')
+    t.test(pop[0] == ltd1, 'subs')
+    t.test(pop[1] == 'slotName', 'slotName')
+    t.test(pop[2] is None, 'slotIndex')
 
-        ltd0 = LibraryTestDevice()
-        ltd1 = LibraryTestDevice()
-        ltd0.add_submodule(ltd1, 'slotName')
-        pop = ltd0.subs.pop()
-        self.test(ltd1.subOwner == ltd0, 'subOwner')
-        self.test(pop[0] == ltd1, 'subs')
-        self.test(pop[1] == 'slotName', 'slotName')
-        self.test(pop[2] is None, 'slotIndex')
-
-        self.finish()
+    return t.finish()
 
 
 if __name__ == "__main__":
@@ -193,11 +169,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     test.verbose = args.verbose
 
-    LibraryTest()
-    PortTest()
-    AssemblyTest()
-    ModelTest()
-    AttributeTest()
-    PartitionTest()
-    CategoryTest()
-    SubmoduleTest()
+    results = [LibraryTest(),
+               PortTest(),
+               AssemblyTest(),
+               ModelTest(),
+               AttributeTest(),
+               PartitionTest(),
+               CategoryTest(),
+               SubmoduleTest()]
+
+    exit(1 if True in results else 0)

@@ -7,9 +7,9 @@ from AHPGraph import *
 class LibraryTestDevice(Device):
     """Unit test for Library."""
 
-    def __init__(self) -> 'Device':
+    def __init__(self, name: str = '') -> 'Device':
         """Test Device for Library."""
-        super().__init__(self.__class__.__name__)
+        super().__init__(f'{self.__class__.__name__}{name}')
 
 
 @port('default')
@@ -33,7 +33,7 @@ class PortTestDevice(Device):
 @port('input', 'input')
 @port('output', 'output')
 class RecursiveAssemblyTestDevice(Device):
-    """Unit Test of a recursive assembly."""
+    """Unit Test for a recursive assembly."""
 
     def __init__(self) -> 'Device':
         """Test Device for recursive assembly."""
@@ -42,7 +42,7 @@ class RecursiveAssemblyTestDevice(Device):
     def expand(self) -> 'DeviceGraph':
         """Test for expanding a Device."""
         graph = DeviceGraph()
-        a = AssemblyTest()
+        a = RecursiveAssemblyTestDevice()
         graph.link(a.input, self.input)
         graph.link(a.output, self.output)
         return graph
