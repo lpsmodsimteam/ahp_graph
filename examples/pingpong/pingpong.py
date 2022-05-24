@@ -7,32 +7,39 @@ from AHPGraph import *
 
 
 class PingFunction():
+    """Example class that sends a ping."""
+
     def __init__(self, name: str, repeats: int):
+        """Init."""
         self.name = name
         self.max = repeats
         self.repeats = 0
         self.output = None
 
     def start(self):
+        """Start the pingpong off by sending ping."""
         print(f'{self.name}: Sending Ping')
         self.output(f'{self.name}: Ping')
 
     def input(self, string: str):
+        """Print input and then send ping if we have more repeats left."""
         print(f'{self.name}: Received {string}')
         self.repeats += 1
         if self.repeats < self.max:
             print(f'{self.name}: Sending Ping')
             self.output(f'{self.name}: Ping')
-        else:
-            print(f'{self.name}: Done')
 
 
 class PongFunction():
+    """Example class that sends a pong when it recieves input."""
+
     def __init__(self, name: str):
+        """Init."""
         self.name = name
         self.output = None
 
     def input(self, string: str):
+        """Print input and then send pong."""
         print(f'{self.name}: Received {string}')
         print(f'{self.name}: Sending Pong')
         self.output(f'{self.name}: Pong')
@@ -134,39 +141,40 @@ if __name__ == "__main__":
     # run the example 'simulation' using the two classes
     # need to manually build the graph since AHPGraph doesn't support this
     flat = graph.flatten()
-    instances = dict()
-    print('Devices:')
+    devs = dict()
+    # instantiate all the devices in the graph
     for device in flat.devices:
-        print(device)
         if flat.devices[device].type == 'Ping':
-            instances[device] = PingFunction(device, args.repeats)
+            devs[device] = PingFunction(device, args.repeats)
         elif flat.devices[device].type == 'Pong':
-            instances[device] = PongFunction(device)
+            devs[device] = PongFunction(device)
         else:
             print('ERROR, should only have Ping or Pong Devices')
             exit()
 
-    print('Links:')
+    # if we only have one pingpong, manually connect them
     if args.num <= 1:
-        pi = instances['PingPong0.Ping']
-        po = instances['PingPong0.Pong']
-        print('PingPong0.Ping --> PingPong0.Pong')
+        pi = devs['PingPong0.Ping']
+        po = devs['PingPong0.Pong']
         pi.output = lambda x: po.input(x)
-        print('PingPong0.Pong --> PingPong0.Ping')
         po.output = lambda x: pi.input(x)
     else:
+        def wrapper(dev: 'Device'):
+            """Need to wrap the lambda function to protect the device scope."""
+            return lambda x: dev.input(x)
+
+        # connect the pingpongs together as specified
+        # flip the direction of the one connection since it wraps around
         for link in flat.links.values():
             n0 = link[0].device.name
             n1 = link[1].device.name
             if n0 == 'PingPong0.Ping' and n1 == f'PingPong{args.num-1}.Pong':
-                print(f'{n1} --> {n0}')
-                instances[n1].output = lambda x: instances[n0].input(x)
+                devs[n1].output = wrapper(devs[n0])
             else:
-                print(f'{n0} --> {n1}')
-                instances[n0].output = lambda x: instances[n1].input(x)
+                devs[n0].output = wrapper(devs[n1])
 
-    print('Running:')
+    # find the first Ping device and start the 'simulation'
     for device in flat.devices:
         if flat.devices[device].type == 'Ping':
-            instances[device].start()
+            devs[device].start()
             break
