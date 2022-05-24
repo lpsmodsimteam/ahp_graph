@@ -1,19 +1,15 @@
-This directory implements a simple Ping Pong message passing simulation by utilizing AHPGraph
+This is the SST specific simulation implementation of the pingpong architecture.
 
-In this case, Ping is the initiator of the "ping pong" message bouncing back and forth
-
-Looking at pingpong.py, you can see some basic imports and environment setup at the top.
-This is followed by the AHPGraph definitions of Ping and Pong. Both are simple with a
-input and output port. The class pingpong describes an assembly that we are
-creating. In this example, pingpong takes one optional argument to describe the number
-of messages to send. Our overall architecture is constructed by creating a loop with the
-given number of pingpong assemblies.
-
-The end of pingpong.py is unique in that it allows you to run the file both from python3
+pingpong.py is unique in that it allows you to run the file both from python3
 and from sst. If you run the file from python3, sst will not be able to be imported and
 the code will create the AHPGraph DeviceGraph and then write out a graphviz dot file
 representing the architecture. If you run the file from sst, sst can be imported and so
 we need to build SST with the graph to begin the simulation.
+
+Since we are simulating with SST, we have to have SST components defined for each
+device in the AHPGraph. In this case, we have Ping and Pong created already in cpp
+and hpp files which you can review. The makefile will compile these and register
+them with SST so that you can run an AHPGraph simulation. 
 
 One important thing to note with running SST simulations is that before actually
 simulating anything, SST usually executes a graph partitioning phase. This phase
