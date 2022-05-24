@@ -32,6 +32,7 @@ class DeviceGraph:
         self.attr = dict(attr) if attr is not None else dict()
         self.devices = dict()
         self.links = collections.defaultdict(tuple)
+        self.ports = set()
 
     def __repr__(self) -> str:
         """Pretty print graph with devices followed by links."""
@@ -71,12 +72,17 @@ class DeviceGraph:
         # Check to make sure the port types match
         t0 = devs[0].get_portinfo()[p0.name]['type']
         t1 = devs[1].get_portinfo()[p1.name]['type']
-
         if t0 != t1:
             raise RuntimeError(
                 f"Port type mismatch: {t0} != {t1} between"
                 f"{devs[0].name} and {devs[1].name}"
             )
+
+        if p0 in self.ports or p1 in self.ports:
+            raise RuntimeError(f'{p0} or {p1} already linked to')
+
+        self.ports.add(p0)
+        self.ports.add(p1)
         self.links[linkName] = (p0, p1, latency)
 
     def add(self, device: 'Device') -> None:
@@ -102,7 +108,7 @@ class DeviceGraph:
         form "CLASS_MODEL".
         """
         counter = collections.defaultdict(int)
-        for device in self.devices():
+        for device in self.devices.values():
             counter[device.get_category()] += 1
         return counter
 

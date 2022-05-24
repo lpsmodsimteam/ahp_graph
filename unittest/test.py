@@ -13,22 +13,22 @@ class test():
         self.name = f"\033[0;34m{name}\033[0m"
         self.fail = False
         if self.verbose:
-            print(f'{self.name}:')
+            print(f'\t{self.name}:')
 
     def test(self, test: bool, string: str) -> None:
         """Print the results of the test."""
         if test:
             if self.verbose:
-                print(f'\t{self.PASS} - {string}')
+                print(f'\t\t{self.PASS} - {string}')
         else:
             self.fail = True
             if self.verbose:
-                print(f'\t{self.FAIL} - {string}')
+                print(f'\t\t{self.FAIL} - {string}')
 
     def finish(self) -> bool:
         """Print final test results and return any failures."""
         if self.fail:
-            print(f'{self.name} - {self.FAIL}')
+            print(f'\t{self.name} - {self.FAIL}')
         else:
-            print(f'{self.name} - {self.PASS}')
+            print(f'\t{self.name} - {self.PASS}')
         return self.fail

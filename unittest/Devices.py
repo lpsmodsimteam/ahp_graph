@@ -24,9 +24,9 @@ class LibraryTestDevice(Device):
 class PortTestDevice(Device):
     """Unit test for Device Ports."""
 
-    def __init__(self) -> 'Device':
+    def __init__(self, name: str = '') -> 'Device':
         """Test Device for Device Ports."""
-        super().__init__(self.__class__.__name__)
+        super().__init__(f'{self.__class__.__name__}{name}')
 
 
 @assembly
@@ -35,9 +35,9 @@ class PortTestDevice(Device):
 class RecursiveAssemblyTestDevice(Device):
     """Unit Test for a recursive assembly."""
 
-    def __init__(self) -> 'Device':
+    def __init__(self, name: str = '') -> 'Device':
         """Test Device for recursive assembly."""
-        super().__init__(self.__class__.__name__)
+        super().__init__(f'{self.__class__.__name__}{name}')
 
     def expand(self) -> 'DeviceGraph':
         """Test for expanding a Device."""
@@ -51,14 +51,24 @@ class RecursiveAssemblyTestDevice(Device):
 class ModelTestDevice(Device):
     """Unit test for Device with model."""
 
-    def __init__(self, model) -> 'Device':
+    def __init__(self, model, name: str = '') -> 'Device':
         """Test Device with model."""
-        super().__init__(self.__class__.__name__, model)
+        super().__init__(f'{self.__class__.__name__}{name}', model)
 
 
 class AttributeTestDevice(Device):
     """Unit test for Device with attributes."""
 
-    def __init__(self, attr) -> 'Device':
+    def __init__(self, attr, name: str = '') -> 'Device':
         """Test Device with attributes."""
-        super().__init__(self.__class__.__name__, attr=attr)
+        super().__init__(f'{self.__class__.__name__}{name}', attr=attr)
+
+
+@library('ElementLibrary.Component')
+@port('default')
+class LibraryPortTestDevice(Device):
+    """Unit test for Device with Library and Port."""
+
+    def __init__(self, name: str = '') -> 'Device':
+        """Test Device for Library."""
+        super().__init__(f'{self.__class__.__name__}{name}')
