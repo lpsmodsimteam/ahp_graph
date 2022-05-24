@@ -6,12 +6,12 @@ class test():
 
     FAIL = f'\033[0;31mFAIL\033[0m'
     PASS = f'\033[0;32mPASS\033[0m'
+    verbose = False
 
-    def __init__(self, name: str, verbose: bool = False) -> None:
+    def __init__(self, name: str) -> None:
         """Init a test with a name."""
         self.name = f"\033[0;34m{name}\033[0m"
         self.fail = False
-        self.verbose = verbose
         if self.verbose:
             print(f'{self.name}:')
 

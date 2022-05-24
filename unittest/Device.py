@@ -10,7 +10,7 @@ class LibraryTest(test):
 
     def __init__(self, verbose: bool = False) -> None:
         """Run the test."""
-        super().__init__(self.__class__.__name__, verbose)
+        super().__init__(self.__class__.__name__)
 
         ltd = LibraryTestDevice().library
         self.test(ltd == 'ElementLibrary.Component', ltd)
@@ -23,7 +23,7 @@ class PortTest(test):
 
     def __init__(self, verbose: bool = False) -> None:
         """Run the test."""
-        super().__init__(self.__class__.__name__, verbose)
+        super().__init__(self.__class__.__name__)
 
         ptd = PortTestDevice()
         portinfo = ptd.get_portinfo()
@@ -80,7 +80,7 @@ class AssemblyTest(test):
 
     def __init__(self, verbose: bool = False) -> None:
         """Run the test."""
-        super().__init__(self.__class__.__name__, verbose)
+        super().__init__(self.__class__.__name__)
 
         try:
             ratd = RecursiveAssemblyTestDevice().assembly
@@ -109,7 +109,7 @@ class ModelTest(test):
 
     def __init__(self, verbose: bool = False) -> None:
         """Run the test."""
-        super().__init__(self.__class__.__name__, verbose)
+        super().__init__(self.__class__.__name__)
 
         mtd = ModelTestDevice('model0')
         ltd = LibraryTestDevice()
@@ -124,7 +124,7 @@ class AttributeTest(test):
 
     def __init__(self, verbose: bool = False) -> None:
         """Run the test."""
-        super().__init__(self.__class__.__name__, verbose)
+        super().__init__(self.__class__.__name__)
 
         attr = {'a1': 1, 'a2': 'blue', 'a3': False}
         atd = AttributeTestDevice(attr)
@@ -138,7 +138,7 @@ class PartitionTest(test):
 
     def __init__(self, verbose: bool = False) -> None:
         """Run the test."""
-        super().__init__(self.__class__.__name__, verbose)
+        super().__init__(self.__class__.__name__)
 
         ratd = RecursiveAssemblyTestDevice()
         ratd.set_partition(1)
@@ -156,7 +156,7 @@ class CategoryTest(test):
 
     def __init__(self, verbose: bool = False) -> None:
         """Run the test."""
-        super().__init__(self.__class__.__name__, verbose)
+        super().__init__(self.__class__.__name__)
 
         ltd = LibraryTestDevice()
         mtd = ModelTestDevice('model')
@@ -171,7 +171,7 @@ class SubmoduleTest(test):
 
     def __init__(self, verbose: bool = False) -> None:
         """Run the test."""
-        super().__init__(self.__class__.__name__, verbose)
+        super().__init__(self.__class__.__name__)
 
         ltd0 = LibraryTestDevice()
         ltd1 = LibraryTestDevice()
@@ -191,12 +191,13 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='show detailed output')
     args = parser.parse_args()
+    test.verbose = args.verbose
 
-    LibraryTest(args.verbose)
-    PortTest(args.verbose)
-    AssemblyTest(args.verbose)
-    ModelTest(args.verbose)
-    AttributeTest(args.verbose)
-    PartitionTest(args.verbose)
-    CategoryTest(args.verbose)
-    SubmoduleTest(args.verbose)
+    LibraryTest()
+    PortTest()
+    AssemblyTest()
+    ModelTest()
+    AttributeTest()
+    PartitionTest()
+    CategoryTest()
+    SubmoduleTest()
