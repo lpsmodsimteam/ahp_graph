@@ -127,6 +127,20 @@ def LinkTest() -> bool:
     except RuntimeError:
         linkAgain = True
     t.test(linkAgain, 'link again with ports reversed')
+    callablePort = None
+    try:
+        graph.link(ptd0.limit, ptd1.no_limit)
+        callablePort = False
+    except RuntimeError:
+        callablePort = True
+    t.test(callablePort, 'forgot to include port num on multi port')
+    typeMismatch = None
+    try:
+        graph.link(ptd0.default, ptd1.ptype)
+        typeMismatch = False
+    except RuntimeError:
+        typeMismatch = True
+    t.test(typeMismatch, 'port type mismatch')
     changeSinglePortLink = None
     try:
         graph.link(ptd0.optional, ptd1.optional)
@@ -134,6 +148,86 @@ def LinkTest() -> bool:
     except RuntimeError:
         changeSinglePortLink = True
     t.test(changeSinglePortLink, 'linking from a single port again')
+    graph.link(ptd0.limit(0), ptd1.limit(0), '123ns')
+    t.test(graph.links.popitem()[1][2] == '123ns', 'latency')
+
+    return t.finish()
+
+
+def VerifyLinksTest() -> bool:
+    """Test of verifying links in a DeviceGraph."""
+    t = test('VerifyLinksTest')
+    graph = DeviceGraph()
+
+    ptd0 = PortTestDevice(0)
+    ptd1 = PortTestDevice(1)
+    ltd = LibraryTestDevice()
+    lptd = LibraryPortTestDevice()
+    ltd.add_submodule(lptd, 'slot')
+
+    graph.link(lptd.default, ptd0.optional)
+    graph.link(ptd0.default, ptd1.default)
+    graph.link(ptd0.ptype, ptd1.ptype)
+    graph.link(ptd0.no_limit(0), ptd1.no_limit(0))
+    graph.link(ptd0.limit(0), ptd1.limit(0))
+    verified = None
+    try:
+        graph.verify_links()
+        verified = False
+    except RuntimeError:
+        verified = True
+    t.test(verified, 'not all required ports connected')
+
+    graph.link(ptd0.format(0), ptd1.format(0))
+    verified = None
+    try:
+        graph.verify_links()
+        verified = True
+    except RuntimeError:
+        verified = False
+    t.test(verified, 'verified all required ports have at least 1 connection')
+
+    return t.finish()
+
+
+def FollowLinksTest() -> bool:
+    """Test of following links by rank in a DeviceGraph."""
+    t = test('FollowLinksTest')
+    graph = DeviceGraph()
+
+    tatd0 = TopAssemblyTestDevice(0)
+    tatd1 = TopAssemblyTestDevice(1)
+    graph.link(tatd0.input, tatd1.output)
+    graph.link(tatd1.input, tatd0.output)
+
+    tatd0.set_partition(0)
+    tatd1.set_partition(1)
+
+    followed = graph.follow_links(0)
+    for dev in followed.devices.values():
+        if dev.assembly:
+            t.test(dev.name == 'TopAssemblyTestDevice1.AssemblyTestDevice1',
+                   'only one assembly left')
+        else:
+            t.test(dev.library is not None, 'library set')
+
+    return t.finish()
+
+
+def FlattenTest() -> bool:
+    """Test of flattening a DeviceGraph."""
+    t = test('FlattenTest')
+    graph = DeviceGraph()
+
+    ratd = RecursiveAssemblyTestDevice()
+    graph.link(ratd.input, ratd.output)
+    pythonRecursionLimit = None
+    try:
+        graph.flatten()
+        pythonRecursionLimit = False
+    except RecursionError:
+        pythonRecursionLimit = True
+    t.test(pythonRecursionLimit, 'infinite assembly recursion')
 
     return t.finish()
 
@@ -151,6 +245,9 @@ if __name__ == "__main__":
                AddDeviceTest(),
                CountDevicesTest(),
                CheckPartitionTest(),
-               LinkTest()]
+               LinkTest(),
+               VerifyLinksTest(),
+               FollowLinksTest(),
+               FlattenTest()]
 
     exit(1 if True in results else 0)

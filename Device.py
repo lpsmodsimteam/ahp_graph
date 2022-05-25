@@ -270,23 +270,30 @@ class Device:
     def __repr__(self) -> str:
         """Return a description of the Device."""
         lines = list()
-        lines.append(f"Device={self.type}")
-        lines.append(f"    name={self.name}")
-        lines.append(f"    library={self.library}")
-        lines.append(f"    assembly={self.assembly}")
-        lines.append(f"    model={self.model}")
-        lines.append(f"    partition={self.partition}")
-        lines.append(f"    submoduleParent={self.subOwner}")
+        lines.append(f"Device = {self.type}")
+        lines.append(f"\tname = {self.name}")
+        lines.append(f"\tassembly = {self.assembly}")
+        if self.model:
+            lines.append(f"\tmodel = {self.model}")
+        if self.library:
+            lines.append(f"\tlibrary = {self.library}")
+        if self.partition:
+            lines.append(f"\tpartition = {self.partition}")
+        if self.subOwner is not None:
+            lines.append(f"\tsubmoduleParent = {self.subOwner.name}")
 
-        lines.append(f"    Ports:")
         portinfo = self.get_portinfo()
-        for port in sorted(portinfo):
-            lines.append(f"        {port}={portinfo[port]}")
-        lines.append(f"    Attributes:")
-        for key in sorted(self.attr):
-            lines.append(f"        {key}={self.attr[key]}")
-        lines.append(f"    Submodules:")
-        for sub in sorted(self.subs, key=lambda x: (x[1], x[2])):
-            lines.append(f"        {sub[1]}:{sub[2]} -> {sub[0].name}")
+        if portinfo:
+            lines.append(f"\tPorts:")
+            for port in sorted(portinfo):
+                lines.append(f"\t\t{port} = {portinfo[port]}")
+        if self.attr:
+            lines.append(f"\tAttributes:")
+            for key in sorted(self.attr):
+                lines.append(f"\t\t{key} = {self.attr[key]}")
+        if self.subs:
+            lines.append(f"\tSubmodules:")
+            for sub in sorted(self.subs, key=lambda x: (x[1], x[2])):
+                lines.append(f"\t\t{sub[1]}:{sub[2]} -> {sub[0].name}")
 
         return "\n".join(lines)

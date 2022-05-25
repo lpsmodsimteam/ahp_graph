@@ -27,7 +27,7 @@ def PortTest() -> bool:
     t.test(portinfo['default']['required'] is True, 'default required')
     t.test(portinfo['default']['format'] == '.#', 'default format')
 
-    t.test(portinfo['type']['type'] == 'test', 'type')
+    t.test(portinfo['ptype']['type'] == 'test', 'type')
     t.test(portinfo['no_limit']['limit'] is None, 'No limit')
     t.test(portinfo['limit']['limit'] == 2, 'limit')
     t.test(portinfo['optional']['required'] is False, 'optional')

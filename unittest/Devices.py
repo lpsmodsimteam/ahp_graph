@@ -13,7 +13,7 @@ class LibraryTestDevice(Device):
 
 
 @port('default')
-@port('type', 'test')
+@port('ptype', 'test')
 @port('no_limit', limit=None)
 @port('limit', limit=2)
 @port('optional', required=False)
@@ -30,8 +30,8 @@ class PortTestDevice(Device):
 
 
 @assembly
-@port('input', 'input')
-@port('output', 'output')
+@port('input')
+@port('output')
 class RecursiveAssemblyTestDevice(Device):
     """Unit Test for a recursive assembly."""
 
@@ -72,3 +72,57 @@ class LibraryPortTestDevice(Device):
     def __init__(self, name: str = '') -> 'Device':
         """Test Device for Library."""
         super().__init__(f'{self.__class__.__name__}{name}')
+
+
+@assembly
+@port('input')
+@port('output')
+class AssemblyTestDevice(Device):
+    """Unit Test for an assembly."""
+
+    def __init__(self, name: str = '') -> 'Device':
+        """Test Device for an assembly."""
+        super().__init__(f'{self.__class__.__name__}{name}')
+
+    def expand(self) -> 'DeviceGraph':
+        """Test for expanding a Device."""
+        graph = DeviceGraph()
+
+        ltd = LibraryTestDevice()
+        lptd = LibraryPortTestDevice()
+        sub = LibraryPortTestDevice('sub')
+        ltd.add_submodule(sub, 'slot')
+
+        graph.link(sub.default, self.input)
+        graph.link(lptd.default, self.output)
+
+        return graph
+
+
+@assembly
+@port('input')
+@port('output')
+class TopAssemblyTestDevice(Device):
+    """Unit Test for an assembly."""
+
+    def __init__(self, name: str = '') -> 'Device':
+        """Test Device for an assembly."""
+        super().__init__(f'{self.__class__.__name__}{name}')
+
+    def expand(self) -> 'DeviceGraph':
+        """Test for expanding a Device."""
+        graph = DeviceGraph()
+
+        atd0 = AssemblyTestDevice(0)
+        atd1 = AssemblyTestDevice(1)
+        ltd = LibraryTestDevice()
+        lptd = LibraryPortTestDevice()
+        sub = LibraryPortTestDevice('sub')
+        ltd.add_submodule(sub, 'slot')
+
+        graph.link(self.input, atd0.input)
+        graph.link(atd0.output, atd1.input)
+        graph.link(atd1.output, sub.default)
+        graph.link(lptd.default, self.output)
+
+        return graph

@@ -5,7 +5,7 @@ NC="\033[0m" # No Color - Default
 FAIL="\033[0;31mFAIL\033[0m\n"
 PASS="\033[0;32mPASS\033[0m\n"
 
-FILES=("Device.py" "DeviceGraph.py" "SSTGraph.py")
+FILES=("Device.py" "DeviceGraph.py")
 
 while getopts vh flag; do
     case "${flag}" in

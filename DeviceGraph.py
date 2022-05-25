@@ -8,6 +8,7 @@ All links are bidirectional.
 """
 
 import os
+import gc
 import collections
 import pygraphviz
 from .Device import *
@@ -55,6 +56,10 @@ class DeviceGraph:
 
         The latency is expressed as a string with time units (ps, ns, us...)
         """
+        if callable(p0) or callable(p1):
+            raise RuntimeError(f"{p0} or {p1} is callable. This probably means"
+                               f" you have a multi port and didn't pick a port"
+                               f" number (ex. Device.portX(portNum))")
         if p1 < p0:
             (p0, p1) = (p1, p0)
         linkName = f"{p0}__{latency}__{p1}"
@@ -141,6 +146,7 @@ class DeviceGraph:
         assemblies until links are fully defined (links touch library
         Devices on both sides)
         """
+        self.check_partition()
         graph = self
         while True:
             devices = set()
@@ -188,7 +194,9 @@ class DeviceGraph:
         # Devices must have a matching name if provided, a matching
         # rank if provided, and be within the expand set if provided
         # if they are to be added to the assemblies list of devices to expand
+        gc.disable()
         if levels == 0:
+            gc.enable()
             return self
 
         assemblies = list()
@@ -212,6 +220,7 @@ class DeviceGraph:
                 assemblies.append(dev)
 
         if not assemblies:
+            gc.enable()
             return self
 
         # Start by creating a link map.  This will allow us quick lookup
