@@ -267,29 +267,26 @@ class DeviceGraph:
 
                 Define a subroutine to find the matching port and
                 remove the associated link.  If we were not able to
-                find a matching port, then return None.
+                find a matching port, then return an error.
                 """
                 for (p0, p1, t) in links[port.device]:
                     if p0 == port:
                         links[p0.device].remove((p0, p1, t))
                         links[p1.device].remove((p1, p0, t))
                         return (p1, t)
-                print(f"Did't find port {port}, this is not good")
-                return (None, None)
+                raise RuntimeError(f"Did't find port {port}")
 
             # Update the links. Latency will come from the link defined
             # higher up in the hierarchy
             for (p0, p1, t) in subgraph.links.values():
                 if p0.device == device:
                     (p2, t2) = find_other_port(p0)
-                    if p2 is not None:
-                        links[p1.device].add((p1, p2, t2))
-                        links[p2.device].add((p2, p1, t2))
+                    links[p1.device].add((p1, p2, t2))
+                    links[p2.device].add((p2, p1, t2))
                 elif p1.device == device:
                     (p2, t2) = find_other_port(p1)
-                    if p2 is not None:
-                        links[p0.device].add((p0, p2, t2))
-                        links[p2.device].add((p2, p0, t2))
+                    links[p0.device].add((p0, p2, t2))
+                    links[p2.device].add((p2, p0, t2))
                 else:
                     links[p0.device].add((p0, p1, t))
                     links[p1.device].add((p1, p0, t))
