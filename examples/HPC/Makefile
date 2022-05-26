@@ -19,8 +19,12 @@ mpi-sst: $(LIB)
 	mpirun -np 4 sst HPC.py -- --partitioner=sst
 
 # arguments after '-- ' are passed to the sst model instead of taken by sst
+# since we are using threads, need to tell SST how many threads to use as well
+# in this case, each node gets its own thread within a rank (rack)
+# for the default case, this is 1 node per rack plus an extra thread for the
+# router resulting in 2 threads required.
 mpi-ahpgraph: $(LIB)
-	mpirun -np 4 sst --parallel-load=SINGLE HPC.py -- --partitioner=ahpgraph
+	mpirun -np 4 sst -n2 --parallel-load=SINGLE HPC.py -- --partitioner=ahpgraph
 
 $(LIB):
 	make -C $(APPS) all
