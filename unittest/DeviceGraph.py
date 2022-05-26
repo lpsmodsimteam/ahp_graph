@@ -1,8 +1,8 @@
 """Collection of Unit tests for AHPGraph DeviceGraph."""
 
 from AHPGraph import *
-from AHPGraph.unittest.test import *
-from AHPGraph.unittest.Devices import *
+from test import *
+from Devices import *
 
 
 def AttributeTest() -> bool:
@@ -113,16 +113,16 @@ def LinkTest() -> bool:
     lptd = LibraryPortTestDevice()
     ltd.add_submodule(lptd, 'slot')
 
-    graph.link(lptd.default, ptd0.optional)
+    graph.link(lptd.input, ptd0.optional)
     t.test(len(graph.devices) == 3, 'linking add submodule parent')
     t.test(graph.devices[ltd.name] == ltd, 'submodule parent included')
     t.test(graph.links.popitem()[1][2] == '1ps', 'default latency')
     # start with a fresh graph since the link was popped off the dictionary
     graph = DeviceGraph()
-    graph.link(lptd.default, ptd0.optional)
+    graph.link(lptd.input, ptd0.optional)
     linkAgain = None
     try:
-        graph.link(ptd0.optional, lptd.default)
+        graph.link(ptd0.optional, lptd.input)
         linkAgain = False
     except RuntimeError:
         linkAgain = True
@@ -165,7 +165,8 @@ def VerifyLinksTest() -> bool:
     lptd = LibraryPortTestDevice()
     ltd.add_submodule(lptd, 'slot')
 
-    graph.link(lptd.default, ptd0.optional)
+    graph.link(lptd.input, ptd0.optional)
+    graph.link(lptd.output, ptd1.optional)
     graph.link(ptd0.default, ptd1.default)
     graph.link(ptd0.ptype, ptd1.ptype)
     graph.link(ptd0.no_limit(0), ptd1.no_limit(0))
@@ -194,19 +195,32 @@ def FollowLinksTest() -> bool:
     """Test of following links by rank in a DeviceGraph."""
     t = test('FollowLinksTest')
     graph = DeviceGraph()
+    levels = 2
 
-    tatd0 = TopAssemblyTestDevice(0)
-    tatd1 = TopAssemblyTestDevice(1)
-    graph.link(tatd0.input, tatd1.output)
-    graph.link(tatd1.input, tatd0.output)
+    ratd0 = RecursiveAssemblyTestDevice(levels, 0)
+    ratd1 = RecursiveAssemblyTestDevice(levels, 1)
+    lptd0 = LibraryPortTestDevice(0)
+    lptd1 = LibraryPortTestDevice(1)
 
-    tatd0.set_partition(0)
-    tatd1.set_partition(1)
+    # complete the rings
+    graph.link(ratd0.input, ratd0.output)
+    graph.link(ratd1.input, ratd1.output)
+
+    graph.link(lptd0.input, lptd1.output)
+    graph.link(lptd1.input, lptd0.output)
+    for i in range(2 ** (levels+1)):
+        graph.link(lptd0.optional(None), ratd0.optional(None))
+        graph.link(lptd1.optional(None), ratd1.optional(None))
+
+    ratd0.set_partition(0)
+    ratd1.set_partition(1)
+    lptd0.set_partition(2)
+    lptd1.set_partition(2)
 
     followed = graph.follow_links(0)
     for dev in followed.devices.values():
         if dev.assembly:
-            t.test(dev.name == 'TopAssemblyTestDevice1.AssemblyTestDevice1',
+            t.test(dev.name == f'RecursiveAssemblyTestDevice{levels}1',
                    'only one assembly left')
         else:
             t.test(dev.library is not None, 'library set')
@@ -218,16 +232,44 @@ def FlattenTest() -> bool:
     """Test of flattening a DeviceGraph."""
     t = test('FlattenTest')
     graph = DeviceGraph()
+    levels = 6
 
-    ratd = RecursiveAssemblyTestDevice()
-    graph.link(ratd.input, ratd.output)
-    pythonRecursionLimit = None
-    try:
-        graph.flatten()
-        pythonRecursionLimit = False
-    except RecursionError:
-        pythonRecursionLimit = True
-    t.test(pythonRecursionLimit, 'infinite assembly recursion')
+    ratd0 = RecursiveAssemblyTestDevice(levels, 0)
+    ratd1 = RecursiveAssemblyTestDevice(levels, 1)
+    lptd0 = LibraryPortTestDevice(0)
+    lptd1 = LibraryPortTestDevice(1)
+
+    # complete the rings
+    graph.link(ratd0.input, ratd0.output)
+    graph.link(ratd1.input, ratd1.output)
+
+    graph.link(lptd0.input, lptd1.output)
+    graph.link(lptd1.input, lptd0.output)
+    for i in range(2 ** (levels+1)):
+        graph.link(lptd0.optional(None), ratd0.optional(None))
+        graph.link(lptd1.optional(None), ratd1.optional(None))
+
+    ratd0.set_partition(0)
+    ratd1.set_partition(1)
+    lptd0.set_partition(2)
+    lptd1.set_partition(2)
+
+    flat = graph.flatten()
+    t.test(not any([d.assembly for d in flat.devices.values()]),
+           'no assemblies left')
+
+    twoLevels = graph.flatten(2)
+    t.test([d.assembly for d in twoLevels.devices.values()].count(True) == 8,
+           'correct number of assemblies left')
+    byName = graph.flatten(name=f'RecursiveAssemblyTestDevice{levels}0')
+    rank0 = graph.flatten(rank=0)
+    t.test(byName.devices.keys() == rank0.devices.keys(),
+           'name and rank devices')
+    t.test(byName.links.keys() == rank0.links.keys(),
+           'name and rank links')
+    expand = graph.flatten(expand={ratd0})
+    t.test([d.assembly for d in expand.devices.values()].count(True) == 3,
+           'correct number of assemblies left')
 
     return t.finish()
 

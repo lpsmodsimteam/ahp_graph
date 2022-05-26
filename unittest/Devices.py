@@ -29,22 +29,52 @@ class PortTestDevice(Device):
         super().__init__(f'{self.__class__.__name__}{name}')
 
 
+@library('ElementLibrary.Component')
+@port('input')
+@port('output')
+@port('optional', limit=None, required=False)
+class LibraryPortTestDevice(Device):
+    """Unit test for Device with Library and Ports."""
+
+    def __init__(self, name: str = '') -> 'Device':
+        """Test Device for Library and Ports."""
+        super().__init__(f'{self.__class__.__name__}{name}')
+
+
 @assembly
 @port('input')
 @port('output')
+@port('optional', limit=None, required=False)
 class RecursiveAssemblyTestDevice(Device):
-    """Unit Test for a recursive assembly."""
+    """Unit Test for a recursive assembly. Creates a ring of Devices."""
 
-    def __init__(self, name: str = '') -> 'Device':
+    def __init__(self, levels: int, name: str = '') -> 'Device':
         """Test Device for recursive assembly."""
-        super().__init__(f'{self.__class__.__name__}{name}')
+        super().__init__(f'{self.__class__.__name__}{levels}{name}', levels)
 
     def expand(self) -> 'DeviceGraph':
         """Test for expanding a Device."""
         graph = DeviceGraph()
-        a = RecursiveAssemblyTestDevice()
-        graph.link(a.input, self.input)
-        graph.link(a.output, self.output)
+
+        # If we have reached the specified number of levels, create 'leafs'
+        # using LibraryPortTestDevice
+        if self.model == 0:
+            d0 = LibraryPortTestDevice(0)
+            d1 = LibraryPortTestDevice(1)
+            graph.link(d0.optional(0), self.optional(0))
+            graph.link(d1.optional(0), self.optional(1))
+
+        else:
+            d0 = RecursiveAssemblyTestDevice(self.model-1, 0)
+            d1 = RecursiveAssemblyTestDevice(self.model-1, 1)
+            for i in range(2 ** self.model):
+                graph.link(d0.optional(i), self.optional(i*2))
+                graph.link(d1.optional(i), self.optional(i*2 + 1))
+
+        graph.link(self.input, d0.input)
+        graph.link(d0.output, d1.input)
+        graph.link(d1.output, self.output)
+
         return graph
 
 
@@ -62,67 +92,3 @@ class AttributeTestDevice(Device):
     def __init__(self, attr, name: str = '') -> 'Device':
         """Test Device with attributes."""
         super().__init__(f'{self.__class__.__name__}{name}', attr=attr)
-
-
-@library('ElementLibrary.Component')
-@port('default')
-class LibraryPortTestDevice(Device):
-    """Unit test for Device with Library and Port."""
-
-    def __init__(self, name: str = '') -> 'Device':
-        """Test Device for Library."""
-        super().__init__(f'{self.__class__.__name__}{name}')
-
-
-@assembly
-@port('input')
-@port('output')
-class AssemblyTestDevice(Device):
-    """Unit Test for an assembly."""
-
-    def __init__(self, name: str = '') -> 'Device':
-        """Test Device for an assembly."""
-        super().__init__(f'{self.__class__.__name__}{name}')
-
-    def expand(self) -> 'DeviceGraph':
-        """Test for expanding a Device."""
-        graph = DeviceGraph()
-
-        ltd = LibraryTestDevice()
-        lptd = LibraryPortTestDevice()
-        sub = LibraryPortTestDevice('sub')
-        ltd.add_submodule(sub, 'slot')
-
-        graph.link(sub.default, self.input)
-        graph.link(lptd.default, self.output)
-
-        return graph
-
-
-@assembly
-@port('input')
-@port('output')
-class TopAssemblyTestDevice(Device):
-    """Unit Test for an assembly."""
-
-    def __init__(self, name: str = '') -> 'Device':
-        """Test Device for an assembly."""
-        super().__init__(f'{self.__class__.__name__}{name}')
-
-    def expand(self) -> 'DeviceGraph':
-        """Test for expanding a Device."""
-        graph = DeviceGraph()
-
-        atd0 = AssemblyTestDevice(0)
-        atd1 = AssemblyTestDevice(1)
-        ltd = LibraryTestDevice()
-        lptd = LibraryPortTestDevice()
-        sub = LibraryPortTestDevice('sub')
-        ltd.add_submodule(sub, 'slot')
-
-        graph.link(self.input, atd0.input)
-        graph.link(atd0.output, atd1.input)
-        graph.link(atd1.output, sub.default)
-        graph.link(lptd.default, self.output)
-
-        return graph

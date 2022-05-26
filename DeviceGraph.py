@@ -8,7 +8,6 @@ All links are bidirectional.
 """
 
 import os
-import gc
 import collections
 import pygraphviz
 from .Device import *
@@ -138,19 +137,23 @@ class DeviceGraph:
             if d.partition is None:
                 raise RuntimeError(f"No partition for component: {d.name}")
 
-    def follow_links(self, rank: int) -> 'DeviceGraph':
+    def follow_links(self, rank: int, prune: bool = False) -> 'DeviceGraph':
         """
         Chase links between ranks.
 
         Given a graph, follow links from the specified rank and expand
         assemblies until links are fully defined (links touch library
         Devices on both sides)
+        Optional prune flag will remove unnecessary Devices and links from
+        the graph. This will result in a different overall graph but will
+        potentially save memory
         """
         self.check_partition()
         graph = self
         while True:
             devices = set()
-            for (p0, p1, _) in graph.links.values():
+            linksToRemove = set()
+            for link, (p0, p1, _) in graph.links.items():
                 # one of the devices is on the rank that we are
                 # following links on
                 if (p0.device.partition[0] == rank
@@ -159,6 +162,23 @@ class DeviceGraph:
                         if p.device.library is None:
                             # link on the rank we want, device needs expanded
                             devices.add(p.device)
+                # this link is not used on our rank, remove it
+                # devices will not be inserted into the next graph if they
+                # aren't linked to
+                elif prune:
+                    linksToRemove.add(link)
+                    # Could potentially leave the ports in the set to indicate
+                    # that they were connected previously
+                    # TODO: remove ports from set or not???
+                    # graph.ports.remove(p0)
+                    # graph.ports.remove(p1)
+
+            # Can't remove items from the dictionary while we are iterating
+            # through it, so we store them in a set and remove them after
+            # should be better than copying the dictionary
+            for link in linksToRemove:
+                graph.links.pop(link)
+
             if devices:
                 graph = graph.flatten(1, expand=devices)
             else:
@@ -194,9 +214,7 @@ class DeviceGraph:
         # Devices must have a matching name if provided, a matching
         # rank if provided, and be within the expand set if provided
         # if they are to be added to the assemblies list of devices to expand
-        gc.disable()
         if levels == 0:
-            gc.enable()
             return self
 
         assemblies = list()
@@ -220,7 +238,6 @@ class DeviceGraph:
                 assemblies.append(dev)
 
         if not assemblies:
-            gc.enable()
             return self
 
         # Start by creating a link map.  This will allow us quick lookup
@@ -257,6 +274,7 @@ class DeviceGraph:
                         links[p0.device].remove((p0, p1, t))
                         links[p1.device].remove((p1, p0, t))
                         return (p1, t)
+                print(f"Did't find port {port}, this is not good")
                 return (None, None)
 
             # Update the links. Latency will come from the link defined

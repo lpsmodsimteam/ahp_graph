@@ -44,8 +44,12 @@ class SSTGraph(DeviceGraph):
                 return dict()
 
             self.check_partition()
-            rankGraph = SSTGraph(self.flatten(rank=rank).follow_links(rank))
+            rankGraph = self.flatten(rank=rank)
+            # need to verify before we follow links because pruning
+            # may make the overall graph invalid
+            # (it will be valid for the current rank)
             rankGraph.verify_links()
+            rankGraph = SSTGraph(rankGraph.follow_links(rank, True))
             return rankGraph.__build_model(True)
 
     def write_json(self, filename: str, nranks: int = 1,
@@ -79,9 +83,12 @@ class SSTGraph(DeviceGraph):
             self.check_partition()
 
             for rank in range(nranks):
-                rankGraph = SSTGraph(self.flatten(
-                    rank=rank).follow_links(rank))
+                rankGraph = self.flatten(rank=rank)
+                # need to verify before we follow links because pruning
+                # may make the overall graph invalid
+                # (it will be valid for the current rank)
                 rankGraph.verify_links()
+                rankGraph = SSTGraph(rankGraph.follow_links(rank, True))
                 rankGraph.__write_model(base + str(rank) + ext,
                                         nranks, program_options)
 

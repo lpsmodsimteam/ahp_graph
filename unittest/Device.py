@@ -1,8 +1,8 @@
 """Collection of Unit tests for AHPGraph Device."""
 
 from AHPGraph import *
-from AHPGraph.unittest.test import *
-from AHPGraph.unittest.Devices import *
+from test import *
+from Devices import *
 
 
 def LibraryTest() -> bool:
@@ -74,7 +74,7 @@ def AssemblyTest() -> bool:
     t = test('AssemblyTest')
 
     try:
-        ratd = RecursiveAssemblyTestDevice().assembly
+        ratd = RecursiveAssemblyTestDevice(0).assembly
         t.test(ratd, 'assembly')
 
         results = None
@@ -122,7 +122,7 @@ def PartitionTest() -> bool:
     """Test of partitioning a device."""
     t = test('PartitionTest')
 
-    ratd = RecursiveAssemblyTestDevice()
+    ratd = RecursiveAssemblyTestDevice(0)
     ratd.set_partition(1)
     t.test(ratd.partition[0] == 1, 'rank')
     t.test(ratd.partition[1] is None, 'thread None')
