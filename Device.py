@@ -4,7 +4,7 @@ This module represents a Device.
 There are decorators for annotating which library the device can be found
 in along with port labels.
 
-The most important feature is that a Device can be an assembly, meaning is is
+The most important feature is that a Device can be an assembly, meaning it is
 constructed of other Devices. This combined with the DeviceGraph allows for
 hierarchical representations of a graph.
 """
@@ -14,11 +14,11 @@ import collections
 
 def library(name: str) -> 'Device':
     """
-    Python decorator to define library associated with this Device.
+    Python decorator to define the library associated with this Device.
 
     For example, this represents the SST Element Library and Component used to
-    simulate the device ('element.component')
-    Note that a device may have a model library defined and also
+    simulate the Device ('element.component')
+    Note that a Device may have a model library defined and also
     be an assembly (e.g., a multi-resolution model).
     """
 
@@ -30,7 +30,7 @@ def library(name: str) -> 'Device':
 
 def assembly(cls: 'Device') -> 'Device':
     """
-    Python decorator to indicate that a device is an assembly.
+    Python decorator to indicate that a Device is an assembly.
 
     Verify that there is an expand method.
     """
@@ -69,7 +69,7 @@ class DevicePort:
     """
     A DevicePort represents a port on a Device.
 
-    DevicePort contains a device reference, a port name, and an
+    DevicePort contains a Device reference, a port name, and an
     optional port number.
     """
 
@@ -135,20 +135,17 @@ class Device:
     """
     Device is the base class for a node in the AHP graph.
 
-    This object is immutable. Each device exports several ports.
-    A device may be represented by an model, may be an assembly
-    of other devices, or both. If an assembly, then the device must define
-    an expand() method that returns a device graph that implements the device.
+    A Device may be represented by an model, may be an assembly
+    of other Devices, or both. If an assembly, then the Device must define
+    an expand() method that returns a DeviceGraph that implements the Device.
 
     Devices may contain submodules which allow for parameterization of
     functionality similar to a lambda function (ex. SST subcomponents). This
     is done by creating a Device to represent the submodule and then adding
-    it into another device.
+    it into another Device.
 
     Note that successive calls to port() will return the same DevicePort
     object so they can be used in sets and comparisons.
-
-    Each device must have a unique name.
     """
 
     library = None
@@ -158,7 +155,7 @@ class Device:
     def __init__(self, name: str, model: str = None,
                  attr: dict = None) -> 'Device':
         """
-        Initialize the device.
+        Initialize the Device.
 
         Initialize with the unique name, model, and optional
         dictionary of attributes which are used as model parameters.
@@ -179,14 +176,15 @@ class Device:
     def add_submodule(self, device: 'Device', slotName: str,
                       slotIndex: int = None) -> None:
         """
-        Add a submodule to this component.
+        Add a submodule to this Device.
 
-        Both the submodule and this device must have libraries.
-        Note that all submodules must be added to the device before
-        the device is added to the graph.
+        Both the submodule and this Device must have libraries.
+        Note that all submodules must be added to the Device before
+        the Device is added to a DeviceGraph.
         """
         if self.library is None or device.library is None:
-            raise RuntimeError(f"Submodule and parent must have libraries")
+            raise RuntimeError(f"Submodule and parent must have libraries:"
+                               f" {device.name}, {self.name}")
         device.subOwner = self
         self.subs.add((device, slotName, slotIndex))
 
@@ -209,7 +207,7 @@ class Device:
 
     def port(self, port: str, number: int = None) -> 'DevicePort':
         """
-        Return a Port object representing the port on this device.
+        Return a Port object representing the port on this Device.
 
         If a Single port, then make sure we do not have a port number.
         If the port has not already been defined, then add it.
@@ -219,7 +217,7 @@ class Device:
         list.  Make sure we do not create too many connections if Bounded.
         Finally, if the port has not already been defined, then create it.
         """
-        info = self._portinfo.get(port)
+        info = self.get_portinfo().get(port)
 
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
@@ -247,16 +245,13 @@ class Device:
 
     def get_portinfo(self) -> dict:
         """Return the portinfo for this Device Class."""
-        if self._portinfo is None:
-            return dict()
-        return self._portinfo
+        return self._portinfo if self._portinfo is not None else dict()
 
     def get_category(self) -> str:
         """Return the category for this Device (type, model)."""
         if self.model is not None:
             return f"{self.type}_{self.model}"
-        else:
-            return self.type
+        return self.type
 
     def label_ports(self) -> str:
         """Return the port labels for a graphviz record style node."""

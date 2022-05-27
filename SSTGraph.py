@@ -9,7 +9,7 @@ from .DeviceGraph import *
 class SSTGraph(DeviceGraph):
     """SSTGraph."""
 
-    def __init__(self, graph: 'DeviceGraph') -> 'SSTGraph':
+    def __init__(self, graph: DeviceGraph) -> 'SSTGraph':
         """Define."""
         self.attr = graph.attr
         self.devices = graph.devices
@@ -143,7 +143,7 @@ class SSTGraph(DeviceGraph):
         for (key, val) in global_params.items():
             sst.addGlobalParam(key, key, val)
 
-        def recurseSubcomponents(dev: 'Device', comp: 'Component'):
+        def recurseSubcomponents(dev: Device, comp: 'Component'):
             """Add subcomponents to the Device."""
             for (d1, n1, s1) in dev.subs:
                 if d1.library is None:
@@ -177,14 +177,15 @@ class SSTGraph(DeviceGraph):
                 recurseSubcomponents(d0, c0)
 
         # Second, link the component ports using graph links.
-        for (name, (p0, p1, t)) in self.links.items():
+        for (p0, p1), t in self.links.items():
             if p0.device.library is not None and p1.device.library is not None:
                 c0 = n2c[p0.device.name]
                 c1 = n2c[p1.device.name]
                 s0 = p0.get_name()
                 s1 = p1.get_name()
-                link = sst.Link(name)
-                link.connect((c0, s0, t), (c1, s1, t))
+                link = sst.Link(f'{p0.get_name()}__{t}__{p1.get_name()}')
+                latency = t if t != '0s' else '1ps'
+                link.connect((c0, s0, latency), (c1, s1, latency))
 
         # Return a map of component names to components.
         return n2c
@@ -211,7 +212,7 @@ class SSTGraph(DeviceGraph):
             model["global_params"][key] = dict({key: val})
         global_set = list(global_params.keys())
 
-        def recurseSubcomponents(dev: 'Device') -> list:
+        def recurseSubcomponents(dev: Device) -> list:
             """Add subcomponents to the Device."""
             subcomponents = list()
             for (d1, n1, s1) in dev.subs:
@@ -261,20 +262,21 @@ class SSTGraph(DeviceGraph):
 
         # Now define the links between components.
         links = list()
-        for (name, (p0, p1, t)) in self.links.items():
+        for (p0, p1), t in self.links.items():
             if p0.device.library is not None and p1.device.library is not None:
+                latency = t if t != '0s' else '1ps'
                 links.append(
                     {
-                        "name": name,
+                        "name": f'{p0.get_name()}__{t}__{p1.get_name()}',
                         "left": {
                             "component": p0.device.name,
                             "port": p0.get_name(),
-                            "latency": t,
+                            "latency": latency,
                         },
                         "right": {
                             "component": p1.device.name,
                             "port": p1.get_name(),
-                            "latency": t,
+                            "latency": latency,
                         },
                     }
                 )

@@ -116,10 +116,7 @@ def LinkTest() -> bool:
     graph.link(lptd.input, ptd0.optional)
     t.test(len(graph.devices) == 3, 'linking add submodule parent')
     t.test(graph.devices[ltd.name] == ltd, 'submodule parent included')
-    t.test(graph.links.popitem()[1][2] == '1ps', 'default latency')
-    # start with a fresh graph since the link was popped off the dictionary
-    graph = DeviceGraph()
-    graph.link(lptd.input, ptd0.optional)
+    t.test(graph.links[(lptd.input, ptd0.optional)] == '0s', 'default latency')
     linkAgain = None
     try:
         graph.link(ptd0.optional, lptd.input)
@@ -149,7 +146,7 @@ def LinkTest() -> bool:
         changeSinglePortLink = True
     t.test(changeSinglePortLink, 'linking from a single port again')
     graph.link(ptd0.limit(0), ptd1.limit(0), '123ns')
-    t.test(graph.links.popitem()[1][2] == '123ns', 'latency')
+    t.test(graph.links[(ptd0.limit(0), ptd1.limit(0))] == '123ns', 'latency')
 
     return t.finish()
 
