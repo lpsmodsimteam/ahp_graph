@@ -183,7 +183,7 @@ class SSTGraph(DeviceGraph):
                 c1 = n2c[p1.device.name]
                 s0 = p0.get_name()
                 s1 = p1.get_name()
-                link = sst.Link(f'{p0.get_name()}__{t}__{p1.get_name()}')
+                link = sst.Link(f'{p0}__{t}__{p1}')
                 latency = t if t != '0s' else '1ps'
                 link.connect((c0, s0, latency), (c1, s1, latency))
 
@@ -267,7 +267,7 @@ class SSTGraph(DeviceGraph):
                 latency = t if t != '0s' else '1ps'
                 links.append(
                     {
-                        "name": f'{p0.get_name()}__{t}__{p1.get_name()}',
+                        "name": f'{p0}__{t}__{p1}',
                         "left": {
                             "component": p0.device.name,
                             "port": p0.get_name(),
