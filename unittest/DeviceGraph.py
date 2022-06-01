@@ -214,8 +214,8 @@ def FollowLinksTest() -> bool:
     lptd0.set_partition(2)
     lptd1.set_partition(2)
 
-    followed = graph.follow_links(0)
-    for dev in followed.devices.values():
+    graph.follow_links(0)
+    for dev in graph.devices.values():
         if dev.assembly:
             t.test(dev.name == f'RecursiveAssemblyTestDevice{levels}1',
                    'only one assembly left')
@@ -228,43 +228,55 @@ def FollowLinksTest() -> bool:
 def FlattenTest() -> bool:
     """Test of flattening a DeviceGraph."""
     t = test('FlattenTest')
-    graph = DeviceGraph()
     levels = 6
 
-    ratd0 = RecursiveAssemblyTestDevice(levels, 0)
-    ratd1 = RecursiveAssemblyTestDevice(levels, 1)
-    lptd0 = LibraryPortTestDevice(0)
-    lptd1 = LibraryPortTestDevice(1)
+    def createGraph() -> 'DeviceGraph':
+        """Create a graph for testing."""
+        graph = DeviceGraph()
 
-    # complete the rings
-    graph.link(ratd0.input, ratd0.output)
-    graph.link(ratd1.input, ratd1.output)
+        ratd0 = RecursiveAssemblyTestDevice(levels, 0)
+        ratd1 = RecursiveAssemblyTestDevice(levels, 1)
+        lptd0 = LibraryPortTestDevice(0)
+        lptd1 = LibraryPortTestDevice(1)
 
-    graph.link(lptd0.input, lptd1.output)
-    graph.link(lptd1.input, lptd0.output)
-    for i in range(2 ** (levels+1)):
-        graph.link(lptd0.optional(None), ratd0.optional(None))
-        graph.link(lptd1.optional(None), ratd1.optional(None))
+        # complete the rings
+        graph.link(ratd0.input, ratd0.output)
+        graph.link(ratd1.input, ratd1.output)
 
-    ratd0.set_partition(0)
-    ratd1.set_partition(1)
-    lptd0.set_partition(2)
-    lptd1.set_partition(2)
+        graph.link(lptd0.input, lptd1.output)
+        graph.link(lptd1.input, lptd0.output)
+        for i in range(2 ** (levels+1)):
+            graph.link(lptd0.optional(None), ratd0.optional(None))
+            graph.link(lptd1.optional(None), ratd1.optional(None))
 
-    flat = graph.flatten()
+        ratd0.set_partition(0)
+        ratd1.set_partition(1)
+        lptd0.set_partition(2)
+        lptd1.set_partition(2)
+        return graph
+
+    flat = createGraph()
+    flat.flatten()
     t.test(not any([d.assembly for d in flat.devices.values()]),
            'no assemblies left')
 
-    twoLevels = graph.flatten(2)
+    twoLevels = createGraph()
+    twoLevels.flatten(2)
     t.test([d.assembly for d in twoLevels.devices.values()].count(True) == 8,
            'correct number of assemblies left')
-    byName = graph.flatten(name=f'RecursiveAssemblyTestDevice{levels}0')
-    rank0 = graph.flatten(rank=0)
+
+    byName = createGraph()
+    byName.flatten(name=f'RecursiveAssemblyTestDevice{levels}0')
+    rank0 = createGraph()
+    rank0.flatten(rank=0)
     t.test(byName.devices.keys() == rank0.devices.keys(),
            'name and rank devices')
     t.test(byName.links.keys() == rank0.links.keys(),
            'name and rank links')
-    expand = graph.flatten(expand={ratd0})
+
+    expand = createGraph()
+    ratd0 = expand.devices[f'RecursiveAssemblyTestDevice{levels}0']
+    expand.flatten(expand={ratd0})
     t.test([d.assembly for d in expand.devices.values()].count(True) == 3,
            'correct number of assemblies left')
 

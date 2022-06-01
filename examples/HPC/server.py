@@ -204,10 +204,8 @@ class Server(Device):
         self.attr['nodes'] = nodes
         self.attr['cores'] = cores
 
-    def expand(self) -> 'DeviceGraph':
+    def expand(self, graph: 'DeviceGraph') -> None:
         """Expand the server into its components."""
-        graph = DeviceGraph()  # initialize a Device Graph
-
         # Setup the NoC first so we can connect the Processors to it
         # Device names created by an assembly will automatically have the
         # assembly name prefixed to the name provided.
@@ -261,4 +259,3 @@ class Server(Device):
         # ports (ex: self.port) and allow whatever uses the assembly to
         # specify latency for the connection (it will get ignored anyway)
         graph.link(netLink.port('rtr_port'), self.network)
-        return graph

@@ -222,10 +222,8 @@ class Processor(Device):
         self.attr['core'] = core
         self.attr['cores'] = cores
 
-    def expand(self) -> 'DeviceGraph':
+    def expand(self, graph: 'DeviceGraph') -> None:
         """Expand the server into its components."""
-        graph = DeviceGraph()  # initialize a Device Graph
-
         # Reminder to add subcomponents to the main component BEFORE adding
         # the main component to the DeviceGraph. You can also link directly
         # to the subcomponents after they are connected to a parent component
@@ -284,4 +282,3 @@ class Processor(Device):
         # ports (ex: self.port) and allow whatever uses the assembly to
         # specify latency for the connection (it will get ignored anyway)
         graph.link(bus.low_network(0), self.low_network(0))
-        return graph

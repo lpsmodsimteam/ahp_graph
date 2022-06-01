@@ -1,19 +1,25 @@
 """This module extends a DeviceGraph to enables SST Simulation output."""
 
 import os
-import gc
 import orjson
 from .DeviceGraph import *
 
 
 class SSTGraph(DeviceGraph):
-    """SSTGraph."""
+    """
+    SSTGraph is an extension to DeviceGraph that lets you build or write JSON.
+
+    SSTGraph will flatten the graph when building or writing JSON. You probably
+    want to do these last since they modify the DeviceGraph itself
+    """
 
     def __init__(self, graph: DeviceGraph) -> 'SSTGraph':
-        """Define."""
+        """Point at the DeviceGraph variables, shallow copy if requested."""
+        self.expanding = None
         self.attr = graph.attr
         self.devices = graph.devices
         self.links = graph.links
+        self.ports = graph.ports
 
     def build(self, nranks: int = 1) -> dict:
         """
@@ -31,7 +37,7 @@ class SSTGraph(DeviceGraph):
         # If this is serial or sst is doing the partitioning,
         # generate the entire graph
         if nranks == 1:
-            self = SSTGraph(self.flatten())
+            self.flatten()
             self.verify_links()
             return self.__build_model(False)
 
@@ -44,13 +50,13 @@ class SSTGraph(DeviceGraph):
                 return dict()
 
             self.check_partition()
-            rankGraph = self.flatten(rank=rank)
+            self.flatten(rank=rank)
             # need to verify before we follow links because pruning
             # may make the overall graph invalid
             # (it will be valid for the current rank)
-            rankGraph.verify_links()
-            rankGraph = SSTGraph(rankGraph.follow_links(rank, True))
-            return rankGraph.__build_model(True)
+            self.verify_links()
+            self.follow_links(rank, True)
+            return self.__build_model(True)
 
     def write_json(self, filename: str, nranks: int = 1,
                    program_options: dict = None) -> None:
@@ -70,33 +76,57 @@ class SSTGraph(DeviceGraph):
         if not os.path.exists('output'):
             os.makedirs('output')
 
+        self.flatten()
+        self.verify_links()
+
         # If this is serial or sst is doing the partitioning,
         # just write the whole thing
         if nranks == 1:
-            self = SSTGraph(self.flatten())
-            self.verify_links()
-            self.__write_model(f"output/{filename}", nranks, program_options)
+            self.__write_model(f"output/{filename}", nranks, program_options,
+                               self.devices, self.links)
 
         # Write a JSON file for each rank
         else:
             (base, ext) = os.path.splitext(f"output/{filename}")
             self.check_partition()
-
+            partition = self.__partition_graph(nranks)
             for rank in range(nranks):
-                rankGraph = self.flatten(rank=rank)
-                # need to verify before we follow links because pruning
-                # may make the overall graph invalid
-                # (it will be valid for the current rank)
-                rankGraph.verify_links()
-                rankGraph = SSTGraph(rankGraph.follow_links(rank, True))
-                rankGraph.__write_model(base + str(rank) + ext,
-                                        nranks, program_options)
+                self.__write_model(base + str(rank) + ext, nranks,
+                                   program_options,
+                                   partition[rank][0], partition[rank][1])
 
-                # Manually remove each graph to make sure we don't overflow
-                del rankGraph
-                gc.collect()
+    def __partition_graph(self, nranks):
+        """
+        Store all the devices and links for a given rank.
 
-    def __encode(self, attr, stringify: bool = False) -> dict:
+        Return a list of pairs of the form (component-set, link-list),
+        where each list entry corresponds to a particular processor rank.
+        It is faster to partition the graph once rather than search it
+        O(p) times.
+        """
+        partition = [(dict(), dict()) for p in range(nranks)]
+
+        for (p0, p1), t in self.links.items():
+            d0 = p0.device
+            d1 = p1.device
+            while d0.subOwner is not None:
+                d0 = d0.subOwner
+            while d1.subOwner is not None:
+                d1 = d1.subOwner
+            r0 = d0.partition[0]
+            r1 = d1.partition[0]
+
+            partition[r0][0][d0.name] = d0
+            partition[r0][0][d1.name] = d1
+            partition[r0][1][(p0, p1)] = t
+            if r0 != r1:
+                partition[r1][0][d0.name] = d0
+                partition[r1][0][d1.name] = d1
+                partition[r1][1][(p0, p1)] = t
+        return partition
+
+    @staticmethod
+    def __encode(attr: dict, stringify: bool = False) -> dict:
         """
         Convert attributes into SST Params.
 
@@ -190,8 +220,8 @@ class SSTGraph(DeviceGraph):
         # Return a map of component names to components.
         return n2c
 
-    def __write_model(self, filename: str, nranks: int,
-                      program_options: dict) -> None:
+    def __write_model(self, filename: str, nranks: int, program_options: dict,
+                      devices: dict, links: dict) -> None:
         """Write this DeviceGraph out as JSON."""
         model = dict()
 
@@ -236,7 +266,7 @@ class SSTGraph(DeviceGraph):
         # Define all the components. We define the name, type, parameters,
         # and global parameters. Ignore Devices that have no library defined
         components = list()
-        for d0 in self.devices.values():
+        for d0 in devices.values():
             if d0.subOwner is None and d0.library is not None:
                 component = {
                     "name": d0.name,
@@ -261,11 +291,11 @@ class SSTGraph(DeviceGraph):
         model["components"] = components
 
         # Now define the links between components.
-        links = list()
-        for (p0, p1), t in self.links.items():
+        linksJSON = list()
+        for (p0, p1), t in links.items():
             if p0.device.library is not None and p1.device.library is not None:
                 latency = t if t != '0s' else '1ps'
-                links.append(
+                linksJSON.append(
                     {
                         "name": f'{p0}__{t}__{p1}',
                         "left": {
@@ -281,7 +311,7 @@ class SSTGraph(DeviceGraph):
                     }
                 )
 
-        model["links"] = links
+        model["links"] = linksJSON
 
         with open(filename, "wb") as jfile:
             jfile.write(orjson.dumps(model, option=orjson.OPT_INDENT_2))

@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     if SST:
         # If running within SST, generate the SST graph
-        # There are multiple ways to run, below are a few common examples
+        # There are multiple ways to run, below are two examples
 
         # SST partitioner
         # This will work in serial or running SST with MPI in parallel
@@ -45,11 +45,11 @@ if __name__ == "__main__":
             sstgraph.build(args.num)
 
     else:
-        # generate a graphviz dot file and json output for demonstration
-        graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
-        sstgraph.write_json('pingpongFlat.json')
-
-        # generate a different view including the hierarchy, and write out
-        # the AHPGraph partitioned graph
+        # generate a graphviz dot file including the hierarchy
         graph.write_dot('pingpong', draw=True, ports=True)
         sstgraph.write_json('pingpong.json', nranks=args.num)
+
+        # generate a graphviz dot file and json output for demonstration
+        graph.flatten()
+        graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
+        sstgraph.write_json('pingpongFlat.json')

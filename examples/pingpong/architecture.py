@@ -37,10 +37,8 @@ class pingpong(Device):
         """Size parameter is stored as the model attribute of a device."""
         super().__init__(name, size, attr)
 
-    def expand(self) -> 'DeviceGraph':
+    def expand(self, graph: 'DeviceGraph') -> None:
         """Expand the overall architecture into its components."""
-        graph = DeviceGraph()  # initialize a Device Graph
-
         # create a Ping Device
         # Device names created by an assembly will automatically have the
         # assembly name prefixed to the name provided.
@@ -58,8 +56,6 @@ class pingpong(Device):
         graph.link(ping.input, self.input)
         # Connect pingpong's output to pong's output
         graph.link(pong.output, self.output)
-
-        return graph
 
 
 def architecture(repeats: int = 10, num: int = 1) -> 'DeviceGraph':

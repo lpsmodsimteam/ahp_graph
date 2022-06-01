@@ -49,11 +49,10 @@ def buildPython(graph: 'DeviceGraph') -> None:
 
     Need to manually build the graph since AHPGraph doesn't support this.
     """
-    flat = graph.flatten()
     devs = dict()
     # instantiate all the devices in the graph
-    for device in flat.devices:
-        dev = flat.devices[device]
+    for device in graph.devices:
+        dev = graph.devices[device]
         if dev.type == 'Ping':
             devs[device] = eval(f'{dev.library.split(".")[1]}('
                                 f'"{device}", {args.repeats})')
@@ -77,17 +76,17 @@ def buildPython(graph: 'DeviceGraph') -> None:
 
         # connect the pingpongs together as specified
         # flip the direction of the one connection since it wraps around
-        for link in flat.links.values():
-            n0 = link[0].device.name
-            n1 = link[1].device.name
+        for (p0, p1) in graph.links:
+            n0 = p0.device.name
+            n1 = p1.device.name
             if n0 == 'PingPong0.Ping' and n1 == f'PingPong{args.num-1}.Pong':
                 devs[n1].output = wrapper(devs[n0])
             else:
                 devs[n0].output = wrapper(devs[n1])
 
     # find the first Ping device and start the 'simulation'
-    for device in flat.devices:
-        if flat.devices[device].type == 'Ping':
+    for device in graph.devices:
+        if graph.devices[device].type == 'Ping':
             devs[device].start()
             break
 
@@ -104,11 +103,11 @@ if __name__ == "__main__":
     # Construct a DeviceGraph with the specified architecture
     graph = architecture(args.repeats, args.num)
 
-    # generate a graphviz dot file and json output for demonstration
-    graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
-
-    # generate a different view including the hierarchy, and write out
-    # the AHPGraph partitioned graph
+    # generate a graphviz dot file including the hierarchy
     graph.write_dot('pingpong', draw=True, ports=True)
+
+    # flatten the graph and generate a graphviz dot file
+    graph.flatten()
+    graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
 
     buildPython(graph)

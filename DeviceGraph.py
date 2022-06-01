@@ -30,6 +30,7 @@ class DeviceGraph:
         not intemediate graphs (e.g., assemblies).
         The dictionary of links uses a sorted tuple of DevicePorts as the key
         """
+        self.expanding = None
         self.attr = attr if attr is not None else dict()
         self.devices = dict()
         self.links = dict()
@@ -62,6 +63,37 @@ class DeviceGraph:
                                f" you have a multi port and didn't pick a port"
                                f" number (ex. Device.portX(portNum))")
 
+        def get_other_port(port: 'DevicePort', dev: 'Device') -> tuple:
+            """Get a matching port through an expanding assembly."""
+            if port.link is not None:
+                other = port.link
+                # clear the link for each port and remove from the ports set
+                port.link = None
+                other.link = None
+                self.ports -= {port, other}
+                if port < other:
+                    latency = self.links.pop((port, other))
+                else:
+                    latency = self.links.pop((other, port))
+                # add the other device to the graph if it doesn't exist
+                # so that we update the name properly
+                if dev not in self.devices.values():
+                    while dev.subOwner is not None:
+                        dev = dev.subOwner
+                    self.add(dev)
+                return (other, latency)
+            return (None, None)
+
+        if self.expanding is not None:
+            if p0.device == self.expanding:
+                (p0, latency) = get_other_port(p0, p1.device)
+                if p0 is None:
+                    return
+            elif p1.device == self.expanding:
+                (p1, latency) = get_other_port(p1, p0.device)
+                if p1 is None:
+                    return
+
         if p0 in self.ports or p1 in self.ports:
             raise RuntimeError(f'{p0} or {p1} already linked to')
 
@@ -77,19 +109,24 @@ class DeviceGraph:
 
         # Add devices to the graph if they aren't already included
         for dev in devs:
-            if dev.name not in self.devices:
+            if dev not in self.devices.values():
                 while dev.subOwner is not None:
                     dev = dev.subOwner
                 self.add(dev)
 
         # Storing the ports in a set so that we can quickly see if they
         # are linked to already
-        self.ports.add(p0)
-        self.ports.add(p1)
+        self.ports |= {p0, p1}
         if p1 < p0:
             link = (p1, p0)
         else:
             link = (p0, p1)
+        # Only update the links if neither are connected
+        # otherwise we are most likely doing a separate graph expansion and
+        # don't want to overwrite the port links that exist
+        if p0.link is None and p1.link is None:
+            p0.link = p1
+            p1.link = p0
         self.links[link] = latency
 
     def add(self, device: Device) -> None:
@@ -101,6 +138,12 @@ class DeviceGraph:
         Do NOT add submodules to a Device after you have added it using
         this function. Add submodules first, then add the parent.
         """
+        if self.expanding is not None:
+            device.name = f"{self.expanding.name}.{device.name}"
+            if (self.expanding.partition is not None
+                    and device.partition is None):
+                device.partition = self.expanding.partition
+
         if device.name in self.devices:
             raise RuntimeError(f"Name already in graph: {device.name}")
         self.devices[device.name] = device
@@ -140,7 +183,7 @@ class DeviceGraph:
             if d.partition is None:
                 raise RuntimeError(f"No partition for Device: {d.name}")
 
-    def follow_links(self, rank: int, prune: bool = False) -> 'DeviceGraph':
+    def follow_links(self, rank: int, prune: bool = False) -> None:
         """
         Chase links between ranks.
 
@@ -152,11 +195,10 @@ class DeviceGraph:
         potentially save memory
         """
         self.check_partition()
-        graph = self
         while True:
             devices = set()
             linksToRemove = set()
-            for (p0, p1) in graph.links:
+            for (p0, p1) in self.links:
                 # One of the Devices is on the rank that we are
                 # following links on
                 if (p0.device.partition[0] == rank
@@ -165,7 +207,7 @@ class DeviceGraph:
                         if p.device.library is None:
                             devices.add(p.device)
                 # This link is not used on our rank, remove it
-                # Devices will not be inserted into the next graph if they
+                # Devices will not be inserted into the graph if they
                 # aren't linked to
                 elif prune:
                     linksToRemove.add((p0, p1))
@@ -173,19 +215,20 @@ class DeviceGraph:
             # Can't remove items from the dictionary while we are iterating
             # through it, so we store them in a set and remove them after
             # should be better than copying the dictionary
-            # Don't prune links on the original graph
-            if graph != self:
-                for link in linksToRemove:
-                    del graph.links[link]
+            for link in linksToRemove:
+                del self.links[link]
+                link[0].link = None
+                link[1].link = None
+                self.ports.discard(link[0])
+                self.ports.discard(link[1])
 
             if devices:
-                graph = graph.flatten(1, expand=devices)
+                self.flatten(1, expand=devices)
             else:
                 break
-        return graph
 
     def flatten(self, levels: int = None, name: str = None,
-                rank: int = None, expand: set = None) -> 'DeviceGraph':
+                rank: int = None, expand: set = None) -> None:
         """
         Recursively flatten the graph by the specified number of levels.
 
@@ -205,16 +248,12 @@ class DeviceGraph:
         You can also provide a set of Devices to expand instead of looking
         through the entire graph
         """
-        # Build up a list of Devices that don't need expanded
-        # and a list of Devices to be expanded
-        #
-        # Non-assembly Devices automatically are added to the Devices list
         # Devices must have a matching name if provided, a matching
         # rank if provided, and be within the expand set if provided
         if levels == 0:
-            return self
+            return
 
-        assemblies = list()
+        assemblies = set()
         if name is not None:
             splitName = name.split(".")
 
@@ -232,72 +271,20 @@ class DeviceGraph:
                 assembly &= dev in expand
 
             if assembly:
-                assemblies.append(dev)
+                assemblies.add(dev)
 
         if not assemblies:
-            return self
-
-        # Start by creating a link map.  This will allow us quick lookup
-        # of the links in the graph.  We add both directions, since we will
-        # need to look up by both the first and second Device.
-        links = collections.defaultdict(set)
-        for (p0, p1), t in self.links.items():
-            links[p0.device].add((p0, p1, t))
-            links[p1.device].add((p1, p0, t))
+            return
 
         # Expand the required Devices
         for device in assemblies:
-            subgraph = device.expand()
-
-            # Expanded Devices inherit the partition of the parent.
-            # Also prepend the assembly's name to the names of the new Devices
-            for d in subgraph.devices.values():
-                if d != device:
-                    d.name = f"{device.name}.{d.name}"
-                    if device.partition is not None and d.partition is None:
-                        d.partition = device.partition
-
-            def find_other_port(port):
-                """Find a matching port."""
-                for (p0, p1, t) in links[port.device]:
-                    if p0 == port:
-                        links[p0.device].remove((p0, p1, t))
-                        links[p1.device].remove((p1, p0, t))
-                        return (p1, t)
-                return (None, None)
-
-            # Update the links. Latency will come from the link defined
-            # higher up in the hierarchy
-            for (p0, p1), t in subgraph.links.items():
-                if p0.device == device:
-                    (p2, t2) = find_other_port(p0)
-                    if p2 is not None:
-                        links[p1.device].add((p1, p2, t2))
-                        links[p2.device].add((p2, p1, t2))
-                elif p1.device == device:
-                    (p2, t2) = find_other_port(p1)
-                    if p2 is not None:
-                        links[p0.device].add((p0, p2, t2))
-                        links[p2.device].add((p2, p0, t2))
-                else:
-                    links[p0.device].add((p0, p1, t))
-                    links[p1.device].add((p1, p0, t))
-
-            # Sanity check that we removed all the links
-            for (p0, p1, _) in links[device]:
-                raise RuntimeError(f"Unexpanded link: {p0} <--> {p1}")
-
-        # Reconstruct the new graph from the Devices and links.
-        graph = DeviceGraph(self.attr)
-
-        for linkset in links.values():
-            for (p0, p1, t) in linkset:
-                if p0 < p1:
-                    graph.link(p0, p1, t)
+            self.expanding = device
+            device.expand(self)
+            del self.devices[device.name]
+        self.expanding = None
 
         # Recursively flatten
-        return graph.flatten(None if levels is None else levels - 1,
-                             name, rank, expand)
+        self.flatten(None if levels is None else levels-1, name, rank, expand)
 
     def write_dot(self, name: str, draw: bool = False, ports: bool = False,
                   hierarchy: bool = True) -> None:
@@ -309,8 +296,8 @@ class DeviceGraph:
         The ports parameter will display ports on the graph if set to True
 
         The hierarchy parameter specifies whether you would like to view the
-        graph as a hierarchy of assemblies or if you would like to flatten
-        the entire graph and view it as a single file
+        graph as a hierarchy of assemblies or if you would like get a flat
+        view of the graph as it is
         hierarchy is True by default, and highly recommended for large graphs
         """
         if not os.path.exists('output'):
@@ -336,6 +323,8 @@ class DeviceGraph:
         if types is None:
             types = set()
 
+        splitName = None
+        splitNameLen = None
         if assembly is not None:
             splitName = assembly.split('.')
             splitNameLen = len(splitName)
@@ -346,7 +335,8 @@ class DeviceGraph:
                 category = dev.get_category()
                 if category not in types:
                     types.add(category)
-                    expanded = dev.expand()
+                    expanded = DeviceGraph()
+                    dev.expand(expanded)
                     types = expanded.__write_dot_hierarchy(category, draw,
                                                            ports, dev.name,
                                                            types)
@@ -364,6 +354,7 @@ class DeviceGraph:
                         graph.add_node(f"{dev.type}:{port}",
                                        shape='diamond', label=port,
                                        color='green', fontcolor='green')
+                    break
         else:
             # No provided assembly, this is most likely the top level
             subgraph = graph
@@ -395,11 +386,7 @@ class DeviceGraph:
                 else:
                     subgraph.add_node(nodeName, label=label)
 
-        if assembly is not None:
-            self.__dot_add_links(graph, ports, assembly,
-                                 splitName, splitNameLen)
-        else:
-            self.__dot_add_links(graph, ports)
+        self.__dot_add_links(graph, ports, assembly, splitName, splitNameLen)
 
         graph.write(f"output/{name}.dot")
         if draw:
@@ -412,12 +399,8 @@ class DeviceGraph:
         """
         Write the DeviceGraph as a DOT file.
 
-        This function will flatten the graph so it is not recommended for using
-        on large graphs. It is suggested that you use write_dot_hierarchy for
-        large graphs
+        It is suggested that you use write_dot_hierarchy for large graphs
         """
-        self = self.flatten()
-        self.verify_links()
         graph = self.__format_graph(name, ports)
 
         for dev in self.devices.values():

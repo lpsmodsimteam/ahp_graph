@@ -79,6 +79,7 @@ class DevicePort:
         self.device = device
         self.name = name
         self.number = number
+        self.link = None
 
     def get_name(self) -> str:
         """Return a string representation of the port name and number."""

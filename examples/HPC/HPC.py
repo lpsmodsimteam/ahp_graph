@@ -45,10 +45,8 @@ class Rack(Device):
         self.attr['nodes'] = nodes
         self.attr['cores'] = cores
 
-    def expand(self) -> 'DeviceGraph':
+    def expand(self, graph: 'DeviceGraph') -> None:
         """Expand the rack into its components."""
-        graph = DeviceGraph()  # initialize a Device Graph
-
         # Device names created by an assembly will automatically have the
         # assembly name prefixed to the name provided.
         router = Router("Router", 'Interconnect',
@@ -73,8 +71,6 @@ class Rack(Device):
                             self.attr['cores'])
             server.set_partition(self.partition[0], node+1)
             graph.link(router.port('port', None), server.network, '10ns')
-
-        return graph
 
 
 def Cluster(shape: str = '2x2', nodes: int = 1,

@@ -52,10 +52,8 @@ class RecursiveAssemblyTestDevice(Device):
         """Test Device for recursive assembly."""
         super().__init__(f'{self.__class__.__name__}{levels}{name}', levels)
 
-    def expand(self) -> 'DeviceGraph':
+    def expand(self, graph: 'DeviceGraph') -> None:
         """Test for expanding a Device."""
-        graph = DeviceGraph()
-
         # If we have reached the specified number of levels, create 'leafs'
         # using LibraryPortTestDevice
         if self.model == 0:
@@ -74,8 +72,6 @@ class RecursiveAssemblyTestDevice(Device):
         graph.link(self.input, d0.input)
         graph.link(d0.output, d1.input)
         graph.link(d1.output, self.output)
-
-        return graph
 
 
 class ModelTestDevice(Device):
