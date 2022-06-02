@@ -121,16 +121,6 @@ class DevicePort:
         (p0, p1) = self.__cmp__(other)
         return p0 >= p1
 
-    def __eq__(self, other: 'DevicePort') -> bool:
-        """Compare this DevicePort to another."""
-        (p0, p1) = self.__cmp__(other)
-        return p0 == p1
-
-    def __hash__(self) -> int:
-        """Need to define a hash function since we defined __eq__."""
-        return hash((self.device.name, self.name,
-                     -1 if self.number is None else self.number))
-
 
 class Device:
     """

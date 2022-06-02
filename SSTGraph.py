@@ -104,7 +104,7 @@ class SSTGraph(DeviceGraph):
         It is faster to partition the graph once rather than search it
         O(p) times.
         """
-        partition = [(dict(), dict()) for p in range(nranks)]
+        partition = [(set(), dict()) for p in range(nranks)]
 
         for (p0, p1), t in self.links.items():
             d0 = p0.device
@@ -116,12 +116,12 @@ class SSTGraph(DeviceGraph):
             r0 = d0.partition[0]
             r1 = d1.partition[0]
 
-            partition[r0][0][d0.name] = d0
-            partition[r0][0][d1.name] = d1
+            partition[r0][0].add(d0)
+            partition[r0][0].add(d1)
             partition[r0][1][(p0, p1)] = t
             if r0 != r1:
-                partition[r1][0][d0.name] = d0
-                partition[r1][0][d1.name] = d1
+                partition[r1][0].add(d0)
+                partition[r1][0].add(d1)
                 partition[r1][1][(p0, p1)] = t
         return partition
 
@@ -192,7 +192,7 @@ class SSTGraph(DeviceGraph):
 
         # First, we instantiate all of the components with
         # their attributes. Ignore Devices that have no library defined
-        for d0 in self.devices.values():
+        for d0 in self.devices:
             if d0.subOwner is None and d0.library is not None:
                 c0 = sst.Component(d0.name, d0.library)
                 c0.addParams(self.__encode(
@@ -221,7 +221,7 @@ class SSTGraph(DeviceGraph):
         return n2c
 
     def __write_model(self, filename: str, nranks: int, program_options: dict,
-                      devices: dict, links: dict) -> None:
+                      devices: set, links: dict) -> None:
         """Write this DeviceGraph out as JSON."""
         model = dict()
 
@@ -266,7 +266,7 @@ class SSTGraph(DeviceGraph):
         # Define all the components. We define the name, type, parameters,
         # and global parameters. Ignore Devices that have no library defined
         components = list()
-        for d0 in devices.values():
+        for d0 in devices:
             if d0.subOwner is None and d0.library is not None:
                 component = {
                     "name": d0.name,

@@ -32,14 +32,14 @@ class DeviceGraph:
         """
         self.expanding = None
         self.attr = attr if attr is not None else dict()
-        self.devices = dict()
+        self.devices = set()
         self.links = dict()
         self.ports = set()
 
     def __repr__(self) -> str:
         """Pretty print a DeviceGraph with Devices followed by links."""
         lines = list()
-        for device in self.devices.values():
+        for device in self.devices:
             lines.append(str(device))
         for (p0, p1), t in self.links.items():
             lines.append(f"{p0} <--{t}--> {p1}")
@@ -77,7 +77,7 @@ class DeviceGraph:
                     latency = self.links.pop((other, port))
                 # add the other device to the graph if it doesn't exist
                 # so that we update the name properly
-                if dev not in self.devices.values():
+                if dev not in self.devices:
                     while dev.subOwner is not None:
                         dev = dev.subOwner
                     self.add(dev)
@@ -109,7 +109,7 @@ class DeviceGraph:
 
         # Add devices to the graph if they aren't already included
         for dev in devs:
-            if dev not in self.devices.values():
+            if dev not in self.devices:
                 while dev.subOwner is not None:
                     dev = dev.subOwner
                 self.add(dev)
@@ -144,9 +144,9 @@ class DeviceGraph:
                     and device.partition is None):
                 device.partition = self.expanding.partition
 
-        if device.name in self.devices:
-            raise RuntimeError(f"Name already in graph: {device.name}")
-        self.devices[device.name] = device
+        if device in self.devices:
+            raise RuntimeError(f"Device already in graph: {device.name}")
+        self.devices.add(device)
         for (dev, _, _) in device.subs:
             self.add(dev)
 
@@ -158,7 +158,7 @@ class DeviceGraph:
         form "CLASS_MODEL".
         """
         counter = collections.defaultdict(int)
-        for device in self.devices.values():
+        for device in self.devices:
             counter[device.get_category()] += 1
         return counter
 
@@ -171,7 +171,7 @@ class DeviceGraph:
             d2ports[p1.device].add(p1.name)
 
         # Walk all Devices and make sure required ports are connected.
-        for device in self.devices.values():
+        for device in self.devices:
             portinfo = device.get_portinfo()
             for name in portinfo:
                 if portinfo[name]['required'] and name not in d2ports[device]:
@@ -179,7 +179,7 @@ class DeviceGraph:
 
     def check_partition(self) -> None:
         """Check to make sure the graph has ranks specified for all Devices."""
-        for d in self.devices.values():
+        for d in self.devices:
             if d.partition is None:
                 raise RuntimeError(f"No partition for Device: {d.name}")
 
@@ -257,8 +257,10 @@ class DeviceGraph:
         if name is not None:
             splitName = name.split(".")
 
-        for dev in self.devices.values():
+        for dev in self.devices:
             assembly = dev.assembly
+            if not assembly:
+                continue
 
             # check to see if the name matches
             if name is not None:
@@ -280,7 +282,7 @@ class DeviceGraph:
         for device in assemblies:
             self.expanding = device
             device.expand(self)
-            del self.devices[device.name]
+            self.devices.discard(device)
         self.expanding = None
 
         # Recursively flatten
@@ -330,7 +332,7 @@ class DeviceGraph:
             splitNameLen = len(splitName)
 
         # Expand all unique assembly types and write separate graphviz files
-        for dev in self.devices.values():
+        for dev in self.devices:
             if dev.assembly:
                 category = dev.get_category()
                 if category not in types:
@@ -344,7 +346,7 @@ class DeviceGraph:
         # Need to check if the provided assembly name is in the graph
         # and if so make that our cluster
         if assembly is not None:
-            for dev in self.devices.values():
+            for dev in self.devices:
                 if assembly == dev.name:
                     # This device is the assembly that we just expanded
                     # make this a cluster and add its ports as nodes
@@ -360,7 +362,7 @@ class DeviceGraph:
             subgraph = graph
 
         # Loop through all Devices and add them to the graphviz graph
-        for dev in self.devices.values():
+        for dev in self.devices:
             if assembly != dev.name:
                 label = dev.name
                 nodeName = dev.name
@@ -403,7 +405,7 @@ class DeviceGraph:
         """
         graph = self.__format_graph(name, ports)
 
-        for dev in self.devices.values():
+        for dev in self.devices:
             label = dev.name
             if dev.model is not None:
                 label += f"\\nmodel={dev.model}"
@@ -496,7 +498,7 @@ class DeviceGraph:
             return node
 
         # Add "links" to submodules so they don't just float around
-        for dev in self.devices.values():
+        for dev in self.devices:
             if dev.subOwner is not None:
                 graph.add_edge(device2Node(dev), device2Node(dev.subOwner),
                                color='purple', style='dashed')
