@@ -16,6 +16,10 @@ from AHPGraph import *
 ```Bash
 apt install graphviz libgraphviz-dev
 ```
+### RHEL/CentOS yum packages:
+```Bash
+yum install graphviz graphviz-devel
+```
 ### Python3 packages:
 ```Bash
 python3 -m pip install pygraphviz orjson
