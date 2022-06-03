@@ -95,11 +95,11 @@ class SSTGraph(DeviceGraph):
                                    program_options,
                                    partition[rank][0], partition[rank][1])
 
-    def __partition_graph(self, nranks):
+    def __partition_graph(self, nranks: int) -> list:
         """
         Store all the devices and links for a given rank.
 
-        Return a list of pairs of the form (component-set, link-list),
+        Return a list of pairs of the form (Device-set, link-dict),
         where each list entry corresponds to a particular processor rank.
         It is faster to partition the graph once rather than search it
         O(p) times.
