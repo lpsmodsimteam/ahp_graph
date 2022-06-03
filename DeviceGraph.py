@@ -63,52 +63,51 @@ class DeviceGraph:
                                f" you have a multi port and didn't pick a port"
                                f" number (ex. Device.portX(portNum))")
 
-        def get_other_port(port: 'DevicePort', dev: 'Device') -> tuple:
-            """Get a matching port through an expanding assembly."""
-            if port.link is not None:
-                other = port.link
-                # clear the link for each port and remove from the ports set
-                port.link = None
-                other.link = None
-                self.ports -= {port, other}
-                if port < other:
-                    latency = self.links.pop((port, other))
+        def link_other_port(p0: 'DevicePort', p1: 'Device') -> None:
+            """Link a matching port through an expanding assembly."""
+            if p0.link is not None:
+                p2 = p0.link
+                if not self.check_port_types(p1, p2):
+                    raise RuntimeError(f'Port type mismatch {p1}, {p2}')
+                # remove p0 from the links and connect p1 to p2
+                p0.link = None
+                p2.link = p1
+                p1.link = p2
+                self.ports.discard(p0)
+                self.ports.add(p1)
+                if p0 < p2:
+                    latency = self.links.pop((p0, p2))
                 else:
-                    latency = self.links.pop((other, port))
+                    latency = self.links.pop((p2, p0))
                 # add the other device to the graph if it doesn't exist
                 # so that we update the name properly
-                if dev not in self.devices:
+                if p1.device not in self.devices:
+                    dev = p1.device
                     while dev.subOwner is not None:
                         dev = dev.subOwner
                     self.add(dev)
-                return (other, latency)
-            return (None, None)
+                if p2 < p1:
+                    link = (p2, p1)
+                else:
+                    link = (p1, p2)
+                self.links[link] = latency
 
         if self.expanding is not None:
             if p0.device == self.expanding:
-                (p0, latency) = get_other_port(p0, p1.device)
-                if p0 is None:
-                    return
+                link_other_port(p0, p1)
+                return
             elif p1.device == self.expanding:
-                (p1, latency) = get_other_port(p1, p0.device)
-                if p1 is None:
-                    return
+                link_other_port(p1, p0)
+                return
 
         if p0 in self.ports or p1 in self.ports:
             raise RuntimeError(f'{p0} or {p1} already linked to')
 
-        devs = [p0.device, p1.device]
-        # Check to make sure the port types match
-        t0 = devs[0].get_portinfo()[p0.name]['type']
-        t1 = devs[1].get_portinfo()[p1.name]['type']
-        if t0 != t1:
-            raise RuntimeError(
-                f"Port type mismatch: {t0} != {t1} between"
-                f"{devs[0].name} and {devs[1].name}"
-            )
+        if not self.check_port_types(p0, p1):
+            raise RuntimeError(f'Port type mismatch {p0}, {p1}')
 
         # Add devices to the graph if they aren't already included
-        for dev in devs:
+        for dev in (p0.device, p1.device):
             if dev not in self.devices:
                 while dev.subOwner is not None:
                     dev = dev.subOwner
@@ -129,7 +128,7 @@ class DeviceGraph:
             p1.link = p0
         self.links[link] = latency
 
-    def add(self, device: Device) -> None:
+    def add(self, device: Device, sub: bool = False) -> None:
         """
         Add a Device to the graph.
 
@@ -138,17 +137,24 @@ class DeviceGraph:
         Do NOT add submodules to a Device after you have added it using
         this function. Add submodules first, then add the parent.
         """
+        if device in self.devices:
+            return
+        self.devices.add(device)
+
         if self.expanding is not None:
             device.name = f"{self.expanding.name}.{device.name}"
             if (self.expanding.partition is not None
                     and device.partition is None):
                 device.partition = self.expanding.partition
 
-        if device in self.devices:
-            raise RuntimeError(f"Device already in graph: {device.name}")
-        self.devices.add(device)
-        for (dev, _, _) in device.subs:
+        if device.subOwner is not None and not sub:
+            dev = device
+            while dev.subOwner is not None:
+                dev = dev.subOwner
             self.add(dev)
+
+        for (dev, _, _) in device.subs:
+            self.add(dev, True)
 
     def count_devices(self) -> dict:
         """
@@ -161,6 +167,13 @@ class DeviceGraph:
         for device in self.devices:
             counter[device.get_category()] += 1
         return counter
+
+    @staticmethod
+    def check_port_types(p0: 'DevicePort', p1: 'Device') -> bool:
+        """Check that the port types for the two ports match"""
+        t0 = p0.device.get_portinfo()[p0.name]['type']
+        t1 = p1.device.get_portinfo()[p1.name]['type']
+        return t0 == t1
 
     def verify_links(self) -> None:
         """Verify that all required ports are linked up."""
@@ -197,7 +210,7 @@ class DeviceGraph:
         self.check_partition()
         while True:
             devices = set()
-            linksToRemove = set()
+            linksToRemove = list()
             for (p0, p1) in self.links:
                 # One of the Devices is on the rank that we are
                 # following links on
@@ -210,7 +223,7 @@ class DeviceGraph:
                 # Devices will not be inserted into the graph if they
                 # aren't linked to
                 elif prune:
-                    linksToRemove.add((p0, p1))
+                    linksToRemove.append((p0, p1))
 
             # Can't remove items from the dictionary while we are iterating
             # through it, so we store them in a set and remove them after
@@ -219,8 +232,7 @@ class DeviceGraph:
                 del self.links[link]
                 link[0].link = None
                 link[1].link = None
-                self.ports.discard(link[0])
-                self.ports.discard(link[1])
+                self.ports -= {link[0], link[1]}
 
             if devices:
                 self.flatten(1, expand=devices)
@@ -257,7 +269,13 @@ class DeviceGraph:
         if name is not None:
             splitName = name.split(".")
 
-        for dev in self.devices:
+        # only check the expand set if provided
+        if expand is not None:
+            devs = expand
+        else:
+            devs = self.devices
+
+        for dev in devs:
             assembly = dev.assembly
             if not assembly:
                 continue
@@ -268,9 +286,6 @@ class DeviceGraph:
             # rank to check
             if rank is not None:
                 assembly &= rank == dev.partition[0]
-            # check to see if the Device is in the expand set
-            if expand is not None:
-                assembly &= dev in expand
 
             if assembly:
                 assemblies.add(dev)
