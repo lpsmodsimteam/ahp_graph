@@ -476,7 +476,7 @@ class DeviceGraph:
 
         # Create a list of all of the links
         links = list()
-        for (p0, p1), latency in self.links.items():
+        for (p0, p1) in self.links:
             links.append((port2Node(p0), port2Node(p1)))
 
         # Setup a counter so we can check for duplicates
