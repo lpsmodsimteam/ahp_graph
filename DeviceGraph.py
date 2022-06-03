@@ -295,6 +295,7 @@ class DeviceGraph:
         for device in assemblies:
             self.expanding = device
             device.expand(self)
+            self.names.discard(device.name)
             self.devices.discard(device)
         self.expanding = None
 
