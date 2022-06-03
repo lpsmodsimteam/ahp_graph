@@ -18,6 +18,7 @@ class SSTGraph(DeviceGraph):
         self.expanding = None
         self.attr = graph.attr
         self.devices = graph.devices
+        self.names = graph.names
         self.links = graph.links
         self.ports = graph.ports
 

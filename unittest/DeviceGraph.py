@@ -41,6 +41,14 @@ def AddDeviceTest() -> bool:
     graph.add(ltd)
     t.test(len(graph.devices) == 5, 'duplicate add')
 
+    sameName = None
+    try:
+        graph.add(LibraryTestDevice())
+        sameName = False
+    except RuntimeError:
+        sameName = True
+    t.test(sameName, 'same name')
+
     return t.finish()
 
 

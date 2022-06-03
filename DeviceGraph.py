@@ -33,6 +33,7 @@ class DeviceGraph:
         self.expanding = None
         self.attr = attr if attr is not None else dict()
         self.devices = set()
+        self.names = set()
         self.links = dict()
         self.ports = set()
 
@@ -131,13 +132,18 @@ class DeviceGraph:
         """
         if device in self.devices:
             return
-        self.devices.add(device)
 
         if self.expanding is not None:
             device.name = f"{self.expanding.name}.{device.name}"
             if (self.expanding.partition is not None
                     and device.partition is None):
                 device.partition = self.expanding.partition
+
+        if device.name in self.names:
+            raise RuntimeError(f'Device name {device.name} already in graph')
+
+        self.devices.add(device)
+        self.names.add(device.name)
 
         if device.subOwner is not None and not sub:
             dev = device
