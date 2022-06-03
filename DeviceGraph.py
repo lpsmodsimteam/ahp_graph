@@ -79,13 +79,8 @@ class DeviceGraph:
                     latency = self.links.pop((p0, p2))
                 else:
                     latency = self.links.pop((p2, p0))
-                # add the other device to the graph if it doesn't exist
-                # so that we update the name properly
-                if p1.device not in self.devices:
-                    dev = p1.device
-                    while dev.subOwner is not None:
-                        dev = dev.subOwner
-                    self.add(dev)
+                # add the other device to the graph
+                self.add(p1.device)
                 if p2 < p1:
                     link = (p2, p1)
                 else:
@@ -106,12 +101,9 @@ class DeviceGraph:
         if not self.check_port_types(p0, p1):
             raise RuntimeError(f'Port type mismatch {p0}, {p1}')
 
-        # Add devices to the graph if they aren't already included
-        for dev in (p0.device, p1.device):
-            if dev not in self.devices:
-                while dev.subOwner is not None:
-                    dev = dev.subOwner
-                self.add(dev)
+        # Add devices to the graph
+        self.add(p0.device)
+        self.add(p1.device)
 
         # Storing the ports in a set so that we can quickly see if they
         # are linked to already
