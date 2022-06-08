@@ -220,7 +220,7 @@ def FollowLinksTest() -> bool:
 
     graph.follow_links(0)
     for dev in graph.devices:
-        if dev.assembly:
+        if dev.library is None:
             t.test(dev.name == f'RecursiveAssemblyTestDevice{levels}1',
                    'only one assembly left')
         else:
@@ -257,33 +257,36 @@ def FlattenTest() -> bool:
         ratd1.set_partition(1)
         lptd0.set_partition(2)
         lptd1.set_partition(2)
-        return graph
+        return graph, ratd0
 
-    flat = createGraph()
+    flat, _ = createGraph()
     flat.flatten()
-    t.test(not any([d.assembly for d in flat.devices]),
+    t.test(not any([d.library is None for d in flat.devices]),
            'no assemblies left')
 
-    twoLevels = createGraph()
+    twoLevels, _ = createGraph()
     twoLevels.flatten(2)
-    t.test([d.assembly for d in twoLevels.devices].count(True) == 8,
+    t.test([d.library is None for d in twoLevels.devices].count(True) == 8,
            'correct number of assemblies left')
 
-    byName = createGraph()
+    byName, _ = createGraph()
     byName.flatten(name=f'RecursiveAssemblyTestDevice{levels}0')
-    rank0 = createGraph()
+    rank0, _ = createGraph()
     rank0.flatten(rank=0)
-    # TODO: need to check devices and links
-    # t.test(byName.devices.keys() == rank0.devices.keys(),
-    #        'name and rank devices')
-    # t.test(byName.links.keys() == rank0.links.keys(),
-    #        'name and rank links')
+    t.test(byName.names == rank0.names, 'name and rank devices')
 
-    expand = createGraph()
-    # ratd0 = expand.devices[f'RecursiveAssemblyTestDevice{levels}0']
-    # expand.flatten(expand={ratd0})
-    # t.test([d.assembly for d in expand.devices.values()].count(True) == 3,
-    #        'correct number of assemblies left')
+    byNameLinks = set()
+    rankLinks = set()
+    for link in byName.links:
+        byNameLinks.add(str(link))
+    for link in rank0.links:
+        rankLinks.add(str(link))
+    t.test(byNameLinks == rankLinks, 'name and rank links')
+
+    expand, ratd0 = createGraph()
+    expand.flatten(expand={ratd0})
+    assemblies = [d.library is None for d in expand.devices]
+    t.test(assemblies.count(True) == 3, 'correct number of assemblies left')
 
     return t.finish()
 

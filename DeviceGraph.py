@@ -233,7 +233,7 @@ class DeviceGraph:
                 self.ports -= {link[0], link[1]}
 
             if devices:
-                self.flatten(1, expand=devices)
+                self.flatten(expand=devices)
             else:
                 break
 
@@ -274,7 +274,7 @@ class DeviceGraph:
             devs = self.devices
 
         for dev in devs:
-            assembly = dev.assembly
+            assembly = dev.library is None
             if not assembly:
                 continue
 
@@ -299,8 +299,9 @@ class DeviceGraph:
             self.devices.discard(device)
         self.expanding = None
 
-        # Recursively flatten
-        self.flatten(None if levels is None else levels-1, name, rank, expand)
+        if expand is None:
+            # Recursively flatten
+            self.flatten(None if levels is None else levels-1, name, rank)
 
     def write_dot(self, name: str, draw: bool = False, ports: bool = False,
                   hierarchy: bool = True) -> None:
@@ -347,7 +348,7 @@ class DeviceGraph:
 
         # Expand all unique assembly types and write separate graphviz files
         for dev in self.devices:
-            if dev.assembly:
+            if dev.library is None:
                 category = dev.get_category()
                 if category not in types:
                     types.add(category)
@@ -392,7 +393,7 @@ class DeviceGraph:
                         label += f"|{portLabels}"
 
                 # If the Device is an assembly, put a link to its SVG
-                if dev.assembly:
+                if dev.library is None:
                     subgraph.add_node(nodeName, label=label,
                                       href=f"{dev.get_category()}.svg",
                                       color='blue', fontcolor='blue')

@@ -52,13 +52,12 @@ def buildPython(graph: 'DeviceGraph') -> None:
     devs = dict()
     # instantiate all the devices in the graph
     for device in graph.devices:
-        dev = graph.devices[device]
-        if dev.type == 'Ping':
-            devs[device] = eval(f'{dev.library.split(".")[1]}('
-                                f'"{device}", {args.repeats})')
-        elif dev.type == 'Pong':
-            devs[device] = eval(f'{dev.library.split(".")[1]}('
-                                f'"{device}")')
+        if device.type == 'Ping':
+            devs[device.name] = eval(f'{device.library.split(".")[1]}('
+                                     f'"{device.name}", {args.repeats})')
+        elif device.type == 'Pong':
+            devs[device.name] = eval(f'{device.library.split(".")[1]}('
+                                     f'"{device.name}")')
         else:
             print('ERROR, should only have Ping or Pong Devices')
             exit()
@@ -86,8 +85,8 @@ def buildPython(graph: 'DeviceGraph') -> None:
 
     # find the first Ping device and start the 'simulation'
     for device in graph.devices:
-        if graph.devices[device].type == 'Ping':
-            devs[device].start()
+        if device.type == 'Ping':
+            devs[device.name].start()
             break
 
 

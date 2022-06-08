@@ -16,28 +16,16 @@ def library(name: str) -> 'Device':
     """
     Python decorator to define the library associated with this Device.
 
+    If library is not defined, the Device is an assembly and must define
+    the expand function.
     For example, this represents the SST Element Library and Component used to
     simulate the Device ('element.component')
-    Note that a Device may have a model library defined and also
-    be an assembly (e.g., a multi-resolution model).
     """
 
     def wrapper(cls: 'Device') -> 'Device':
         cls.library = name
         return cls
     return wrapper
-
-
-def assembly(cls: 'Device') -> 'Device':
-    """
-    Python decorator to indicate that a Device is an assembly.
-
-    Verify that there is an expand method.
-    """
-    if not hasattr(cls, "expand"):
-        raise RuntimeError(f"Assemblies must define expand(): {cls.__name__}")
-    cls.assembly = True
-    return cls
 
 
 def port(name: str, ptype: str = None, limit: int = 1,
@@ -126,8 +114,8 @@ class Device:
     """
     Device is the base class for a node in the AHP graph.
 
-    A Device may be represented by an model, may be an assembly
-    of other Devices, or both. If an assembly, then the Device must define
+    A Device may be represented by an model or may be an assembly
+    of other Devices. If an assembly, then the Device must define
     an expand() method that returns a DeviceGraph that implements the Device.
 
     Devices may contain submodules which allow for parameterization of
@@ -140,7 +128,6 @@ class Device:
     """
 
     library = None
-    assembly = False
     _portinfo = None
 
     def __init__(self, name: str, model: str = None,
@@ -159,6 +146,8 @@ class Device:
         self.partition = None
         self.type = self.__class__.__name__
         self.model = model
+        if self.library is None and not hasattr(self, "expand"):
+            raise RuntimeError(f"Assemblies must define expand(): {self.type}")
 
     def set_partition(self, rank: int, thread: int = None) -> None:
         """Assign a rank and optional thread to this device."""
@@ -258,11 +247,12 @@ class Device:
         lines = list()
         lines.append(f"Device = {self.type}")
         lines.append(f"\tname = {self.name}")
-        lines.append(f"\tassembly = {self.assembly}")
         if self.model:
             lines.append(f"\tmodel = {self.model}")
         if self.library:
             lines.append(f"\tlibrary = {self.library}")
+        else:
+            lines.append(f"\tassembly = True")
         if self.partition:
             lines.append(f"\tpartition = {self.partition}")
         if self.subOwner is not None:

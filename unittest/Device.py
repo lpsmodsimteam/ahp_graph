@@ -73,13 +73,11 @@ def AssemblyTest() -> bool:
     """Test of Device that is an assembly."""
     t = test('AssemblyTest')
 
+    ratd = RecursiveAssemblyTestDevice(0).library is None
+    t.test(ratd, 'assembly')
+
+    results = None
     try:
-        ratd = RecursiveAssemblyTestDevice(0).assembly
-        t.test(ratd, 'assembly')
-
-        results = None
-
-        @assembly
         class AssemblyNoExpandTestDevice(Device):
             """Assembly that doesn't define the expand function."""
 
@@ -87,6 +85,7 @@ def AssemblyTest() -> bool:
                 """Test Device for assembly with no expand function."""
                 super().__init__(t.__class__.__name__)
 
+        anetd = AssemblyNoExpandTestDevice()
         results = False
     except RuntimeError:
         results = True

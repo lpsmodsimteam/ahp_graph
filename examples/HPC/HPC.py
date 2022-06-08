@@ -27,7 +27,6 @@ class TorusTopology(Device):
         super().__init__(name, shape, parameters)
 
 
-@assembly
 @port('network', 'simpleNet', None, False)
 class Rack(Device):
     """Rack constructed of a router and some servers."""

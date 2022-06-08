@@ -21,6 +21,7 @@ class LibraryTestDevice(Device):
 @port('exampleSinglePort', 'test', required=False)
 @port('exampleMultiPort', 'test', None, False)
 @port('port', 'port', None, False)
+@library('ElementLibrary.Component')
 class PortTestDevice(Device):
     """Unit test for Device Ports."""
 
@@ -41,7 +42,6 @@ class LibraryPortTestDevice(Device):
         super().__init__(f'{self.__class__.__name__}{name}')
 
 
-@assembly
 @port('input')
 @port('output')
 @port('optional', limit=None, required=False)
@@ -74,6 +74,7 @@ class RecursiveAssemblyTestDevice(Device):
         graph.link(d1.output, self.output)
 
 
+@library('ElementLibrary.Component')
 class ModelTestDevice(Device):
     """Unit test for Device with model."""
 
@@ -82,6 +83,7 @@ class ModelTestDevice(Device):
         super().__init__(f'{self.__class__.__name__}{name}', model)
 
 
+@library('ElementLibrary.Component')
 class AttributeTestDevice(Device):
     """Unit test for Device with attributes."""
 

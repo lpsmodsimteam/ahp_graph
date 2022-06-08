@@ -189,7 +189,6 @@ class LinkControl(Device):
         super().__init__(name, attr=parameters)
 
 
-@assembly
 @port('network', 'simpleNet')
 class Server(Device):
     """Server constructed of a processor and some memory."""

@@ -26,7 +26,6 @@ class Pong(Device):
         super().__init__(name, attr=attr)
 
 
-@assembly
 @port('input', 'String')
 @port('output', 'String')
 class pingpong(Device):

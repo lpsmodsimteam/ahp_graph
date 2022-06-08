@@ -210,7 +210,6 @@ class MemLink(Device):
         super().__init__(name, attr=attr)
 
 
-@assembly
 @port('low_network', 'simpleMem', None, False, '_#')
 class Processor(Device):
     """Processor assembly made of various Vanadis components and Caches."""
