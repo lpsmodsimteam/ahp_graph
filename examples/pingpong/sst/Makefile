@@ -57,4 +57,4 @@ uninstall:
 
 # Remove the build files and the library
 clean: uninstall
-	rm -rf .build *.so output
+	rm -rf ../__pycache__ .build *.so output
