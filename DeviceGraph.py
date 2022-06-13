@@ -28,7 +28,7 @@ class DeviceGraph:
         The attributes are considered global parameters shared by all instances
         in the graph. They are only supported at the top-level graph,
         not intemediate graphs (e.g., assemblies).
-        The dictionary of links uses a sorted tuple of DevicePorts as the key
+        The dictionary of links uses a frozenset of DevicePorts as the key
         """
         self.expanding = None
         self.attr = attr if attr is not None else dict()
@@ -51,7 +51,7 @@ class DeviceGraph:
         """
         Link two DevicePorts.
 
-        Links are bidirectional and the key is a sorted tuple of the two
+        Links are bidirectional and the key is a frozenset of the two
         DevicePorts. Duplicate links (links between the same DevicePorts)
         are not permitted. Keep in mind that a unique DevicePort is created
         for each port number in a multi-port style port. If the link

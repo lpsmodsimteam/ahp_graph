@@ -148,7 +148,4 @@ if __name__ == "__main__":
     else:
         # generate a graphviz dot file and json output for demonstration
         graph.write_dot('cluster', draw=True, ports=True)
-        # partially expanding the graph only expands the portions of the graph
-        # relevant to the rank being output at that time, therefore saving
-        # memory by not flattening the entire graph all at once
         sstgraph.write_json('cluster.json', racks)

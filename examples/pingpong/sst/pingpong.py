@@ -49,7 +49,7 @@ if __name__ == "__main__":
         graph.write_dot('pingpong', draw=True, ports=True)
         sstgraph.write_json('pingpong.json', nranks=args.num)
 
-        # generate a graphviz dot file and json output for demonstration
+        # generate a flat graphviz dot file and json output for demonstration
         graph.flatten()
         graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
         sstgraph.write_json('pingpongFlat.json')

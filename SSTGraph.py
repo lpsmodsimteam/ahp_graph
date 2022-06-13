@@ -108,7 +108,8 @@ class SSTGraph(DeviceGraph):
         partition = [(set(), dict()) for p in range(nranks)]
 
         for p0, p1 in self.links:
-            t = self.links[frozenset({p0, p1})]
+            link = frozenset({p0, p1})
+            t = self.links[link]
             d0 = p0.device
             d1 = p1.device
             while d0.subOwner is not None:
@@ -120,11 +121,11 @@ class SSTGraph(DeviceGraph):
 
             partition[r0][0].add(d0)
             partition[r0][0].add(d1)
-            partition[r0][1][(p0, p1)] = t
+            partition[r0][1][link] = t
             if r0 != r1:
                 partition[r1][0].add(d0)
                 partition[r1][0].add(d1)
-                partition[r1][1][(p0, p1)] = t
+                partition[r1][1][link] = t
         return partition
 
     @staticmethod
@@ -208,7 +209,7 @@ class SSTGraph(DeviceGraph):
                     c0.addGlobalParamSet(key)
                 recurseSubcomponents(d0, c0)
 
-        # Second, link the component ports using graph links.
+        # Second, link the component ports using graph links
         for p0, p1 in self.links:
             t = self.links[frozenset({p0, p1})]
             if p0.device.library is not None and p1.device.library is not None:
@@ -295,8 +296,9 @@ class SSTGraph(DeviceGraph):
 
         # Now define the links between components.
         linksJSON = list()
-        for (p0, p1), t in links.items():
+        for p0, p1 in links:
             if p0.device.library is not None and p1.device.library is not None:
+                t = links[frozenset({p0, p1})]
                 latency = t if t != '0s' else '1ps'
                 linksJSON.append(
                     {

@@ -103,8 +103,6 @@ def buildPython(graph: DeviceGraph) -> None:
                     pass
                 else:
                     (name0, name1) = (name1, name0)
-
-            print(f'{name0} -> {name1}')
             devs[name0].output = wrapper(devs[name1])
 
     # find the first Ping device and start the 'simulation'
