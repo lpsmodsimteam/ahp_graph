@@ -81,7 +81,7 @@ def AssemblyTest() -> bool:
         class AssemblyNoExpandTestDevice(Device):
             """Assembly that doesn't define the expand function."""
 
-            def __init__(self) -> 'Device':
+            def __init__(self) -> Device:
                 """Test Device for assembly with no expand function."""
                 super().__init__(t.__class__.__name__)
 

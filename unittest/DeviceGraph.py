@@ -120,7 +120,8 @@ def LinkTest() -> bool:
     graph.link(lptd.input, ptd0.optional)
     t.test(len(graph.devices) == 3, 'linking add submodule parent')
     t.test(ltd in graph.devices, 'submodule parent included')
-    t.test(graph.links[(lptd.input, ptd0.optional)] == '0s', 'default latency')
+    t.test(graph.links[frozenset({lptd.input, ptd0.optional})] == '0s',
+           'default latency')
     linkAgain = None
     try:
         graph.link(ptd0.optional, lptd.input)
@@ -150,7 +151,8 @@ def LinkTest() -> bool:
         changeSinglePortLink = True
     t.test(changeSinglePortLink, 'linking from a single port again')
     graph.link(ptd0.limit(0), ptd1.limit(0), '123ns')
-    t.test(graph.links[(ptd0.limit(0), ptd1.limit(0))] == '123ns', 'latency')
+    t.test(graph.links[frozenset({ptd0.limit(0), ptd1.limit(0)})] == '123ns',
+           'latency')
 
     return t.finish()
 
@@ -234,7 +236,7 @@ def FlattenTest() -> bool:
     t = test('FlattenTest')
     levels = 6
 
-    def createGraph() -> 'DeviceGraph':
+    def createGraph() -> DeviceGraph:
         """Create a graph for testing."""
         graph = DeviceGraph()
 
@@ -278,9 +280,11 @@ def FlattenTest() -> bool:
     byNameLinks = set()
     rankLinks = set()
     for link in byName.links:
-        byNameLinks.add(str(link))
+        for port in link:
+            byNameLinks.add(str(port))
     for link in rank0.links:
-        rankLinks.add(str(link))
+        for port in link:
+            rankLinks.add(str(port))
     t.test(byNameLinks == rankLinks, 'name and rank links')
 
     expand, ratd0 = createGraph()

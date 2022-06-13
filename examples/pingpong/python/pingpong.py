@@ -43,7 +43,7 @@ class Pong():
         self.output(f'{self.name}: Pong')
 
 
-def buildPython(graph: 'DeviceGraph') -> None:
+def buildPython(graph: DeviceGraph) -> None:
     """
     Run the example 'simulation' using the two classes.
 
@@ -69,19 +69,43 @@ def buildPython(graph: 'DeviceGraph') -> None:
         pi.output = lambda x: po.input(x)
         po.output = lambda x: pi.input(x)
     else:
-        def wrapper(dev: 'Device'):
+        def wrapper(dev: Device):
             """Need to wrap the lambda function to protect the device scope."""
             return lambda x: dev.input(x)
 
         # connect the pingpongs together as specified
         # flip the direction of the one connection since it wraps around
-        for (p0, p1) in graph.links:
-            n0 = p0.device.name
-            n1 = p1.device.name
-            if n0 == 'PingPong0.Ping' and n1 == f'PingPong{args.num-1}.Pong':
-                devs[n1].output = wrapper(devs[n0])
+        for p0, p1 in graph.links:
+            name0 = p0.device.name
+            name1 = p1.device.name
+            n0 = int(''.join(filter(str.isdigit, name0)))
+            n1 = int(''.join(filter(str.isdigit, name1)))
+            t0 = name0.split('.')[1]
+            t1 = name1.split('.')[1]
+            # by default, we are going to have the first device as output and
+            # the second as the input, switch name0 and name1 if that is wrong
+            if n0 == n1:
+                if t0 == 'Ping' and t1 == 'Pong':
+                    pass
+                elif t1 == 'Ping' and t0 == 'Pong':
+                    (name0, name1) = (name1, name0)
+                else:
+                    print(f'Numbers equal {n0}, but types'
+                          ' do not match {t0}, {t1}')
             else:
-                devs[n0].output = wrapper(devs[n1])
+                # different PingPong assemblies
+                # handle the wrap around case connecting to PingPong0.Ping
+                if name0 == 'PingPong0.Ping' and n1 == args.num-1:
+                    (name0, name1) = (name1, name0)
+                elif name1 == 'PingPong0.Ping' and n0 == args.num-1:
+                    pass
+                elif n1 > n0:
+                    pass
+                else:
+                    (name0, name1) = (name1, name0)
+
+            print(f'{name0} -> {name1}')
+            devs[name0].output = wrapper(devs[name1])
 
     # find the first Ping device and start the 'simulation'
     for device in graph.devices:

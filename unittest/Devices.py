@@ -7,7 +7,7 @@ from AHPGraph import *
 class LibraryTestDevice(Device):
     """Unit test for Library."""
 
-    def __init__(self, name: str = '') -> 'Device':
+    def __init__(self, name: str = '') -> Device:
         """Test Device for Library."""
         super().__init__(f'{self.__class__.__name__}{name}')
 
@@ -25,7 +25,7 @@ class LibraryTestDevice(Device):
 class PortTestDevice(Device):
     """Unit test for Device Ports."""
 
-    def __init__(self, name: str = '') -> 'Device':
+    def __init__(self, name: str = '') -> Device:
         """Test Device for Device Ports."""
         super().__init__(f'{self.__class__.__name__}{name}')
 
@@ -37,7 +37,7 @@ class PortTestDevice(Device):
 class LibraryPortTestDevice(Device):
     """Unit test for Device with Library and Ports."""
 
-    def __init__(self, name: str = '') -> 'Device':
+    def __init__(self, name: str = '') -> Device:
         """Test Device for Library and Ports."""
         super().__init__(f'{self.__class__.__name__}{name}')
 
@@ -48,11 +48,11 @@ class LibraryPortTestDevice(Device):
 class RecursiveAssemblyTestDevice(Device):
     """Unit Test for a recursive assembly. Creates a ring of Devices."""
 
-    def __init__(self, levels: int, name: str = '') -> 'Device':
+    def __init__(self, levels: int, name: str = '') -> Device:
         """Test Device for recursive assembly."""
         super().__init__(f'{self.__class__.__name__}{levels}{name}', levels)
 
-    def expand(self, graph: 'DeviceGraph') -> None:
+    def expand(self, graph: DeviceGraph) -> None:
         """Test for expanding a Device."""
         # If we have reached the specified number of levels, create 'leafs'
         # using LibraryPortTestDevice
@@ -78,7 +78,7 @@ class RecursiveAssemblyTestDevice(Device):
 class ModelTestDevice(Device):
     """Unit test for Device with model."""
 
-    def __init__(self, model, name: str = '') -> 'Device':
+    def __init__(self, model, name: str = '') -> Device:
         """Test Device with model."""
         super().__init__(f'{self.__class__.__name__}{name}', model)
 
@@ -87,6 +87,6 @@ class ModelTestDevice(Device):
 class AttributeTestDevice(Device):
     """Unit test for Device with attributes."""
 
-    def __init__(self, attr, name: str = '') -> 'Device':
+    def __init__(self, attr, name: str = '') -> Device:
         """Test Device with attributes."""
         super().__init__(f'{self.__class__.__name__}{name}', attr=attr)

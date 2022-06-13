@@ -14,7 +14,7 @@ class SSTGraph(DeviceGraph):
     """
 
     def __init__(self, graph: DeviceGraph) -> 'SSTGraph':
-        """Point at the DeviceGraph variables, shallow copy if requested."""
+        """Point at the DeviceGraph variables."""
         self.expanding = None
         self.attr = graph.attr
         self.devices = graph.devices
@@ -107,7 +107,8 @@ class SSTGraph(DeviceGraph):
         """
         partition = [(set(), dict()) for p in range(nranks)]
 
-        for (p0, p1), t in self.links.items():
+        for p0, p1 in self.links:
+            t = self.links[frozenset({p0, p1})]
             d0 = p0.device
             d1 = p1.device
             while d0.subOwner is not None:
@@ -208,7 +209,8 @@ class SSTGraph(DeviceGraph):
                 recurseSubcomponents(d0, c0)
 
         # Second, link the component ports using graph links.
-        for (p0, p1), t in self.links.items():
+        for p0, p1 in self.links:
+            t = self.links[frozenset({p0, p1})]
             if p0.device.library is not None and p1.device.library is not None:
                 c0 = n2c[p0.device.name]
                 c1 = n2c[p1.device.name]

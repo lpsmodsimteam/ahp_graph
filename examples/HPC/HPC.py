@@ -15,7 +15,7 @@ class TorusTopology(Device):
     """Torus Topology."""
 
     def __init__(self, name: str, shape: str = '2x2', nodes: int = 1,
-                 attr: dict = None) -> 'Device':
+                 attr: dict = None) -> Device:
         """Initialize using the shape as the model."""
         parameters = {
             "shape": shape,
@@ -33,7 +33,7 @@ class Rack(Device):
 
     def __init__(self, name: str, shape: str = '2x2', rack: int = 0,
                  nodes: int = 1, cores: int = 1,
-                 attr: dict = None) -> 'Device':
+                 attr: dict = None) -> Device:
         """Store our name and the model describing nodes and cores per node."""
         super().__init__(name, f"{nodes}Node_{cores}Core", attr)
         self.attr['shape'] = shape
@@ -44,7 +44,7 @@ class Rack(Device):
         self.attr['nodes'] = nodes
         self.attr['cores'] = cores
 
-    def expand(self, graph: 'DeviceGraph') -> None:
+    def expand(self, graph: DeviceGraph) -> None:
         """Expand the rack into its components."""
         # Device names created by an assembly will automatically have the
         # assembly name prefixed to the name provided.
@@ -73,7 +73,7 @@ class Rack(Device):
 
 
 def Cluster(shape: str = '2x2', nodes: int = 1,
-            cores: int = 1) -> 'DeviceGraph':
+            cores: int = 1) -> DeviceGraph:
     """HPC Cluster built out of racks. Using a 2D torus network."""
     graph = DeviceGraph()  # initialize a Device Graph
     dimX = int(shape.split('x')[0])

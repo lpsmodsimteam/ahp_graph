@@ -10,7 +10,7 @@ class Ping(Device):
     """Ping Device: has a Name and a Model type."""
 
     def __init__(self, name: str, size: int = 10,
-                 attr: dict = None) -> 'Device':
+                 attr: dict = None) -> Device:
         """Size parameter is stored as the model attribute of a device."""
         super().__init__(name, size, attr)
 
@@ -21,7 +21,7 @@ class Ping(Device):
 class Pong(Device):
     """Pong Device."""
 
-    def __init__(self, name: str, attr: dict = None) -> 'Device':
+    def __init__(self, name: str, attr: dict = None) -> Device:
         """No model for Pong."""
         super().__init__(name, attr=attr)
 
@@ -36,7 +36,7 @@ class pingpong(Device):
         """Size parameter is stored as the model attribute of a device."""
         super().__init__(name, size, attr)
 
-    def expand(self, graph: 'DeviceGraph') -> None:
+    def expand(self, graph: DeviceGraph) -> None:
         """Expand the overall architecture into its components."""
         # create a Ping Device
         # Device names created by an assembly will automatically have the
@@ -57,7 +57,7 @@ class pingpong(Device):
         graph.link(pong.output, self.output)
 
 
-def architecture(repeats: int = 10, num: int = 1) -> 'DeviceGraph':
+def architecture(repeats: int = 10, num: int = 1) -> DeviceGraph:
     """Create pingpong(s) and link them together in a loop."""
     graph = DeviceGraph()
     pingpongs = dict()

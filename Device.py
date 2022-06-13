@@ -81,34 +81,6 @@ class DevicePort:
         """Return a string representation of this DevicePort."""
         return f"{self.device.name}.{self.get_name()}"
 
-    def __cmp__(self, other: 'DevicePort') -> tuple:
-        """Generate tuples to use for comparison."""
-        n0 = -1 if self.number is None else self.number
-        n1 = -1 if other.number is None else other.number
-        p0 = (self.device.name, self.name, n0)
-        p1 = (other.device.name, other.name, n1)
-        return (p0, p1)
-
-    def __lt__(self, other: 'DevicePort') -> bool:
-        """Compare this DevicePort to another."""
-        (p0, p1) = self.__cmp__(other)
-        return p0 < p1
-
-    def __le__(self, other: 'DevicePort') -> bool:
-        """Compare this DevicePort to another."""
-        (p0, p1) = self.__cmp__(other)
-        return p0 <= p1
-
-    def __gt__(self, other: 'DevicePort') -> bool:
-        """Compare this DevicePort to another."""
-        (p0, p1) = self.__cmp__(other)
-        return p0 > p1
-
-    def __ge__(self, other: 'DevicePort') -> bool:
-        """Compare this DevicePort to another."""
-        (p0, p1) = self.__cmp__(other)
-        return p0 >= p1
-
 
 class Device:
     """

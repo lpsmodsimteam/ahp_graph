@@ -42,8 +42,8 @@ class DeviceGraph:
         lines = list()
         for device in self.devices:
             lines.append(str(device))
-        for (p0, p1), t in self.links.items():
-            lines.append(f"{p0} <--{t}--> {p1}")
+        for p0, p1 in self.links:
+            lines.append(f"{p0} <--{self.links[frozenset({p0, p1})]}--> {p1}")
         return "\n".join(lines)
 
     def link(self, p0: DevicePort, p1: DevicePort,
@@ -64,7 +64,7 @@ class DeviceGraph:
                                f" you have a multi port and didn't pick a port"
                                f" number (ex. Device.portX(portNum))")
 
-        def link_other_port(p0: 'DevicePort', p1: 'Device') -> None:
+        def link_other_port(p0: DevicePort, p1: Device) -> None:
             """Link a matching port through an expanding assembly."""
             if p0.link is not None:
                 p2 = p0.link
@@ -76,17 +76,10 @@ class DeviceGraph:
                 p1.link = p2
                 self.ports.discard(p0)
                 self.ports.add(p1)
-                if p0 < p2:
-                    latency = self.links.pop((p0, p2))
-                else:
-                    latency = self.links.pop((p2, p0))
+                latency = self.links.pop(frozenset({p0, p2}))
                 # add the other device to the graph
                 self.add(p1.device)
-                if p2 < p1:
-                    link = (p2, p1)
-                else:
-                    link = (p1, p2)
-                self.links[link] = latency
+                self.links[frozenset({p1, p2})] = latency
 
         if self.expanding is not None:
             if p0.device == self.expanding:
@@ -109,17 +102,13 @@ class DeviceGraph:
         # Storing the ports in a set so that we can quickly see if they
         # are linked to already
         self.ports |= {p0, p1}
-        if p1 < p0:
-            link = (p1, p0)
-        else:
-            link = (p0, p1)
         # Only update the links if neither are connected
         # otherwise we are most likely doing a separate graph expansion and
         # don't want to overwrite the port links that exist
         if p0.link is None and p1.link is None:
             p0.link = p1
             p1.link = p0
-        self.links[link] = latency
+        self.links[frozenset({p0, p1})] = latency
 
     def add(self, device: Device, sub: bool = False) -> None:
         """
@@ -167,8 +156,8 @@ class DeviceGraph:
         return counter
 
     @staticmethod
-    def check_port_types(p0: 'DevicePort', p1: 'Device') -> bool:
-        """Check that the port types for the two ports match"""
+    def check_port_types(p0: DevicePort, p1: Device) -> bool:
+        """Check that the port types for the two ports match."""
         t0 = p0.device.get_portinfo()[p0.name]['type']
         t1 = p1.device.get_portinfo()[p1.name]['type']
         return t0 == t1
@@ -177,7 +166,7 @@ class DeviceGraph:
         """Verify that all required ports are linked up."""
         # Create a map of Devices to all ports linked on those Devices.
         d2ports = collections.defaultdict(set)
-        for (p0, p1) in self.links:
+        for p0, p1 in self.links:
             d2ports[p0.device].add(p0.name)
             d2ports[p1.device].add(p1.name)
 
@@ -209,7 +198,7 @@ class DeviceGraph:
         while True:
             devices = set()
             linksToRemove = list()
-            for (p0, p1) in self.links:
+            for p0, p1 in self.links:
                 # One of the Devices is on the rank that we are
                 # following links on
                 if (p0.device.partition[0] == rank
@@ -221,16 +210,16 @@ class DeviceGraph:
                 # Devices will not be inserted into the graph if they
                 # aren't linked to
                 elif prune:
-                    linksToRemove.append((p0, p1))
+                    linksToRemove.append(frozenset({p0, p1}))
 
             # Can't remove items from the dictionary while we are iterating
             # through it, so we store them in a set and remove them after
             # should be better than copying the dictionary
-            for link in linksToRemove:
-                del self.links[link]
-                link[0].link = None
-                link[1].link = None
-                self.ports -= {link[0], link[1]}
+            for p0, p1 in linksToRemove:
+                del self.links[frozenset({p0, p1})]
+                p0.link = None
+                p1.link = None
+                self.ports -= {p0, p1}
 
             if devices:
                 self.flatten(expand=devices)
@@ -484,7 +473,7 @@ class DeviceGraph:
 
         # Create a list of all of the links
         links = list()
-        for (p0, p1) in self.links:
+        for p0, p1 in self.links:
             links.append((port2Node(p0), port2Node(p1)))
 
         # Setup a counter so we can check for duplicates

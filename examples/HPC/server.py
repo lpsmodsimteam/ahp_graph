@@ -12,7 +12,7 @@ from processor import *
 class MemNIC(Device):
     """MemNIC."""
 
-    def __init__(self, name: str, model: str, attr: dict = None) -> 'Device':
+    def __init__(self, name: str, model: str, attr: dict = None) -> Device:
         """Initialize with a model describing where this is on the NoC."""
         parameters = {
             "network_bw": "25GB/s"
@@ -47,7 +47,7 @@ class Router(Device):
     """Router."""
 
     def __init__(self, name: str, model: str, id: int = 0, ports: int = 1,
-                 attr: dict = None) -> 'Device':
+                 attr: dict = None) -> Device:
         """Initialize with a model for a NoC or Interconnect."""
         parameters = {
             "id": id,
@@ -85,7 +85,7 @@ class Router(Device):
 class SingleRouter(Device):
     """Single Router Topology."""
 
-    def __init__(self, name: str, attr: dict = None) -> 'Device':
+    def __init__(self, name: str, attr: dict = None) -> Device:
         """Initialize."""
         super().__init__(name, attr=attr)
 
@@ -95,7 +95,7 @@ class SingleRouter(Device):
 class DirectoryController(Device):
     """DirectoryController."""
 
-    def __init__(self, name: str, attr: dict = None) -> 'Device':
+    def __init__(self, name: str, attr: dict = None) -> Device:
         """Initialize."""
         parameters = {
             "coherence_protocol": "MESI",
@@ -113,7 +113,7 @@ class DirectoryController(Device):
 class MemController(Device):
     """MemController."""
 
-    def __init__(self, name: str, attr: dict = None) -> 'Device':
+    def __init__(self, name: str, attr: dict = None) -> Device:
         """Initialize."""
         parameters = {
             "clock": "1GHz",
@@ -131,7 +131,7 @@ class MemController(Device):
 class simpleMem(Device):
     """simpleMem."""
 
-    def __init__(self, name: str, attr: dict = None) -> 'Device':
+    def __init__(self, name: str, attr: dict = None) -> Device:
         """Initialize."""
         parameters = {
             "mem_size": "2GiB",
@@ -148,7 +148,7 @@ class RDMA_NIC(Device):
     """RDMA_NIC."""
 
     def __init__(self, name: str, id: int = 0, nodes: int = 2,
-                 cores: int = 1, attr: dict = None) -> 'Device':
+                 cores: int = 1, attr: dict = None) -> Device:
         """
         Initialize using various simulation parameters.
 
@@ -177,7 +177,7 @@ class RDMA_NIC(Device):
 class LinkControl(Device):
     """LinkControl."""
 
-    def __init__(self, name: str, attr: dict = None) -> 'Device':
+    def __init__(self, name: str, attr: dict = None) -> Device:
         """Initialize."""
         parameters = {
             "link_bw": "16GB/s",
@@ -195,7 +195,7 @@ class Server(Device):
 
     def __init__(self, name: str, node: int = 0,
                  racks: int = 2, nodes: int = 2, cores: int = 1,
-                 attr: dict = None) -> 'Device':
+                 attr: dict = None) -> Device:
         """Store our name and use number of cores as the model type."""
         super().__init__(name, f"{cores}Core", attr)
         self.attr['node'] = node
@@ -203,7 +203,7 @@ class Server(Device):
         self.attr['nodes'] = nodes
         self.attr['cores'] = cores
 
-    def expand(self, graph: 'DeviceGraph') -> None:
+    def expand(self, graph: DeviceGraph) -> None:
         """Expand the server into its components."""
         # Setup the NoC first so we can connect the Processors to it
         # Device names created by an assembly will automatically have the
