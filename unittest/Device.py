@@ -20,18 +20,17 @@ def PortTest() -> bool:
     t = test('PortTest')
 
     ptd = PortTestDevice()
-    portinfo = ptd.get_portinfo()
 
-    t.test(portinfo['default']['type'] is None, 'default type')
-    t.test(portinfo['default']['limit'] == 1, 'default limit')
-    t.test(portinfo['default']['required'] is True, 'default required')
-    t.test(portinfo['default']['format'] == '.#', 'default format')
+    t.test(ptd.portinfo['default'][0] == 1, 'default limit')
+    t.test(ptd.portinfo['default'][1] is None, 'default type')
+    t.test(ptd.portinfo['default'][2] is True, 'default required')
+    t.test(ptd.portinfo['default'][3] == '.#', 'default format')
 
-    t.test(portinfo['ptype']['type'] == 'test', 'type')
-    t.test(portinfo['no_limit']['limit'] is None, 'No limit')
-    t.test(portinfo['limit']['limit'] == 2, 'limit')
-    t.test(portinfo['optional']['required'] is False, 'optional')
-    t.test(portinfo['format']['format'] == '(#)', 'format')
+    t.test(ptd.portinfo['no_limit'][0] is None, 'No limit')
+    t.test(ptd.portinfo['limit'][0] == 2, 'limit')
+    t.test(ptd.portinfo['ptype'][1] == 'test', 'type')
+    t.test(ptd.portinfo['optional'][2] is False, 'optional')
+    t.test(ptd.portinfo['format'][3] == '(#)', 'format')
 
     t.test(ptd.default == ptd.port('default'), '__getattr__')
     t.test(ptd.default.device == ptd, 'device')

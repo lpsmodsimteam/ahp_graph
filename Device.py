@@ -9,10 +9,12 @@ constructed of other Devices. This combined with the DeviceGraph allows for
 hierarchical representations of a graph.
 """
 
+from __future__ import annotations
+from typing import Optional, Union, Callable, Any
 import collections
 
 
-def library(name: str) -> 'Device':
+def library(name: str) -> Callable[[Device], Device]:
     """
     Python decorator to define the library associated with this Device.
 
@@ -22,14 +24,14 @@ def library(name: str) -> 'Device':
     simulate the Device ('element.component')
     """
 
-    def wrapper(cls: 'Device') -> 'Device':
+    def wrapper(cls: Device) -> Device:
         cls.library = name
         return cls
     return wrapper
 
 
-def port(name: str, ptype: str = None, limit: int = 1,
-         required: bool = True, format: str = '.#') -> 'Device':
+def port(name: str, ptype: str = None, limit: int = 1, required: bool = True,
+         format: str = '.#') -> Callable[[Device], Device]:
     """
     Python decorator to define the ports for a particular device.
 
@@ -40,15 +42,10 @@ def port(name: str, ptype: str = None, limit: int = 1,
     Can also have an optional format for how to format port numbers
     """
 
-    def wrapper(cls: 'Device') -> 'Device':
-        if cls._portinfo is None:
-            cls._portinfo = collections.defaultdict(dict)
-        cls._portinfo[name] = {
-            'limit': limit,
-            'type': ptype,
-            'required': required,
-            'format': format
-        }
+    def wrapper(cls: Device) -> Device:
+        if not cls.portinfo:
+            cls.portinfo = dict()
+        cls.portinfo[name] = (limit, ptype, required, format)
         return cls
     return wrapper
 
@@ -61,20 +58,20 @@ class DevicePort:
     optional port number.
     """
 
-    def __init__(self, device: 'Device', name: str,
-                 number: int = None) -> 'DevicePort':
+    def __init__(self, device: Device, name: str,
+                 number: int = None) -> None:
         """Initialize the device, name, port number."""
-        self.device = device
-        self.name = name
-        self.number = number
-        self.link = None
+        self.device: Device = device
+        self.name: str = name
+        self.number: Optional[int] = number
+        self.link: Optional[DevicePort] = None
 
     def get_name(self) -> str:
         """Return a string representation of the port name and number."""
         if self.number is None:
             return self.name
         else:
-            sf = self.device.get_portinfo()[self.name]['format'].split('#')
+            sf = self.device.portinfo[self.name][3].split('#')
             return f"{self.name}{sf[0]}{self.number}{sf[1]}"
 
     def __repr__(self) -> str:
@@ -99,25 +96,27 @@ class Device:
     object so they can be used in sets and comparisons.
     """
 
-    library = None
-    _portinfo = None
+    library: Optional[str] = None
+    portInfoType = tuple[int, Optional[str], bool, str]
+    portinfo: dict[str, portInfoType] = dict()
 
     def __init__(self, name: str, model: str = None,
-                 attr: dict = None) -> 'Device':
+                 attr: dict[str, Any] = None) -> None:
         """
         Initialize the Device.
 
         Initialize with the unique name, model, and optional
         dictionary of attributes which are used as model parameters.
         """
-        self.name = name
-        self.attr = attr if attr is not None else dict()
-        self.ports = collections.defaultdict(dict)
-        self.subs = set()
-        self.subOwner = None
-        self.partition = None
-        self.type = self.__class__.__name__
-        self.model = model
+        self.name: str = name
+        self.attr: dict[str, Any] = attr if attr is not None else dict()
+        portType = dict[str, dict[int, DevicePort]]
+        self.ports: portType = collections.defaultdict(dict)
+        self.subs: set[tuple[Device, str, Optional[int]]] = set()
+        self.subOwner: Optional[Device] = None
+        self.partition: Optional[tuple[int, Optional[int]]] = None
+        self.type: str = self.__class__.__name__
+        self.model: Optional[str] = model
         if self.library is None and not hasattr(self, "expand"):
             raise RuntimeError(f"Assemblies must define expand(): {self.type}")
 
@@ -125,7 +124,7 @@ class Device:
         """Assign a rank and optional thread to this device."""
         self.partition = (rank, thread)
 
-    def add_submodule(self, device: 'Device', slotName: str,
+    def add_submodule(self, device: Device, slotName: str,
                       slotIndex: int = None) -> None:
         """
         Add a submodule to this Device.
@@ -140,7 +139,8 @@ class Device:
         device.subOwner = self
         self.subs.add((device, slotName, slotIndex))
 
-    def __getattr__(self, port: str) -> 'DevicePort':
+    def __getattr__(self, port: str) -> Union[DevicePort,
+                                              Callable[[Any], DevicePort]]:
         """
         Enable ports to be treated as variables.
 
@@ -148,16 +148,16 @@ class Device:
         class (e.g., Device.Input instead of Device.port("Input").
         If the port is not defined, then we thrown an exception.
         """
-        info = self._portinfo.get(port)
-
+        info: Optional[Device.portInfoType] = self.portinfo.get(port)
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
-        elif info['limit'] == 1:
+
+        elif info[0] == 1:
             return self.port(port)
         else:
             return lambda x: self.port(port, x)
 
-    def port(self, port: str, number: int = None) -> 'DevicePort':
+    def port(self, port: str, number: int = None) -> DevicePort:
         """
         Return a Port object representing the port on this Device.
 
@@ -169,35 +169,30 @@ class Device:
         list.  Make sure we do not create too many connections if Bounded.
         Finally, if the port has not already been defined, then create it.
         """
-        info = self.get_portinfo().get(port)
-
+        info: Optional[Device.portInfoType] = self.portinfo.get(port)
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
 
-        elif info['limit'] == 1:
+        elif info[0] == 1:
             # Single Port, don't use port numbers
             if number is not None:
                 print(f"WARNING! Single port ({port}) being provided a port"
                       f" number ({number})")
             if port not in self.ports:
-                self.ports[port] = DevicePort(self, port)
-            return self.ports[port]
+                self.ports[port][-1] = DevicePort(self, port)
+            return self.ports[port][-1]
 
         else:
             # Multi Port, use port numbers and check the provided limit
             if number is None:
                 number = len(self.ports[port])
-            if info['limit'] is not None:
-                if number >= info['limit']:
+            if info[0] is not None:
+                if number >= info[0]:
                     raise RuntimeError(f"Too many connections ({number}):"
-                                       f" {port} (limit {info['limit']})")
+                                       f" {port} (limit {info[0]})")
             if number not in self.ports[port]:
                 self.ports[port][number] = DevicePort(self, port, number)
             return self.ports[port][number]
-
-    def get_portinfo(self) -> dict:
-        """Return the portinfo for this Device Class."""
-        return self._portinfo if self._portinfo is not None else dict()
 
     def get_category(self) -> str:
         """Return the category for this Device (type, model)."""
@@ -216,7 +211,7 @@ class Device:
 
     def __repr__(self) -> str:
         """Return a description of the Device."""
-        lines = list()
+        lines: list[str] = list()
         lines.append(f"Device = {self.type}")
         lines.append(f"\tname = {self.name}")
         if self.model:
@@ -230,11 +225,10 @@ class Device:
         if self.subOwner is not None:
             lines.append(f"\tsubmoduleParent = {self.subOwner.name}")
 
-        portinfo = self.get_portinfo()
-        if portinfo:
+        if self.portinfo:
             lines.append(f"\tPorts:")
-            for port in sorted(portinfo):
-                lines.append(f"\t\t{port} = {portinfo[port]}")
+            for port in sorted(self.portinfo):
+                lines.append(f"\t\t{port} = {self.portinfo[port]}")
         if self.attr:
             lines.append(f"\tAttributes:")
             for key in sorted(self.attr):
