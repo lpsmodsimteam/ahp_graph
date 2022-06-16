@@ -13,7 +13,7 @@ import os
 class VanadisCPU(Device):
     """VanadisCPU."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize using the msg executable."""
         parameters = {
             "clock": "1GHz",
@@ -42,7 +42,7 @@ class VanadisCPU(Device):
 class VanadisMIPSDecoder(Device):
     """VanadisMIPSDecoder."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         parameters = {
             "uop_cache_entries": 1536,
@@ -57,7 +57,7 @@ class VanadisMIPSDecoder(Device):
 class VanadisMIPSOSHandler(Device):
     """VanadisMIPSOSHandler."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         parameters = {
             "verbose": 0,
@@ -72,7 +72,7 @@ class VanadisMIPSOSHandler(Device):
 class VanadisBasicBranchUnit(Device):
     """VanadisBasicBranchUnit."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         parameters = {
             "branch_entries": 32
@@ -86,7 +86,7 @@ class VanadisBasicBranchUnit(Device):
 class VanadisSequentialLoadStoreQueue(Device):
     """VanadisSequentialLoadStoreQueue."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         parameters = {
             "verbose": 0,
@@ -107,7 +107,7 @@ class VanadisNodeOS(Device):
     """VanadisNodeOS."""
 
     def __init__(self, name: str, cores: int = 1,
-                 attr: dict = None) -> Device:
+                 attr: dict = None) -> None:
         """Initialize with the number of cores per server."""
         parameters = {
             "verbose": 0,
@@ -138,7 +138,7 @@ class memInterface(Device):
     """memInterface."""
 
     def __init__(self, name: str, coreId: int = 0,
-                 attr: dict = None) -> Device:
+                 attr: dict = None) -> None:
         """Initialize."""
         parameters = {
             "coreId": coreId
@@ -154,7 +154,7 @@ class memInterface(Device):
 class Cache(Device):
     """Cache."""
 
-    def __init__(self, name: str, model: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, model: str, attr: dict = None) -> None:
         """Initialize with a model of which cache level this is (L1, L2)."""
         parameters = {
             "replacement_policy": "lru",
@@ -190,7 +190,7 @@ class Cache(Device):
 class Bus(Device):
     """Bus."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         parameters = {
             "bus_frequency": "1GHz",
@@ -205,7 +205,7 @@ class Bus(Device):
 class MemLink(Device):
     """MemLink."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         super().__init__(name, attr=attr)
 
@@ -215,7 +215,7 @@ class Processor(Device):
     """Processor assembly made of various Vanadis components and Caches."""
 
     def __init__(self, name: str, core: int = 0, cores: int = 1,
-                 attr: dict = None) -> Device:
+                 attr: dict = None) -> None:
         """Initialize with the core ID and number of cores in a server."""
         super().__init__(name, attr=attr)
         self.attr['core'] = core

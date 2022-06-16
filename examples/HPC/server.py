@@ -5,6 +5,7 @@ Constructed from Processors and main memory using a NoC.
 """
 from AHPGraph import *
 from processor import *
+from typing import Union
 
 
 @library('memHierarchy.MemNIC')
@@ -12,9 +13,9 @@ from processor import *
 class MemNIC(Device):
     """MemNIC."""
 
-    def __init__(self, name: str, model: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, model: str, attr: dict = None) -> None:
         """Initialize with a model describing where this is on the NoC."""
-        parameters = {
+        parameters: dict[str, Union[str, int]] = {
             "network_bw": "25GB/s"
         }
         if model == 'Cache':
@@ -47,9 +48,9 @@ class Router(Device):
     """Router."""
 
     def __init__(self, name: str, model: str, id: int = 0, ports: int = 1,
-                 attr: dict = None) -> Device:
+                 attr: dict = None) -> None:
         """Initialize with a model for a NoC or Interconnect."""
-        parameters = {
+        parameters: dict[str, Union[str, int]] = {
             "id": id,
             "num_ports": ports
         }
@@ -85,7 +86,7 @@ class Router(Device):
 class SingleRouter(Device):
     """Single Router Topology."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         super().__init__(name, attr=attr)
 
@@ -95,7 +96,7 @@ class SingleRouter(Device):
 class DirectoryController(Device):
     """DirectoryController."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         parameters = {
             "coherence_protocol": "MESI",
@@ -113,7 +114,7 @@ class DirectoryController(Device):
 class MemController(Device):
     """MemController."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         parameters = {
             "clock": "1GHz",
@@ -131,7 +132,7 @@ class MemController(Device):
 class simpleMem(Device):
     """simpleMem."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         parameters = {
             "mem_size": "2GiB",
@@ -148,7 +149,7 @@ class RDMA_NIC(Device):
     """RDMA_NIC."""
 
     def __init__(self, name: str, id: int = 0, nodes: int = 2,
-                 cores: int = 1, attr: dict = None) -> Device:
+                 cores: int = 1, attr: dict = None) -> None:
         """
         Initialize using various simulation parameters.
 
@@ -177,7 +178,7 @@ class RDMA_NIC(Device):
 class LinkControl(Device):
     """LinkControl."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict = None) -> None:
         """Initialize."""
         parameters = {
             "link_bw": "16GB/s",
@@ -195,7 +196,7 @@ class Server(Device):
 
     def __init__(self, name: str, node: int = 0,
                  racks: int = 2, nodes: int = 2, cores: int = 1,
-                 attr: dict = None) -> Device:
+                 attr: dict = None) -> None:
         """Store our name and use number of cores as the model type."""
         super().__init__(name, f"{cores}Core", attr)
         self.attr['node'] = node

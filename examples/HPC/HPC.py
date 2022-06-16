@@ -15,7 +15,7 @@ class TorusTopology(Device):
     """Torus Topology."""
 
     def __init__(self, name: str, shape: str = '2x2', nodes: int = 1,
-                 attr: dict = None) -> Device:
+                 attr: dict = None) -> None:
         """Initialize using the shape as the model."""
         parameters = {
             "shape": shape,
@@ -33,7 +33,7 @@ class Rack(Device):
 
     def __init__(self, name: str, shape: str = '2x2', rack: int = 0,
                  nodes: int = 1, cores: int = 1,
-                 attr: dict = None) -> Device:
+                 attr: dict = None) -> None:
         """Store our name and the model describing nodes and cores per node."""
         super().__init__(name, f"{nodes}Node_{cores}Core", attr)
         self.attr['shape'] = shape
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     """
     import argparse
     try:
-        import sst
+        import sst  # type: ignore[import]
         SST = True
     except ImportError:
         SST = False

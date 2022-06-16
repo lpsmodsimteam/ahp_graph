@@ -1,25 +1,26 @@
 """Simple example of two Python functions playing pingpong with messages."""
 
 from AHPGraph import *
-from AHPGraph.examples.pingpong.architecture import architecture
+from AHPGraph.examples.pingpong.architecture import architecture  # type: ignore[import]
+from typing import Callable, Optional
 
 
 class Ping():
     """Example class that sends a ping."""
 
-    def __init__(self, name: str, repeats: int):
+    def __init__(self, name: str, repeats: int) -> None:
         """Init."""
-        self.name = name
-        self.max = repeats
-        self.repeats = 0
-        self.output = None
+        self.name: str = name
+        self.max: int = repeats
+        self.repeats: int = 0
+        self.output: Optional[Callable[[str], None]] = None
 
-    def start(self):
+    def start(self) -> None:
         """Start the pingpong off by sending ping."""
         print(f'{self.name}: Sending Ping')
         self.output(f'{self.name}: Ping')
 
-    def input(self, string: str):
+    def input(self, string: str) -> None:
         """Print input and then send ping if we have more repeats left."""
         print(f'{self.name}: Received {string}')
         self.repeats += 1
@@ -31,12 +32,12 @@ class Ping():
 class Pong():
     """Example class that sends a pong when it recieves input."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         """Init."""
-        self.name = name
-        self.output = None
+        self.name: str = name
+        self.output: Optional[Callable[[str], None]] = None
 
-    def input(self, string: str):
+    def input(self, string: str) -> None:
         """Print input and then send pong."""
         print(f'{self.name}: Received {string}')
         print(f'{self.name}: Sending Pong')
@@ -49,7 +50,7 @@ def buildPython(graph: DeviceGraph) -> None:
 
     Need to manually build the graph since AHPGraph doesn't support this.
     """
-    devs = dict()
+    devs: dict[str, Union[Ping, Pong]] = dict()
     # instantiate all the devices in the graph
     for device in graph.devices:
         if device.type == 'Ping':
@@ -69,7 +70,7 @@ def buildPython(graph: DeviceGraph) -> None:
         pi.output = lambda x: po.input(x)
         po.output = lambda x: pi.input(x)
     else:
-        def wrapper(dev: Device):
+        def wrapper(dev: Union[Ping, Pong]) -> Callable[[str], None]:
             """Need to wrap the lambda function to protect the device scope."""
             return lambda x: dev.input(x)
 

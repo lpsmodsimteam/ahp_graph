@@ -283,7 +283,7 @@ class DeviceGraph:
         # Expand the required Devices
         for device in assemblies:
             self.expanding = device
-            device.expand(self)  # type: ignore[operator]
+            device.expand(self)  # type: ignore[operator, arg-type]
             self.names.discard(device.name)
             self.devices.discard(device)
         self.expanding = None
@@ -342,7 +342,7 @@ class DeviceGraph:
                 if category not in types:
                     types.add(category)
                     expanded = DeviceGraph()
-                    dev.expand(expanded)  # type: ignore[operator]
+                    dev.expand(expanded)  # type: ignore[operator, arg-type]
                     types = expanded.__write_dot_hierarchy(category, draw,
                                                            ports, dev.name,
                                                            types)

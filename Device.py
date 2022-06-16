@@ -30,7 +30,8 @@ def library(name: str) -> Callable[[Device], Device]:
     return wrapper
 
 
-def port(name: str, ptype: str = None, limit: int = 1, required: bool = True,
+def port(name: str, ptype: str = None, limit: Optional[int] = 1,
+         required: bool = True,
          format: str = '.#') -> Callable[[Device], Device]:
     """
     Python decorator to define the ports for a particular device.
@@ -97,7 +98,7 @@ class Device:
     """
 
     library: Optional[str] = None
-    portInfoType = tuple[int, Optional[str], bool, str]
+    portInfoType = tuple[Optional[int], Optional[str], bool, str]
     portinfo: dict[str, portInfoType] = dict()
 
     def __init__(self, name: str, model: str = None,
@@ -140,7 +141,7 @@ class Device:
         self.subs.add((device, slotName, slotIndex))
 
     def __getattr__(self, port: str) -> Union[DevicePort,
-                                              Callable[[Any], DevicePort]]:
+                                              Callable[[Optional[int]], DevicePort]]:
         """
         Enable ports to be treated as variables.
 

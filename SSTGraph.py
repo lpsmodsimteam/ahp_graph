@@ -119,8 +119,8 @@ class SSTGraph(DeviceGraph):
                 d0 = d0.subOwner
             while d1.subOwner is not None:
                 d1 = d1.subOwner
-            r0 = d0.partition[0]  # type: ignore
-            r1 = d1.partition[0]  # type: ignore
+            r0 = d0.partition[0]  # type: ignore[index]
+            r1 = d1.partition[0]  # type: ignore[index]
 
             partition[r0][0].add(d0)
             partition[r0][0].add(d1)
@@ -207,9 +207,9 @@ class SSTGraph(DeviceGraph):
                     {'type': d0.type, 'model': d0.model} | d0.attr))
                 # Set the component partition if we are self-partitioning
                 if self_partition:
-                    thread = (0 if d0.partition[1] is None  # type: ignore
-                              else d0.partition[1])  # type: ignore
-                    c0.setRank(d0.partition[0], thread)  # type: ignore
+                    thread = (0 if d0.partition[1] is None  # type: ignore[index]
+                              else d0.partition[1])  # type: ignore[index]
+                    c0.setRank(d0.partition[0], thread)  # type: ignore[index]
                 n2c[d0.name] = c0
                 for key in global_params:
                     c0.addGlobalParamSet(key)

@@ -9,8 +9,8 @@ from AHPGraph import *
 class Ping(Device):
     """Ping Device: has a Name and a Model type."""
 
-    def __init__(self, name: str, size: int = 10,
-                 attr: dict = None) -> Device:
+    def __init__(self, name: str, size: str = '10',
+                 attr: dict[str, Any] = None) -> None:
         """Size parameter is stored as the model attribute of a device."""
         super().__init__(name, size, attr)
 
@@ -21,7 +21,7 @@ class Ping(Device):
 class Pong(Device):
     """Pong Device."""
 
-    def __init__(self, name: str, attr: dict = None) -> Device:
+    def __init__(self, name: str, attr: dict[str, Any] = None) -> None:
         """No model for Pong."""
         super().__init__(name, attr=attr)
 
@@ -31,8 +31,8 @@ class Pong(Device):
 class pingpong(Device):
     """Assembly of a ping and pong device with connections outside."""
 
-    def __init__(self, name: str, size: int = 10,
-                 attr: dict = None) -> 'Device':
+    def __init__(self, name: str, size: str = '10',
+                 attr: dict[str, Any] = None) -> None:
         """Size parameter is stored as the model attribute of a device."""
         super().__init__(name, size, attr)
 
@@ -63,7 +63,7 @@ def architecture(repeats: int = 10, num: int = 1) -> DeviceGraph:
     pingpongs = dict()
 
     for i in range(num):
-        pingpongs[i] = pingpong(f"PingPong{i}", repeats)
+        pingpongs[i] = pingpong(f"PingPong{i}", str(repeats))
         pingpongs[i].set_partition(i)
 
     for i in range(num):

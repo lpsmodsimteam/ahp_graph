@@ -111,8 +111,8 @@ def LinkTest() -> bool:
     t = test('LinkTest')
     graph = DeviceGraph()
 
-    ptd0 = PortTestDevice(0)
-    ptd1 = PortTestDevice(1)
+    ptd0 = PortTestDevice('0')
+    ptd1 = PortTestDevice('1')
     ltd = LibraryTestDevice()
     lptd = LibraryPortTestDevice()
     ltd.add_submodule(lptd, 'slot')
@@ -162,8 +162,8 @@ def VerifyLinksTest() -> bool:
     t = test('VerifyLinksTest')
     graph = DeviceGraph()
 
-    ptd0 = PortTestDevice(0)
-    ptd1 = PortTestDevice(1)
+    ptd0 = PortTestDevice('0')
+    ptd1 = PortTestDevice('1')
     ltd = LibraryTestDevice()
     lptd = LibraryPortTestDevice()
     ltd.add_submodule(lptd, 'slot')
@@ -200,10 +200,10 @@ def FollowLinksTest() -> bool:
     graph = DeviceGraph()
     levels = 2
 
-    ratd0 = RecursiveAssemblyTestDevice(levels, 0)
-    ratd1 = RecursiveAssemblyTestDevice(levels, 1)
-    lptd0 = LibraryPortTestDevice(0)
-    lptd1 = LibraryPortTestDevice(1)
+    ratd0 = RecursiveAssemblyTestDevice(levels, '0')
+    ratd1 = RecursiveAssemblyTestDevice(levels, '1')
+    lptd0 = LibraryPortTestDevice('0')
+    lptd1 = LibraryPortTestDevice('1')
 
     # complete the rings
     graph.link(ratd0.input, ratd0.output)
@@ -236,14 +236,14 @@ def FlattenTest() -> bool:
     t = test('FlattenTest')
     levels = 6
 
-    def createGraph() -> DeviceGraph:
+    def createGraph() -> tuple[DeviceGraph, Device]:
         """Create a graph for testing."""
         graph = DeviceGraph()
 
-        ratd0 = RecursiveAssemblyTestDevice(levels, 0)
-        ratd1 = RecursiveAssemblyTestDevice(levels, 1)
-        lptd0 = LibraryPortTestDevice(0)
-        lptd1 = LibraryPortTestDevice(1)
+        ratd0 = RecursiveAssemblyTestDevice(levels, '0')
+        ratd1 = RecursiveAssemblyTestDevice(levels, '1')
+        lptd0 = LibraryPortTestDevice('0')
+        lptd1 = LibraryPortTestDevice('1')
 
         # complete the rings
         graph.link(ratd0.input, ratd0.output)
