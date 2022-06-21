@@ -8,32 +8,34 @@ from processor import *
 from typing import Union
 
 
-@library('memHierarchy.MemNIC')
-@port('port', 'simpleNet')
 class MemNIC(Device):
     """MemNIC."""
 
+    library = 'memHierarchy.MemNIC'
+    portinfo = PortInfo()
+    portinfo.add('port', 'simpleNet')
+    attr: dict[str, Union[str, int]] = {
+        "network_bw": "25GB/s"
+    }
+
     def __init__(self, name: str, model: str, attr: dict = None) -> None:
         """Initialize with a model describing where this is on the NoC."""
-        parameters: dict[str, Union[str, int]] = {
-            "network_bw": "25GB/s"
-        }
         if model == 'Cache':
-            parameters.update({
+            parameters = {
                 "group": 1,
                 "destinations": "2,3"  # DirCtrl, SHMEMNIC
-            })
+            }
         elif model == 'DirCtrl':
-            parameters.update({
+            parameters = {
                 "group": 2,
                 "sources": "1,3"  # Cache, SHMEMNIC
-            })
+            }
         elif model == 'SHMEMNIC':
-            parameters.update({
+            parameters = {
                 "group": 3,
                 "sources": "1",  # Cache
                 "destinations": "2"  # DirCtrl
-            })
+            }
         else:
             return None
 
@@ -42,10 +44,12 @@ class MemNIC(Device):
         super().__init__(name, attr=parameters)
 
 
-@library('merlin.hr_router')
-@port('port', 'simpleNet', None, False, '#')
 class Router(Device):
     """Router."""
+
+    library = 'merlin.hr_router'
+    portinfo = PortInfo()
+    portinfo.add('port', 'simpleNet', None, False, '#')
 
     def __init__(self, name: str, model: str, id: int = 0, ports: int = 1,
                  attr: dict = None) -> None:
@@ -82,71 +86,66 @@ class Router(Device):
         super().__init__(name, model, parameters)
 
 
-@library('merlin.singlerouter')
 class SingleRouter(Device):
     """Single Router Topology."""
 
-    def __init__(self, name: str, attr: dict = None) -> None:
-        """Initialize."""
-        super().__init__(name, attr=attr)
+    library = 'merlin.singlerouter'
 
 
-@library('memHierarchy.DirectoryController')
-@port('direct_link', 'simpleMem', required=False)
 class DirectoryController(Device):
     """DirectoryController."""
 
-    def __init__(self, name: str, attr: dict = None) -> None:
-        """Initialize."""
-        parameters = {
-            "coherence_protocol": "MESI",
-            "entry_cache_size": 1024,
-            "addr_range_start": 0x0,
-            "addr_range_end": 0x7fffffff
-        }
-        if attr is not None:
-            parameters.update(attr)
-        super().__init__(name, attr=parameters)
+    library = 'memHierarchy.DirectoryController'
+    portinfo = PortInfo()
+    portinfo.add('direct_link', 'simpleMem', required=False)
+    attr: dict[str, Union[str, int]] = {
+        "coherence_protocol": "MESI",
+        "entry_cache_size": 1024,
+        "addr_range_start": 0x0,
+        "addr_range_end": 0x7fffffff
+    }
 
 
-@library('memHierarchy.MemController')
-@port('direct_link', 'simpleMem', required=False)
 class MemController(Device):
     """MemController."""
 
-    def __init__(self, name: str, attr: dict = None) -> None:
-        """Initialize."""
-        parameters = {
-            "clock": "1GHz",
-            "backend.mem_size": "4GiB",
-            "backing": "malloc",
-            "addr_range_start": 0x0,
-            "addr_range_end": 0x7fffffff
-        }
-        if attr is not None:
-            parameters.update(attr)
-        super().__init__(name, attr=parameters)
+    library = 'memHierarchy.MemController'
+    portinfo = PortInfo()
+    portinfo.add('direct_link', 'simpleMem', required=False)
+    attr: dict[str, Union[str, int]] = {
+        "clock": "1GHz",
+        "backend.mem_size": "4GiB",
+        "backing": "malloc",
+        "addr_range_start": 0x0,
+        "addr_range_end": 0x7fffffff
+    }
 
 
-@library('memHierarchy.simpleMem')
 class simpleMem(Device):
     """simpleMem."""
 
-    def __init__(self, name: str, attr: dict = None) -> None:
-        """Initialize."""
-        parameters = {
-            "mem_size": "2GiB",
-            "access_time": "1 ns"
-        }
-        if attr is not None:
-            parameters.update(attr)
-        super().__init__(name, attr=parameters)
+    library = 'memHierarchy.simpleMem'
+    attr: dict[str, Union[str, int]] = {
+        "mem_size": "2GiB",
+        "access_time": "1 ns"
+    }
 
 
-@library('rdmaNic.nic')
-@port('port', 'simpleNet', None, False, '#')
 class RDMA_NIC(Device):
     """RDMA_NIC."""
+
+    library = 'rdmaNic.nic'
+    portinfo = PortInfo()
+    portinfo.add('port', 'simpleNet', None, False, '#')
+    attr: dict[str, Union[str, int]] = {
+        "clock": "8GHz",
+        "maxPendingCmds": 128,
+        "maxMemReqs": 256,
+        "maxCmdQSize": 128,
+        "cache_line_size": 64,
+        'baseAddr': 0x80000000,
+        'cmdQSize': 64
+    }
 
     def __init__(self, name: str, id: int = 0, nodes: int = 2,
                  cores: int = 1, attr: dict = None) -> None:
@@ -156,43 +155,30 @@ class RDMA_NIC(Device):
         Need to know the number of processing elements (cores) per node.
         Also need the total number of nodes in the system.
         """
-        parameters = {
-            "clock": "8GHz",
-            "maxPendingCmds": 128,
-            "maxMemReqs": 256,
-            "maxCmdQSize": 128,
-            "cache_line_size": 64,
-            'baseAddr': 0x80000000,
-            'cmdQSize': 64,
-            'pesPerNode': cores,
-            'nicId': id,
-            'numNodes': nodes
-        }
-        if attr is not None:
-            parameters.update(attr)
-        super().__init__(name, attr=parameters)
+        super().__init__(name, attr=attr)
+        self.attr['pesPerNode'] = cores
+        self.attr['nicId'] = id
+        self.attr['numNodes'] = nodes
 
 
-@library('merlin.linkcontrol')
-@port('rtr_port', 'simpleNet')
 class LinkControl(Device):
     """LinkControl."""
 
-    def __init__(self, name: str, attr: dict = None) -> None:
-        """Initialize."""
-        parameters = {
-            "link_bw": "16GB/s",
-            "input_buf_size": "14KB",
-            "output_buf_size": "14KB"
-        }
-        if attr is not None:
-            parameters.update(attr)
-        super().__init__(name, attr=parameters)
+    library = 'merlin.linkcontrol'
+    portinfo = PortInfo()
+    portinfo.add('rtr_port', 'simpleNet')
+    attr: dict[str, Union[str, int]] = {
+        "link_bw": "16GB/s",
+        "input_buf_size": "14KB",
+        "output_buf_size": "14KB"
+    }
 
 
-@port('network', 'simpleNet')
 class Server(Device):
     """Server constructed of a processor and some memory."""
+
+    portinfo = PortInfo()
+    portinfo.add('network', 'simpleNet')
 
     def __init__(self, name: str, node: int = 0,
                  racks: int = 2, nodes: int = 2, cores: int = 1,

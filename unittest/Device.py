@@ -109,9 +109,13 @@ def AttributeTest() -> bool:
     """Test of Device with attributes."""
     t = test('AttributeTest')
 
-    attr = {'a1': 1, 'a2': 'blue', 'a3': False}
-    atd = AttributeTestDevice(attr)
-    t.test(atd.attr == attr, 'attr')
+    attr1 = {'a1': 1, 'a2': 'blue', 'a3': False}
+    atd1 = AttributeTestDevice({})
+    t.test(atd1.attr == attr1, 'class attr')
+    attr2 = {'a1': 1, 'a2': 'blue', 'a3': False, 'b': 'test'}
+    atd2 = AttributeTestDevice({'b': 'test'})
+    t.test(atd2.attr == attr2, 'instance attr')
+    t.test(atd1.attr == attr1, 'class attr unchanged')
 
     return t.finish()
 

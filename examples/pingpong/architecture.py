@@ -3,38 +3,30 @@
 from AHPGraph import *
 
 
-@library('pingpong.Ping')
-@port('input', 'String')
-@port('output', 'String')
 class Ping(Device):
     """Ping Device: has a Name and a Model type."""
 
-    def __init__(self, name: str, size: str = '10',
-                 attr: dict[str, Any] = None) -> None:
-        """Size parameter is stored as the model attribute of a device."""
-        super().__init__(name, size, attr)
+    library = 'pingpong.Ping'
+    portinfo = PortInfo()
+    portinfo.add('input', 'String')
+    portinfo.add('output', 'String')
 
 
-@library('pingpong.Pong')
-@port('input', 'String')
-@port('output', 'String')
 class Pong(Device):
     """Pong Device."""
 
-    def __init__(self, name: str, attr: dict[str, Any] = None) -> None:
-        """No model for Pong."""
-        super().__init__(name, attr=attr)
+    library = 'pingpong.Pong'
+    portinfo = PortInfo()
+    portinfo.add('input', 'String')
+    portinfo.add('output', 'String')
 
 
-@port('input', 'String')
-@port('output', 'String')
 class pingpong(Device):
     """Assembly of a ping and pong device with connections outside."""
 
-    def __init__(self, name: str, size: str = '10',
-                 attr: dict[str, Any] = None) -> None:
-        """Size parameter is stored as the model attribute of a device."""
-        super().__init__(name, size, attr)
+    portinfo = PortInfo()
+    portinfo.add('input', 'String')
+    portinfo.add('output', 'String')
 
     def expand(self, graph: DeviceGraph) -> None:
         """Expand the overall architecture into its components."""

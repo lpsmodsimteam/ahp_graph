@@ -8,28 +8,30 @@ and then build all the way up to a cluster.
 """
 from AHPGraph import *
 from server import *
+from typing import Union
 
 
-@library('merlin.torus')
 class TorusTopology(Device):
     """Torus Topology."""
+
+    library = 'merlin.torus'
+    attr: dict[str, Union[str, int]] = {
+        "width": "1x1"
+    }
 
     def __init__(self, name: str, shape: str = '2x2', nodes: int = 1,
                  attr: dict = None) -> None:
         """Initialize using the shape as the model."""
-        parameters = {
-            "shape": shape,
-            "width": "1x1",
-            "local_ports": nodes
-        }
-        if attr is not None:
-            parameters.update(attr)
-        super().__init__(name, shape, parameters)
+        super().__init__(name, shape, attr)
+        self.attr['shape'] = shape
+        self.attr['local_ports'] = nodes
 
 
-@port('network', 'simpleNet', None, False)
 class Rack(Device):
     """Rack constructed of a router and some servers."""
+
+    portinfo = PortInfo()
+    portinfo.add('network', 'simpleNet', None, False)
 
     def __init__(self, name: str, shape: str = '2x2', rack: int = 0,
                  nodes: int = 1, cores: int = 1,

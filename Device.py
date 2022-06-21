@@ -13,42 +13,16 @@ from __future__ import annotations
 from typing import Optional, Union, Callable, Any
 import collections
 
-
-def library(name: str) -> Callable[[Device], Device]:
-    """
-    Python decorator to define the library associated with this Device.
-
-    If library is not defined, the Device is an assembly and must define
-    the expand function.
-    For example, this represents the SST Element Library and Component used to
-    simulate the Device ('element.component')
-    """
-
-    def wrapper(cls: Device) -> Device:
-        cls.library = name
-        return cls
-    return wrapper
+portInfoType = tuple[Optional[int], Optional[str], bool, str]
 
 
-def port(name: str, ptype: str = None, limit: Optional[int] = 1,
-         required: bool = True,
-         format: str = '.#') -> Callable[[Device], Device]:
-    """
-    Python decorator to define the ports for a particular device.
+class PortInfo(dict[str, portInfoType]):
+    """Represents port definitions and limitations."""
 
-    A port has a name, a port type which is used to verify connections are
-    between ports of the same type, whether the port is required to be
-    connected or if it is an optional connection, and a limit on the number of
-    connections. If you want unlimited connections, set this to None
-    Can also have an optional format for how to format port numbers
-    """
-
-    def wrapper(cls: Device) -> Device:
-        if not cls.portinfo:
-            cls.portinfo = dict()
-        cls.portinfo[name] = (limit, ptype, required, format)
-        return cls
-    return wrapper
+    def add(self, name: str, ptype: str = None, limit: Optional[int] = 1,
+            required: bool = True, format: str = '.#') -> None:
+        """Add a port definition to the dictionary."""
+        self[name] = (limit, ptype, required, format)
 
 
 class DevicePort:
@@ -98,8 +72,8 @@ class Device:
     """
 
     library: Optional[str] = None
-    portInfoType = tuple[Optional[int], Optional[str], bool, str]
-    portinfo: dict[str, portInfoType] = dict()
+    portinfo: PortInfo = PortInfo()
+    attr: dict[str, Any] = dict()
 
     def __init__(self, name: str, model: str = None,
                  attr: dict[str, Any] = None) -> None:
@@ -110,7 +84,11 @@ class Device:
         dictionary of attributes which are used as model parameters.
         """
         self.name: str = name
-        self.attr: dict[str, Any] = attr if attr is not None else dict()
+        if self.attr:
+            if attr is not None:
+                self.attr = {**self.attr, **attr}
+        elif attr is not None:
+            self.attr = attr
         portType = dict[str, dict[int, DevicePort]]
         self.ports: portType = collections.defaultdict(dict)
         self.subs: set[tuple[Device, str, Optional[int]]] = set()
@@ -149,7 +127,7 @@ class Device:
         class (e.g., Device.Input instead of Device.port("Input").
         If the port is not defined, then we thrown an exception.
         """
-        info: Optional[Device.portInfoType] = self.portinfo.get(port)
+        info: Optional[portInfoType] = self.portinfo.get(port)
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
 
@@ -170,7 +148,7 @@ class Device:
         list.  Make sure we do not create too many connections if Bounded.
         Finally, if the port has not already been defined, then create it.
         """
-        info: Optional[Device.portInfoType] = self.portinfo.get(port)
+        info: Optional[portInfoType] = self.portinfo.get(port)
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
 
