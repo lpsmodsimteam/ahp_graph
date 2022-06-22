@@ -69,19 +69,19 @@ class RecursiveAssemblyTestDevice(Device):
         if level == 0:
             d0: Device = LibraryPortTestDevice('0')
             d1: Device = LibraryPortTestDevice('1')
-            graph.link(d0.optional(0), self.optional(0))
-            graph.link(d1.optional(0), self.optional(1))
+            graph.link(d0.optional(0), self.optional(0))  # type: ignore[operator]
+            graph.link(d1.optional(0), self.optional(1))  # type: ignore[operator]
 
         else:
             d0 = RecursiveAssemblyTestDevice(level-1, '0')
             d1 = RecursiveAssemblyTestDevice(level-1, '1')
             for i in range(2 ** level):
-                graph.link(d0.optional(i), self.optional(i*2))
-                graph.link(d1.optional(i), self.optional(i*2 + 1))
+                graph.link(d0.optional(i), self.optional(i*2))  # type: ignore[operator]
+                graph.link(d1.optional(i), self.optional(i*2 + 1))  # type: ignore[operator]
 
-        graph.link(self.input, d0.input)
-        graph.link(d0.output, d1.input)
-        graph.link(d1.output, self.output)
+        graph.link(self.input, d0.input)  # type: ignore[arg-type]
+        graph.link(d0.output, d1.input)  # type: ignore[arg-type]
+        graph.link(d1.output, self.output)  # type: ignore[arg-type]
 
 
 class ModelTestDevice(Device):

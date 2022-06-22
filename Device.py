@@ -10,7 +10,7 @@ hierarchical representations of a graph.
 """
 
 from __future__ import annotations
-from typing import Optional, Union, Callable, Any
+from typing import Optional, Union, Callable, Any, ClassVar
 import collections
 
 portInfoType = tuple[Optional[int], Optional[str], bool, str]
@@ -71,8 +71,8 @@ class Device:
     object so they can be used in sets and comparisons.
     """
 
-    library: Optional[str] = None
-    portinfo: PortInfo = PortInfo()
+    library: ClassVar[Optional[str]] = None
+    portinfo: ClassVar[PortInfo] = PortInfo()
     attr: dict[str, Any] = dict()
 
     def __init__(self, name: str, model: str = None,

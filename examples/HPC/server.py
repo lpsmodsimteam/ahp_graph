@@ -209,7 +209,7 @@ class Server(Device):
             L2.add_submodule(L1_to_L2, 'cpulink')
             L2.add_submodule(L2_to_mem, 'memlink')
 
-            graph.link(cpu.low_network(0), L1_to_L2.port('port'), '1ns')
+            graph.link(cpu.low_network(0), L1_to_L2.port('port'), '1ns')  # type: ignore[operator]
             graph.link(L2_to_mem.port('port'), NoC.port('port', core), '1ns')
 
         # Setup the main memory with controllers
@@ -244,4 +244,4 @@ class Server(Device):
         # Generally you don't want to put latency on the links to assembly
         # ports (ex: self.port) and allow whatever uses the assembly to
         # specify latency for the connection (it will get ignored anyway)
-        graph.link(netLink.port('rtr_port'), self.network)
+        graph.link(netLink.port('rtr_port'), self.network)  # type: ignore[arg-type]

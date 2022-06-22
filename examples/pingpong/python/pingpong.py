@@ -18,7 +18,7 @@ class Ping():
     def start(self) -> None:
         """Start the pingpong off by sending ping."""
         print(f'{self.name}: Sending Ping')
-        self.output(f'{self.name}: Ping')
+        self.output(f'{self.name}: Ping')  # type: ignore[misc]
 
     def input(self, string: str) -> None:
         """Print input and then send ping if we have more repeats left."""
@@ -26,7 +26,7 @@ class Ping():
         self.repeats += 1
         if self.repeats < self.max:
             print(f'{self.name}: Sending Ping')
-            self.output(f'{self.name}: Ping')
+            self.output(f'{self.name}: Ping')  # type: ignore[misc]
 
 
 class Pong():
@@ -41,7 +41,7 @@ class Pong():
         """Print input and then send pong."""
         print(f'{self.name}: Received {string}')
         print(f'{self.name}: Sending Pong')
-        self.output(f'{self.name}: Pong')
+        self.output(f'{self.name}: Pong')  # type: ignore[misc]
 
 
 def buildPython(graph: DeviceGraph) -> None:
@@ -54,10 +54,10 @@ def buildPython(graph: DeviceGraph) -> None:
     # instantiate all the devices in the graph
     for device in graph.devices:
         if device.type == 'Ping':
-            devs[device.name] = eval(f'{device.library.split(".")[1]}('
+            devs[device.name] = eval(f'{device.library.split(".")[1]}('  # type: ignore[union-attr]
                                      f'"{device.name}", {args.repeats})')
         elif device.type == 'Pong':
-            devs[device.name] = eval(f'{device.library.split(".")[1]}('
+            devs[device.name] = eval(f'{device.library.split(".")[1]}('  # type: ignore[union-attr]
                                      f'"{device.name}")')
         else:
             print('ERROR, should only have Ping or Pong Devices')
@@ -109,7 +109,7 @@ def buildPython(graph: DeviceGraph) -> None:
     # find the first Ping device and start the 'simulation'
     for device in graph.devices:
         if device.type == 'Ping':
-            devs[device.name].start()
+            devs[device.name].start()  # type: ignore[union-attr]
             break
 
 

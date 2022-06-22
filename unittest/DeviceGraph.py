@@ -117,41 +117,41 @@ def LinkTest() -> bool:
     lptd = LibraryPortTestDevice()
     ltd.add_submodule(lptd, 'slot')
 
-    graph.link(lptd.input, ptd0.optional)
+    graph.link(lptd.input, ptd0.optional)  # type: ignore[arg-type]
     t.test(len(graph.devices) == 3, 'linking add submodule parent')
     t.test(ltd in graph.devices, 'submodule parent included')
-    t.test(graph.links[frozenset({lptd.input, ptd0.optional})] == '0s',
+    t.test(graph.links[frozenset({lptd.input, ptd0.optional})] == '0s',  # type: ignore[arg-type]
            'default latency')
     linkAgain = None
     try:
-        graph.link(ptd0.optional, lptd.input)
+        graph.link(ptd0.optional, lptd.input)  # type: ignore[arg-type]
         linkAgain = False
     except RuntimeError:
         linkAgain = True
     t.test(linkAgain, 'link again with ports reversed')
     callablePort = None
     try:
-        graph.link(ptd0.limit, ptd1.no_limit)
+        graph.link(ptd0.limit, ptd1.no_limit)  # type: ignore[arg-type]
         callablePort = False
     except RuntimeError:
         callablePort = True
     t.test(callablePort, 'forgot to include port num on multi port')
     typeMismatch = None
     try:
-        graph.link(ptd0.default, ptd1.ptype)
+        graph.link(ptd0.default, ptd1.ptype)  # type: ignore[arg-type]
         typeMismatch = False
     except RuntimeError:
         typeMismatch = True
     t.test(typeMismatch, 'port type mismatch')
     changeSinglePortLink = None
     try:
-        graph.link(ptd0.optional, ptd1.optional)
+        graph.link(ptd0.optional, ptd1.optional)  # type: ignore[arg-type]
         changeSinglePortLink = False
     except RuntimeError:
         changeSinglePortLink = True
     t.test(changeSinglePortLink, 'linking from a single port again')
-    graph.link(ptd0.limit(0), ptd1.limit(0), '123ns')
-    t.test(graph.links[frozenset({ptd0.limit(0), ptd1.limit(0)})] == '123ns',
+    graph.link(ptd0.limit(0), ptd1.limit(0), '123ns')  # type: ignore[operator]
+    t.test(graph.links[frozenset({ptd0.limit(0), ptd1.limit(0)})] == '123ns',  # type: ignore[operator]
            'latency')
 
     return t.finish()
@@ -168,12 +168,12 @@ def VerifyLinksTest() -> bool:
     lptd = LibraryPortTestDevice()
     ltd.add_submodule(lptd, 'slot')
 
-    graph.link(lptd.input, ptd0.optional)
-    graph.link(lptd.output, ptd1.optional)
-    graph.link(ptd0.default, ptd1.default)
-    graph.link(ptd0.ptype, ptd1.ptype)
-    graph.link(ptd0.no_limit(0), ptd1.no_limit(0))
-    graph.link(ptd0.limit(0), ptd1.limit(0))
+    graph.link(lptd.input, ptd0.optional)  # type: ignore[arg-type]
+    graph.link(lptd.output, ptd1.optional)  # type: ignore[arg-type]
+    graph.link(ptd0.default, ptd1.default)  # type: ignore[arg-type]
+    graph.link(ptd0.ptype, ptd1.ptype)  # type: ignore[arg-type]
+    graph.link(ptd0.no_limit(0), ptd1.no_limit(0))  # type: ignore[operator]
+    graph.link(ptd0.limit(0), ptd1.limit(0))  # type: ignore[operator]
     verified = None
     try:
         graph.verify_links()
@@ -182,7 +182,7 @@ def VerifyLinksTest() -> bool:
         verified = True
     t.test(verified, 'not all required ports connected')
 
-    graph.link(ptd0.format(0), ptd1.format(0))
+    graph.link(ptd0.format(0), ptd1.format(0))  # type: ignore[operator]
     verified = None
     try:
         graph.verify_links()
@@ -206,14 +206,14 @@ def FollowLinksTest() -> bool:
     lptd1 = LibraryPortTestDevice('1')
 
     # complete the rings
-    graph.link(ratd0.input, ratd0.output)
-    graph.link(ratd1.input, ratd1.output)
+    graph.link(ratd0.input, ratd0.output)  # type: ignore[arg-type]
+    graph.link(ratd1.input, ratd1.output)  # type: ignore[arg-type]
 
-    graph.link(lptd0.input, lptd1.output)
-    graph.link(lptd1.input, lptd0.output)
+    graph.link(lptd0.input, lptd1.output)  # type: ignore[arg-type]
+    graph.link(lptd1.input, lptd0.output)  # type: ignore[arg-type]
     for i in range(2 ** (levels+1)):
-        graph.link(lptd0.optional(None), ratd0.optional(None))
-        graph.link(lptd1.optional(None), ratd1.optional(None))
+        graph.link(lptd0.optional(None), ratd0.optional(None))  # type: ignore[operator]
+        graph.link(lptd1.optional(None), ratd1.optional(None))  # type: ignore[operator]
 
     ratd0.set_partition(0)
     ratd1.set_partition(1)
@@ -246,14 +246,14 @@ def FlattenTest() -> bool:
         lptd1 = LibraryPortTestDevice('1')
 
         # complete the rings
-        graph.link(ratd0.input, ratd0.output)
-        graph.link(ratd1.input, ratd1.output)
+        graph.link(ratd0.input, ratd0.output)  # type: ignore[arg-type]
+        graph.link(ratd1.input, ratd1.output)  # type: ignore[arg-type]
 
-        graph.link(lptd0.input, lptd1.output)
-        graph.link(lptd1.input, lptd0.output)
+        graph.link(lptd0.input, lptd1.output)  # type: ignore[arg-type]
+        graph.link(lptd1.input, lptd0.output)  # type: ignore[arg-type]
         for i in range(2 ** (levels+1)):
-            graph.link(lptd0.optional(None), ratd0.optional(None))
-            graph.link(lptd1.optional(None), ratd1.optional(None))
+            graph.link(lptd0.optional(None), ratd0.optional(None))  # type: ignore[operator]
+            graph.link(lptd1.optional(None), ratd1.optional(None))  # type: ignore[operator]
 
         ratd0.set_partition(0)
         ratd1.set_partition(1)

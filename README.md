@@ -1,6 +1,8 @@
 # AHPGraph - Python Attributed Hierarchical Port Graph
 AHP Graphs - https://arxiv.org/pdf/1802.06492.pdf
 
+!!! Requires Python3.7 at a minimum !!!
+
 In order to use AHPGraph you will need to add to the python path so
 that the files can be located
 

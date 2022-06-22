@@ -242,14 +242,14 @@ class Processor(Device):
         # Linking automatically adds the devices as needed
         graph.link(dcache.port('port'), cpu_to_L1D.port('port'), '1ns')
         graph.link(icache.port('port'), cpu_to_L1I.port('port'), '1ns')
-        graph.link(nodeOSmem.port('port'), nodeOSL1D.high_network(0), '1ns')
-        graph.link(L1D_to_L2.port('port'), bus.high_network(0), '1ns')
-        graph.link(L1I_to_L2.port('port'), bus.high_network(1), '1ns')
-        graph.link(nodeOSL1D.low_network(0), bus.high_network(2), '1ns')
-        graph.link(cpu.os_link, nodeOS.core(0), '5ns')
+        graph.link(nodeOSmem.port('port'), nodeOSL1D.high_network(0), '1ns')  # type: ignore[operator]
+        graph.link(L1D_to_L2.port('port'), bus.high_network(0), '1ns')  # type: ignore[operator]
+        graph.link(L1I_to_L2.port('port'), bus.high_network(1), '1ns')  # type: ignore[operator]
+        graph.link(nodeOSL1D.low_network(0), bus.high_network(2), '1ns')  # type: ignore[operator]
+        graph.link(cpu.os_link, nodeOS.core(0), '5ns')  # type: ignore[arg-type, operator]
 
         # Our external connection goes through the memHierarchy Bus
         # Generally you don't want to put latency on the links to assembly
         # ports (ex: self.port) and allow whatever uses the assembly to
         # specify latency for the connection (it will get ignored anyway)
-        graph.link(bus.low_network(0), self.low_network(0))
+        graph.link(bus.low_network(0), self.low_network(0))  # type: ignore[operator]

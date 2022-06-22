@@ -29,22 +29,13 @@ done
 
 for file in "${UnitTestFiles[@]}"; do
     echo -e "$file"
-    mypy $file \
-        # --disable-error-code arg-type \
-        # --disable-error-code operator \
-        # --disable-error-code index \
-        # --disable-error-code union-attr
+    mypy $file
     echo
 done
 
 for file in "${ExampleFiles[@]}"; do
     echo -e "$file"
-    mypy $file \
-        # --disable-error-code arg-type \
-        # --disable-error-code operator \
-        # --disable-error-code index \
-        # --disable-error-code union-attr \
-        # --disable-error-code misc
+    mypy $file
     echo
 done
 
