@@ -8,14 +8,13 @@ and then build all the way up to a cluster.
 """
 from AHPGraph import *
 from server import *
-from typing import Union
 
 
 class TorusTopology(Device):
     """Torus Topology."""
 
     library = 'merlin.torus'
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "width": "1x1"
     }
 
@@ -55,14 +54,14 @@ class Rack(Device):
         topology = TorusTopology("TorusTopology",
                                  self.attr['shape'], self.attr['nodes'])
         router.add_submodule(topology, "topology")
-        router.set_partition(self.partition[0], 0)  # type: ignore[index]
+        router.set_partition(self.partition[0], 0)
 
         # make all the torus ports available outside the rack
         for i in range(4):
             # Generally you don't want to put latency on the links to assembly
             # ports (ex: self.port) and allow whatever uses the assembly to
             # specify latency for the connection (it will get ignored anyway)
-            graph.link(router.port('port', i), self.network(i))  # type: ignore[operator]
+            graph.link(router.port('port', i), self.network(i))
 
         # connect the servers to the router
         for node in range(self.attr['nodes']):
@@ -70,8 +69,8 @@ class Rack(Device):
                             (self.attr['rack'] * self.attr['nodes']) + node,
                             self.attr['racks'], self.attr['nodes'],
                             self.attr['cores'])
-            server.set_partition(self.partition[0], node+1)  # type: ignore[index]
-            graph.link(router.port('port', None), server.network, '10ns')  # type: ignore[arg-type]
+            server.set_partition(self.partition[0], node+1)
+            graph.link(router.port('port', None), server.network, '10ns')
 
 
 def Cluster(shape: str = '2x2', nodes: int = 1,
@@ -92,11 +91,11 @@ def Cluster(shape: str = '2x2', nodes: int = 1,
     # order is 0: north, 1: east, 2: south, 3: west
     for x in range(dimX):
         for y in range(dimY):
-            graph.link(racks[f"{x}x{y}"].network(1),  # type: ignore[operator]
-                       racks[f"{(x+1) % dimX}x{y}"].network(3), '10ns')  # type: ignore[operator]
+            graph.link(racks[f"{x}x{y}"].network(1),
+                       racks[f"{(x+1) % dimX}x{y}"].network(3), '10ns')
 
-            graph.link(racks[f"{x}x{y}"].network(0),  # type: ignore[operator]
-                       racks[f"{x}x{(y+1) % dimY}"].network(2), '10ns')  # type: ignore[operator]
+            graph.link(racks[f"{x}x{y}"].network(0),
+                       racks[f"{x}x{(y+1) % dimY}"].network(2), '10ns')
 
     return graph
 
@@ -108,7 +107,7 @@ if __name__ == "__main__":
     """
     import argparse
     try:
-        import sst  # type: ignore[import]
+        import sst
         SST = True
     except ImportError:
         SST = False

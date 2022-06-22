@@ -63,25 +63,25 @@ class RecursiveAssemblyTestDevice(Device):
         """Test for expanding a Device."""
         # If we have reached the specified number of levels, create 'leafs'
         # using LibraryPortTestDevice
-        level: int = 0
+        level = 0
         if self.model is not None:
             level = int(self.model)
         if level == 0:
-            d0: Device = LibraryPortTestDevice('0')
-            d1: Device = LibraryPortTestDevice('1')
-            graph.link(d0.optional(0), self.optional(0))  # type: ignore[operator]
-            graph.link(d1.optional(0), self.optional(1))  # type: ignore[operator]
+            d0 = LibraryPortTestDevice('0')
+            d1 = LibraryPortTestDevice('1')
+            graph.link(d0.optional(0), self.optional(0))
+            graph.link(d1.optional(0), self.optional(1))
 
         else:
             d0 = RecursiveAssemblyTestDevice(level-1, '0')
             d1 = RecursiveAssemblyTestDevice(level-1, '1')
             for i in range(2 ** level):
-                graph.link(d0.optional(i), self.optional(i*2))  # type: ignore[operator]
-                graph.link(d1.optional(i), self.optional(i*2 + 1))  # type: ignore[operator]
+                graph.link(d0.optional(i), self.optional(i*2))
+                graph.link(d1.optional(i), self.optional(i*2 + 1))
 
-        graph.link(self.input, d0.input)  # type: ignore[arg-type]
-        graph.link(d0.output, d1.input)  # type: ignore[arg-type]
-        graph.link(d1.output, self.output)  # type: ignore[arg-type]
+        graph.link(self.input, d0.input)
+        graph.link(d0.output, d1.input)
+        graph.link(d1.output, self.output)
 
 
 class ModelTestDevice(Device):
@@ -100,6 +100,6 @@ class AttributeTestDevice(Device):
     library = 'ElementLibrary.Component'
     attr = {'a1': 1, 'a2': 'blue', 'a3': False}
 
-    def __init__(self, attr: dict[str, Any], name: str = '') -> None:
+    def __init__(self, attr: dict, name: str = '') -> None:
         """Test Device with attributes."""
         super().__init__(f'{self.__class__.__name__}{name}', attr=attr)

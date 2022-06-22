@@ -14,7 +14,7 @@ class VanadisCPU(Device):
     library = 'vanadis.dbg_VanadisCPU'
     portinfo = PortInfo()
     portinfo.add('os_link', 'os')
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "clock": "1GHz",
         "verbose": 0,
         "physical_fp_registers": 168,
@@ -38,7 +38,7 @@ class VanadisMIPSDecoder(Device):
     """VanadisMIPSDecoder."""
 
     library = 'vanadis.VanadisMIPSDecoder'
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "uop_cache_entries": 1536,
         "predecode_cache_entries": 4
     }
@@ -48,7 +48,7 @@ class VanadisMIPSOSHandler(Device):
     """VanadisMIPSOSHandler."""
 
     library = 'vanadis.VanadisMIPSOSHandler'
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "verbose": 0,
         "brk_zero_memory": "yes"
     }
@@ -58,7 +58,7 @@ class VanadisBasicBranchUnit(Device):
     """VanadisBasicBranchUnit."""
 
     library = 'vanadis.VanadisBasicBranchUnit'
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "branch_entries": 32
     }
 
@@ -67,7 +67,7 @@ class VanadisSequentialLoadStoreQueue(Device):
     """VanadisSequentialLoadStoreQueue."""
 
     library = 'vanadis.VanadisSequentialLoadStoreQueue'
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "verbose": 0,
         "address_mask": 0xFFFFFFFF,
         "load_store_entries": 32,
@@ -83,7 +83,7 @@ class VanadisNodeOS(Device):
     library = 'vanadis.VanadisNodeOS'
     portinfo = PortInfo()
     portinfo.add('core', 'os', limit=None, format='#')
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "verbose": 0,
         "heap_start": 512 * 1024 * 1024,
         "heap_end": (2 * 1024 * 1024 * 1024) - 4096,
@@ -129,7 +129,7 @@ class Cache(Device):
     portinfo = PortInfo()
     portinfo.add('high_network', 'simpleMem', None, False, '_#')
     portinfo.add('low_network', 'simpleMem', None, False, '_#')
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "replacement_policy": "lru",
         "coherence_protocol": "MESI",
         "cache_line_size": 64,
@@ -167,7 +167,7 @@ class Bus(Device):
     portinfo = PortInfo()
     portinfo.add('high_network', 'simpleMem', None, False, '_#')
     portinfo.add('low_network', 'simpleMem', None, False, '_#')
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "bus_frequency": "1GHz",
     }
 
@@ -242,14 +242,14 @@ class Processor(Device):
         # Linking automatically adds the devices as needed
         graph.link(dcache.port('port'), cpu_to_L1D.port('port'), '1ns')
         graph.link(icache.port('port'), cpu_to_L1I.port('port'), '1ns')
-        graph.link(nodeOSmem.port('port'), nodeOSL1D.high_network(0), '1ns')  # type: ignore[operator]
-        graph.link(L1D_to_L2.port('port'), bus.high_network(0), '1ns')  # type: ignore[operator]
-        graph.link(L1I_to_L2.port('port'), bus.high_network(1), '1ns')  # type: ignore[operator]
-        graph.link(nodeOSL1D.low_network(0), bus.high_network(2), '1ns')  # type: ignore[operator]
-        graph.link(cpu.os_link, nodeOS.core(0), '5ns')  # type: ignore[arg-type, operator]
+        graph.link(nodeOSmem.port('port'), nodeOSL1D.high_network(0), '1ns')
+        graph.link(L1D_to_L2.port('port'), bus.high_network(0), '1ns')
+        graph.link(L1I_to_L2.port('port'), bus.high_network(1), '1ns')
+        graph.link(nodeOSL1D.low_network(0), bus.high_network(2), '1ns')
+        graph.link(cpu.os_link, nodeOS.core(0), '5ns')
 
         # Our external connection goes through the memHierarchy Bus
         # Generally you don't want to put latency on the links to assembly
         # ports (ex: self.port) and allow whatever uses the assembly to
         # specify latency for the connection (it will get ignored anyway)
-        graph.link(bus.low_network(0), self.low_network(0))  # type: ignore[operator]
+        graph.link(bus.low_network(0), self.low_network(0))

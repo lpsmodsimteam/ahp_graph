@@ -1,7 +1,7 @@
 """Simple example of two SST components playing pingpong with messages."""
 
 from AHPGraph import *
-from AHPGraph.examples.pingpong.architecture import architecture  # type: ignore[import]
+from AHPGraph.examples.pingpong.architecture import architecture
 
 
 if __name__ == "__main__":
@@ -11,7 +11,7 @@ if __name__ == "__main__":
     """
     import argparse
     try:
-        import sst  # type: ignore[import]
+        import sst
         SST = True
     except ImportError:
         SST = False

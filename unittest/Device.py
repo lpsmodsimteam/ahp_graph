@@ -33,9 +33,9 @@ def PortTest() -> bool:
     t.test(ptd.portinfo['format'][3] == '(#)', 'format')
 
     t.test(ptd.default == ptd.port('default'), '__getattr__')
-    t.test(ptd.default.device == ptd, 'device')  # type: ignore[union-attr]
-    t.test(ptd.default.name == 'default', 'name')  # type: ignore[union-attr]
-    t.test(ptd.default.number is None, 'No port number')  # type: ignore[union-attr]
+    t.test(ptd.default.device == ptd, 'device')
+    t.test(ptd.default.name == 'default', 'name')
+    t.test(ptd.default.number is None, 'No port number')
     notDefinedTest = None
     try:
         ptd.portNotDefined
@@ -47,8 +47,8 @@ def PortTest() -> bool:
     noLimitTest = None
     try:
         for i in range(1000):
-            ptd.no_limit(None)  # type: ignore[operator]
-        ptd.no_limit(3004823048)  # type: ignore[operator]
+            ptd.no_limit(None)
+        ptd.no_limit(3004823048)
         noLimitTest = True
     except RuntimeError:
         noLimitTest = False
@@ -56,13 +56,13 @@ def PortTest() -> bool:
 
     limitTest = None
     try:
-        ptd.limit(2)  # type: ignore[operator]
+        ptd.limit(2)
         limitTest = False
     except RuntimeError:
         limitTest = True
     t.test(limitTest, 'limit instantiation')
 
-    t.test(ptd.format(0).get_name() == 'format(0)', 'format incorrect')  # type: ignore[operator]
+    t.test(ptd.format(0).get_name() == 'format(0)', 'format incorrect')
     t.test(ptd.port('port').name == 'port', 'port named port')
 
     return t.finish()
@@ -126,11 +126,11 @@ def PartitionTest() -> bool:
 
     ratd = RecursiveAssemblyTestDevice(0)
     ratd.set_partition(1)
-    t.test(ratd.partition[0] == 1, 'rank')  # type: ignore[index]
-    t.test(ratd.partition[1] is None, 'thread None')  # type: ignore[index]
+    t.test(ratd.partition[0] == 1, 'rank')
+    t.test(ratd.partition[1] is None, 'thread None')
     ratd.set_partition(2, 3)
-    t.test(ratd.partition[0] == 2, 'rank')  # type: ignore[index]
-    t.test(ratd.partition[1] == 3, 'thread')  # type: ignore[index]
+    t.test(ratd.partition[0] == 2, 'rank')
+    t.test(ratd.partition[1] == 3, 'thread')
 
     return t.finish()
 

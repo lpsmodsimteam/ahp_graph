@@ -1,6 +1,5 @@
 """This module extends a DeviceGraph to enables SST Simulation output."""
 
-from typing import Optional, Any
 import os
 import orjson
 from .DeviceGraph import *
@@ -16,12 +15,12 @@ class SSTGraph(DeviceGraph):
 
     def __init__(self, graph: DeviceGraph) -> None:
         """Point at the DeviceGraph variables."""
-        self.expanding: Optional[Device] = None
-        self.attr: dict[str, Any] = graph.attr
-        self.devices: set[Device] = graph.devices
-        self.names: set[str] = graph.names
-        self.links: dict[frozenset[DevicePort], str] = graph.links
-        self.ports: set[DevicePort] = graph.ports
+        self.expanding = None
+        self.attr = graph.attr
+        self.devices = graph.devices
+        self.names = graph.names
+        self.links = graph.links
+        self.ports = graph.ports
 
     def build(self, nranks: int = 1) -> dict:
         """
@@ -34,7 +33,7 @@ class SSTGraph(DeviceGraph):
         setting nranks in this function to the total number of ranks used
         """
         # only import sst when we are going to build the graph
-        import sst  # type: ignore[import]
+        import sst
 
         # If this is serial or sst is doing the partitioning,
         # generate the entire graph
@@ -61,7 +60,7 @@ class SSTGraph(DeviceGraph):
             return self.__build_model(True)
 
     def write_json(self, filename: str, nranks: int = 1,
-                   program_options: dict[str, Any] = None) -> None:
+                   program_options: dict = None) -> None:
         """
         Generate the JSON and write it to the specified filename.
 
@@ -97,9 +96,7 @@ class SSTGraph(DeviceGraph):
                                    partition[rank][0], partition[rank][1],
                                    program_options)
 
-    pType = list[tuple[set[Device], dict[frozenset, str]]]
-
-    def __partition_graph(self, nranks: int) -> pType:
+    def __partition_graph(self, nranks: int) -> list:
         """
         Store all the devices and links for a given rank.
 
@@ -108,7 +105,7 @@ class SSTGraph(DeviceGraph):
         It is faster to partition the graph once rather than search it
         O(p) times.
         """
-        partition: SSTGraph.pType = [(set(), dict()) for p in range(nranks)]
+        partition = [(set(), dict()) for p in range(nranks)]
 
         for p0, p1 in self.links:
             link = frozenset({p0, p1})
@@ -119,8 +116,8 @@ class SSTGraph(DeviceGraph):
                 d0 = d0.subOwner
             while d1.subOwner is not None:
                 d1 = d1.subOwner
-            r0 = d0.partition[0]  # type: ignore[index]
-            r1 = d1.partition[0]  # type: ignore[index]
+            r0 = d0.partition[0]
+            r1 = d1.partition[0]
 
             partition[r0][0].add(d0)
             partition[r0][0].add(d1)
@@ -132,8 +129,8 @@ class SSTGraph(DeviceGraph):
         return partition
 
     @staticmethod
-    def __encode(attr: dict[str, Any],
-                 stringify: bool = False) -> dict[str, Any]:
+    def __encode(attr: dict,
+                 stringify: bool = False) -> dict:
         """
         Convert attributes into SST Params.
 
@@ -143,11 +140,11 @@ class SSTGraph(DeviceGraph):
         Ignore bad conversions.
         """
 
-        def supported_f(x: Any) -> bool:
+        def supported_f(x) -> bool:
             """Return whether the type is supported by SST."""
             return isinstance(x, (bool, float, int, str))
 
-        params: dict[str, Any] = dict()
+        params = dict()
         for (key, val) in attr.items():
             native = supported_f(val)
             if not native and isinstance(val, list):
@@ -169,12 +166,11 @@ class SSTGraph(DeviceGraph):
 
         return params
 
-    def __build_model(self, self_partition: bool
-                      ) -> dict[str, 'sst.Component']:  # type: ignore[name-defined]
+    def __build_model(self, self_partition: bool) -> dict:
         """Generate the model for the SST program."""
         # only import sst when we are going to build the graph inside of sst
         import sst
-        n2c: dict[str, 'sst.Component'] = dict()
+        n2c = dict()
 
         # Set up global parameters.
         global_params = self.__encode(self.attr)
@@ -207,9 +203,9 @@ class SSTGraph(DeviceGraph):
                     {'type': d0.type, 'model': d0.model} | d0.attr))
                 # Set the component partition if we are self-partitioning
                 if self_partition:
-                    thread = (0 if d0.partition[1] is None  # type: ignore[index]
-                              else d0.partition[1])  # type: ignore[index]
-                    c0.setRank(d0.partition[0], thread)  # type: ignore[index]
+                    thread = (0 if d0.partition[1] is None
+                              else d0.partition[1])
+                    c0.setRank(d0.partition[0], thread)
                 n2c[d0.name] = c0
                 for key in global_params:
                     c0.addGlobalParamSet(key)
@@ -233,11 +229,11 @@ class SSTGraph(DeviceGraph):
         # Return a map of component names to components.
         return n2c
 
-    def __write_model(self, filename: str, nranks: int, devices: set[Device],
-                      links: dict[frozenset[DevicePort], str],
-                      program_options: dict[str, Any] = None) -> None:
+    def __write_model(self, filename: str, nranks: int, devices: set,
+                      links: dict,
+                      program_options: dict = None) -> None:
         """Write this DeviceGraph out as JSON."""
-        model: dict[str, Any] = dict()
+        model = dict()
 
         # Write the program options to the model.
         if program_options is None:
@@ -256,7 +252,7 @@ class SSTGraph(DeviceGraph):
             model["global_params"][key] = dict({key: val})
         global_set = list(global_params.keys())
 
-        def recurseSubcomponents(dev: Device) -> list[Any]:
+        def recurseSubcomponents(dev: Device) -> list:
             """Add subcomponents to the Device."""
             subcomponents = list()
             for (d1, n1, s1) in dev.subs:
@@ -292,9 +288,9 @@ class SSTGraph(DeviceGraph):
                 }
                 if nranks > 1:
                     component["partition"] = {
-                        "rank": d0.partition[0],  # type: ignore[index]
-                        "thread": (0 if d0.partition[1] is None  # type: ignore[index]
-                                   else d0.partition[1]),  # type: ignore[index]
+                        "rank": d0.partition[0],
+                        "thread": (0 if d0.partition[1] is None
+                                   else d0.partition[1]),
                     }
 
                 subcomponents = recurseSubcomponents(d0)

@@ -5,7 +5,6 @@ Constructed from Processors and main memory using a NoC.
 """
 from AHPGraph import *
 from processor import *
-from typing import Union
 
 
 class MemNIC(Device):
@@ -14,7 +13,7 @@ class MemNIC(Device):
     library = 'memHierarchy.MemNIC'
     portinfo = PortInfo()
     portinfo.add('port', 'simpleNet')
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "network_bw": "25GB/s"
     }
 
@@ -54,7 +53,7 @@ class Router(Device):
     def __init__(self, name: str, model: str, id: int = 0, ports: int = 1,
                  attr: dict = None) -> None:
         """Initialize with a model for a NoC or Interconnect."""
-        parameters: dict[str, Union[str, int]] = {
+        parameters = {
             "id": id,
             "num_ports": ports
         }
@@ -98,7 +97,7 @@ class DirectoryController(Device):
     library = 'memHierarchy.DirectoryController'
     portinfo = PortInfo()
     portinfo.add('direct_link', 'simpleMem', required=False)
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "coherence_protocol": "MESI",
         "entry_cache_size": 1024,
         "addr_range_start": 0x0,
@@ -112,7 +111,7 @@ class MemController(Device):
     library = 'memHierarchy.MemController'
     portinfo = PortInfo()
     portinfo.add('direct_link', 'simpleMem', required=False)
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "clock": "1GHz",
         "backend.mem_size": "4GiB",
         "backing": "malloc",
@@ -125,7 +124,7 @@ class simpleMem(Device):
     """simpleMem."""
 
     library = 'memHierarchy.simpleMem'
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "mem_size": "2GiB",
         "access_time": "1 ns"
     }
@@ -137,7 +136,7 @@ class RDMA_NIC(Device):
     library = 'rdmaNic.nic'
     portinfo = PortInfo()
     portinfo.add('port', 'simpleNet', None, False, '#')
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "clock": "8GHz",
         "maxPendingCmds": 128,
         "maxMemReqs": 256,
@@ -167,7 +166,7 @@ class LinkControl(Device):
     library = 'merlin.linkcontrol'
     portinfo = PortInfo()
     portinfo.add('rtr_port', 'simpleNet')
-    attr: dict[str, Union[str, int]] = {
+    attr = {
         "link_bw": "16GB/s",
         "input_buf_size": "14KB",
         "output_buf_size": "14KB"
@@ -209,7 +208,7 @@ class Server(Device):
             L2.add_submodule(L1_to_L2, 'cpulink')
             L2.add_submodule(L2_to_mem, 'memlink')
 
-            graph.link(cpu.low_network(0), L1_to_L2.port('port'), '1ns')  # type: ignore[operator]
+            graph.link(cpu.low_network(0), L1_to_L2.port('port'), '1ns')
             graph.link(L2_to_mem.port('port'), NoC.port('port', core), '1ns')
 
         # Setup the main memory with controllers
@@ -244,4 +243,4 @@ class Server(Device):
         # Generally you don't want to put latency on the links to assembly
         # ports (ex: self.port) and allow whatever uses the assembly to
         # specify latency for the connection (it will get ignored anyway)
-        graph.link(netLink.port('rtr_port'), self.network)  # type: ignore[arg-type]
+        graph.link(netLink.port('rtr_port'), self.network)
