@@ -143,7 +143,7 @@ class DeviceGraph:
         for (dev, _, _) in device.subs:
             self.add(dev, True)
 
-    def count_devices(self) -> dict[str, int]:
+    def count_devices(self) -> dict:
         """
         Count the Devices in a graph.
 
