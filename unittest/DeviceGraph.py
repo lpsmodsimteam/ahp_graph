@@ -236,7 +236,7 @@ def FlattenTest() -> bool:
     t = test('FlattenTest')
     levels = 6
 
-    def createGraph() -> tuple[DeviceGraph, Device]:
+    def createGraph() -> tuple:
         """Create a graph for testing."""
         graph = DeviceGraph()
 
