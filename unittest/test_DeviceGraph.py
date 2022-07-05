@@ -1,24 +1,18 @@
 """Collection of Unit tests for AHPGraph DeviceGraph."""
 
 from AHPGraph import *
-from test import *
 from Devices import *
 
 
-def AttributeTest() -> bool:
+def test_attribute():
     """Test of DeviceGraph with attributes."""
-    t = test('AttributeTest')
-
     attr = {'a1': 1, 'a2': 'blue', 'a3': False}
     graph = DeviceGraph(attr)
-    t.test(graph.attr == attr, 'attr')
-
-    return t.finish()
+    assert graph.attr == attr, 'attr'
 
 
-def AddDeviceTest() -> bool:
+def test_addDevice():
     """Test of adding Devices to a DeviceGraph."""
-    t = test('AddDeviceTest')
     graph = DeviceGraph()
 
     ltd = LibraryTestDevice('ltd')
@@ -30,16 +24,16 @@ def AddDeviceTest() -> bool:
     ltd.add_submodule(sub2, 'slot', 2)
     graph.add(ltd)
 
-    t.test(len(graph.devices) == 4, 'num devices')
-    t.test(ltd in graph.devices, 'get device')
-    t.test(sub1 in graph.devices, 'get device')
-    t.test(sub2 in graph.devices, 'get device')
-    t.test(sub11 in graph.devices, 'get device')
+    assert len(graph.devices) == 4, 'num devices'
+    assert ltd in graph.devices, 'get device'
+    assert sub1 in graph.devices, 'get device'
+    assert sub2 in graph.devices, 'get device'
+    assert sub11 in graph.devices, 'get device'
 
     ltd = LibraryTestDevice()
     graph.add(ltd)
     graph.add(ltd)
-    t.test(len(graph.devices) == 5, 'duplicate add')
+    assert len(graph.devices) == 5, 'duplicate add'
 
     sameName = None
     try:
@@ -47,14 +41,11 @@ def AddDeviceTest() -> bool:
         sameName = False
     except RuntimeError:
         sameName = True
-    t.test(sameName, 'same name')
-
-    return t.finish()
+    assert sameName, 'same name'
 
 
-def CountDevicesTest() -> bool:
+def test_countDevices():
     """Test of counting Devices in a DeviceGraph."""
-    t = test('CountDevicesTest')
     graph = DeviceGraph()
 
     devs = dict()
@@ -64,18 +55,15 @@ def CountDevicesTest() -> bool:
                                                   f'mtd{i}.{j}')
             graph.add(devs[f'mtd{i}.{j}'])
 
-    t.test(len(graph.devices) == 30, 'num devices')
-    t.test(devs['mtd0.0'] in graph.devices, 'get device')
+    assert len(graph.devices) == 30, 'num devices'
+    assert devs['mtd0.0'] in graph.devices, 'get device'
     c = graph.count_devices()
-    t.test(len(c) == 10, 'device count length')
-    t.test(c[devs['mtd0.0'].get_category()] == 3, 'device count length')
-
-    return t.finish()
+    assert len(c) == 10, 'device count length'
+    assert c[devs['mtd0.0'].get_category()] == 3, 'device count length'
 
 
-def CheckPartitionTest() -> bool:
+def test_checkPartition():
     """Test of checking partition info in a DeviceGraph."""
-    t = test('CheckPartitionTest')
     graph = DeviceGraph()
 
     devs = dict()
@@ -92,7 +80,7 @@ def CheckPartitionTest() -> bool:
         partitionIncluded = True
     except RuntimeError:
         partitionIncluded = False
-    t.test(partitionIncluded, 'correct partitioning')
+    assert partitionIncluded, 'correct partitioning'
 
     graph.add(LibraryTestDevice())
     partitionIncluded = None
@@ -101,14 +89,11 @@ def CheckPartitionTest() -> bool:
         partitionIncluded = False
     except RuntimeError:
         partitionIncluded = True
-    t.test(partitionIncluded, 'missing partitioning')
-
-    return t.finish()
+    assert partitionIncluded, 'missing partitioning'
 
 
-def LinkTest() -> bool:
+def test_link():
     """Test of linking Devices in a DeviceGraph."""
-    t = test('LinkTest')
     graph = DeviceGraph()
 
     ptd0 = PortTestDevice('0')
@@ -118,48 +103,43 @@ def LinkTest() -> bool:
     ltd.add_submodule(lptd, 'slot')
 
     graph.link(lptd.input, ptd0.optional)  # type: ignore[arg-type]
-    t.test(len(graph.devices) == 3, 'linking add submodule parent')
-    t.test(ltd in graph.devices, 'submodule parent included')
-    t.test(graph.links[frozenset({lptd.input, ptd0.optional})] == '0s',  # type: ignore[arg-type]
-           'default latency')
+    assert len(graph.devices) == 3, 'linking add submodule parent'
+    assert ltd in graph.devices, 'submodule parent included'
+    assert graph.links[frozenset({lptd.input, ptd0.optional})] == '0s', 'default latency'  # type: ignore[arg-type]
     linkAgain = None
     try:
         graph.link(ptd0.optional, lptd.input)  # type: ignore[arg-type]
         linkAgain = False
     except RuntimeError:
         linkAgain = True
-    t.test(linkAgain, 'link again with ports reversed')
+    assert linkAgain, 'link again with ports reversed'
     callablePort = None
     try:
         graph.link(ptd0.limit, ptd1.no_limit)  # type: ignore[arg-type]
         callablePort = False
     except RuntimeError:
         callablePort = True
-    t.test(callablePort, 'forgot to include port num on multi port')
+    assert callablePort, 'forgot to include port num on multi port'
     typeMismatch = None
     try:
         graph.link(ptd0.default, ptd1.ptype)  # type: ignore[arg-type]
         typeMismatch = False
     except RuntimeError:
         typeMismatch = True
-    t.test(typeMismatch, 'port type mismatch')
+    assert typeMismatch, 'port type mismatch'
     changeSinglePortLink = None
     try:
         graph.link(ptd0.optional, ptd1.optional)  # type: ignore[arg-type]
         changeSinglePortLink = False
     except RuntimeError:
         changeSinglePortLink = True
-    t.test(changeSinglePortLink, 'linking from a single port again')
+    assert changeSinglePortLink, 'linking from a single port again'
     graph.link(ptd0.limit(0), ptd1.limit(0), '123ns')  # type: ignore[operator]
-    t.test(graph.links[frozenset({ptd0.limit(0), ptd1.limit(0)})] == '123ns',  # type: ignore[operator]
-           'latency')
-
-    return t.finish()
+    assert graph.links[frozenset({ptd0.limit(0), ptd1.limit(0)})] == '123ns', 'latency'  # type: ignore[operator]
 
 
-def VerifyLinksTest() -> bool:
+def test_verifyLinks():
     """Test of verifying links in a DeviceGraph."""
-    t = test('VerifyLinksTest')
     graph = DeviceGraph()
 
     ptd0 = PortTestDevice('0')
@@ -180,7 +160,7 @@ def VerifyLinksTest() -> bool:
         verified = False
     except RuntimeError:
         verified = True
-    t.test(verified, 'not all required ports connected')
+    assert verified, 'not all required ports connected'
 
     graph.link(ptd0.format(0), ptd1.format(0))  # type: ignore[operator]
     verified = None
@@ -189,14 +169,11 @@ def VerifyLinksTest() -> bool:
         verified = True
     except RuntimeError:
         verified = False
-    t.test(verified, 'verified all required ports have at least 1 connection')
-
-    return t.finish()
+    assert verified, 'verified all required ports have at least 1 connection'
 
 
-def FollowLinksTest() -> bool:
+def test_followLinks():
     """Test of following links by rank in a DeviceGraph."""
-    t = test('FollowLinksTest')
     graph = DeviceGraph()
     levels = 2
 
@@ -223,17 +200,13 @@ def FollowLinksTest() -> bool:
     graph.follow_links(0)
     for dev in graph.devices:
         if dev.library is None:
-            t.test(dev.name == f'RecursiveAssemblyTestDevice{levels}1',
-                   'only one assembly left')
+            assert dev.name == f'RecursiveAssemblyTestDevice{levels}1', 'only one assembly left'
         else:
-            t.test(dev.library is not None, 'library set')
-
-    return t.finish()
+            assert dev.library is not None, 'library set'
 
 
-def FlattenTest() -> bool:
+def test_flatten():
     """Test of flattening a DeviceGraph."""
-    t = test('FlattenTest')
     levels = 6
 
     def createGraph() -> tuple[DeviceGraph, Device]:
@@ -263,19 +236,17 @@ def FlattenTest() -> bool:
 
     flat, _ = createGraph()
     flat.flatten()
-    t.test(not any([d.library is None for d in flat.devices]),
-           'no assemblies left')
+    assert not any([d.library is None for d in flat.devices]), 'no assemblies left'
 
     twoLevels, _ = createGraph()
     twoLevels.flatten(2)
-    t.test([d.library is None for d in twoLevels.devices].count(True) == 8,
-           'correct number of assemblies left')
+    assert [d.library is None for d in twoLevels.devices].count(True) == 8, 'correct number of assemblies left'
 
     byName, _ = createGraph()
     byName.flatten(name=f'RecursiveAssemblyTestDevice{levels}0')
     rank0, _ = createGraph()
     rank0.flatten(rank=0)
-    t.test(byName.names == rank0.names, 'name and rank devices')
+    assert byName.names == rank0.names, 'name and rank devices'
 
     byNameLinks = set()
     rankLinks = set()
@@ -285,32 +256,9 @@ def FlattenTest() -> bool:
     for link in rank0.links:
         for port in link:
             rankLinks.add(str(port))
-    t.test(byNameLinks == rankLinks, 'name and rank links')
+    assert byNameLinks == rankLinks, 'name and rank links'
 
     expand, ratd0 = createGraph()
     expand.flatten(expand={ratd0})
     assemblies = [d.library is None for d in expand.devices]
-    t.test(assemblies.count(True) == 3, 'correct number of assemblies left')
-
-    return t.finish()
-
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(
-        description='AHPGraph DeviceGraph unittests')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='show detailed output')
-    args = parser.parse_args()
-    test.verbose = args.verbose
-
-    results = [AttributeTest(),
-               AddDeviceTest(),
-               CountDevicesTest(),
-               CheckPartitionTest(),
-               LinkTest(),
-               VerifyLinksTest(),
-               FollowLinksTest(),
-               FlattenTest()]
-
-    exit(1 if True in results else 0)
+    assert assemblies.count(True) == 3, 'correct number of assemblies left'
