@@ -1,4 +1,4 @@
-"""This module extends a DeviceGraph to enables SST Simulation output."""
+"""This module extends a DeviceGraph to enable SST Simulation output."""
 
 from typing import Optional, Any
 import os
@@ -66,7 +66,6 @@ class SSTGraph(DeviceGraph):
         Generate the JSON and write it to the specified filename.
 
         All output will be stored in a folder called output
-
         The program_options dictionary provides a way to pass SST
         program options, such as timebase and stopAtCycle.
 

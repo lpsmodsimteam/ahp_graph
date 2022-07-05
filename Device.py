@@ -17,7 +17,15 @@ portInfoType = tuple[Optional[int], Optional[str], bool, str]
 
 
 class PortInfo(dict[str, portInfoType]):
-    """Represents port definitions and limitations."""
+    """
+    PortInfo is a dictionary describing what ports a Device can have.
+
+    PortInfo contains information such as port type, limit on the number of
+    connections, whether the port is required, and formatting info.
+    PortInfo is a class variable which defines the available ports for all
+    instances of a specific Device. DevicePort represents an actual instance of
+    a port on a Device.
+    """
 
     def add(self, name: str, ptype: str = None, limit: Optional[int] = 1,
             required: bool = True, format: str = '.#') -> None:
@@ -27,10 +35,11 @@ class PortInfo(dict[str, portInfoType]):
 
 class DevicePort:
     """
-    A DevicePort represents a port on a Device.
+    A DevicePort represents an instance of a port on a Device.
 
     DevicePort contains a Device reference, a port name, and an
     optional port number.
+    It can also reference the other DevicePort that it is linked to.
     """
 
     def __init__(self, device: Device, name: str,
@@ -56,7 +65,7 @@ class DevicePort:
 
 class Device:
     """
-    Device is the base class for a node in the AHP graph.
+    Device is the base class for a node in a DeviceGraph.
 
     A Device may be represented by an model or may be an assembly
     of other Devices. If an assembly, then the Device must define
@@ -67,8 +76,12 @@ class Device:
     is done by creating a Device to represent the submodule and then adding
     it into another Device.
 
-    Note that successive calls to port() will return the same DevicePort
-    object so they can be used in sets and comparisons.
+    The variables library and portinfo are class variables that can be set on
+    the definition of a new Device class. The variable attr is a dictionary of
+    attributes that can be used as both a class variable and an instance
+    variable. Attributes that are common among all instances of a Device can
+    be set in the definition of that Device and instance attributes can be
+    added to the class attributes on specific instances of the Device.
     """
 
     library: ClassVar[Optional[str]] = None
@@ -138,14 +151,14 @@ class Device:
 
     def port(self, port: str, number: int = None) -> DevicePort:
         """
-        Return a Port object representing the port on this Device.
+        Return a DevicePort object representing the port on this Device.
 
         If a Single port, then make sure we do not have a port number.
         If the port has not already been defined, then add it.
 
-        If a Bounded or Multi port, determine the port number.  If
+        If a limited or multi port, determine the port number.  If
         number is None, then create a new port at the end of the current
-        list.  Make sure we do not create too many connections if Bounded.
+        list.  Make sure we do not create too many connections if limited.
         Finally, if the port has not already been defined, then create it.
         """
         info: Optional[portInfoType] = self.portinfo.get(port)

@@ -22,7 +22,7 @@ class Pong(Device):
 
 
 class pingpong(Device):
-    """Assembly of a ping and pong device with connections outside."""
+    """Assembly of a Ping and Pong device with connections outside."""
 
     portinfo = PortInfo()
     portinfo.add('input', 'String')

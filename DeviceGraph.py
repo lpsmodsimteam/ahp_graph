@@ -18,7 +18,7 @@ class DeviceGraph:
     """
     A DeviceGraph is a graph of Devices and their connections to one another.
 
-    The Devices are nodes and the links connect the ports on the nodes.
+    The Devices are nodes and the links connect the DevicePorts on the nodes.
     This implements an AHP (Attributed Hierarchical Port) graph.
     """
 
@@ -50,7 +50,7 @@ class DeviceGraph:
     def link(self, p0: DevicePort, p1: DevicePort,
              latency: str = '0s') -> None:
         """
-        Link two DevicePorts.
+        Link two DevicePorts with latency if provided.
 
         Links are bidirectional and the key is a frozenset of the two
         DevicePorts. Duplicate links (links between the same DevicePorts)
@@ -118,7 +118,7 @@ class DeviceGraph:
         The Device must be a AHPGraph Device. The name must be unique.
         If the Device has submodules, then we add those, as well.
         Do NOT add submodules to a Device after you have added it using
-        this function. Add submodules first, then add the parent.
+        this function, they will not be included in the DeviceGraph.
         """
         if device in self.devices:
             return
@@ -187,9 +187,8 @@ class DeviceGraph:
         """
         Chase links between ranks.
 
-        Given a graph, follow links from the specified rank and expand
-        assemblies until links are fully defined (links touch library
-        Devices on both sides)
+        Follow links from the specified rank and expand assemblies until links
+        are fully defined (links touch library Devices on both sides).
         Optional prune flag will remove unnecessary Devices and links from
         the graph. This will result in a different overall graph but will
         potentially save memory
@@ -232,9 +231,8 @@ class DeviceGraph:
         Recursively flatten the graph by the specified number of levels.
 
         For example, if levels is one, then only one level of the hierarchy
-        will be expanded.  If levels is None, then the graph will be fully
-        expanded.  If levels is zero or no Devices are an assembly, then just
-        return self.
+        will be expanded. If levels is None, then the graph will be fully
+        expanded.
 
         The name parameter lets you flatten the graph only under a specified
         Device. This expansion allows for multilevel expansion of an assembly
@@ -303,7 +301,7 @@ class DeviceGraph:
 
         The hierarchy parameter specifies whether you would like to view the
         graph as a hierarchy of assemblies or if you would like get a flat
-        view of the graph as it is
+        view of the graph as it is.
         hierarchy is True by default, and highly recommended for large graphs
         """
         if not os.path.exists('output'):
@@ -321,7 +319,7 @@ class DeviceGraph:
         Take a DeviceGraph and write dot files for each assembly.
 
         Write a graphviz dot file for each unique assembly (type, model) in the
-        graph
+        graph.
         assembly and types should NOT be specified by the user, they are
         soley used for recursion of this function
         """
