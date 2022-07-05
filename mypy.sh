@@ -2,9 +2,9 @@
 
 export MYPYPATH=$MYPYPATH:$(pwd)/..
 SourceFiles=(
-    'src/Device.py'
-    'src/DeviceGraph.py'
-    'src/SSTGraph.py'
+    'ahp_graph/Device.py'
+    'ahp_graph/DeviceGraph.py'
+    'ahp_graph/SSTGraph.py'
 )
 UnitTestFiles=(
     'unittest/Devices.py'
