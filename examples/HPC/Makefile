@@ -24,7 +24,7 @@ mpi-sst: $(LIB)
 # for the default case, this is 1 node per rack plus an extra thread for the
 # router resulting in 2 threads required.
 mpi-ahpgraph: $(LIB)
-	mpirun -np 4 sst -n2 --parallel-load=SINGLE HPC.py -- --partitioner=ahpgraph
+	mpirun -np 4 sst -n2 --parallel-load=SINGLE HPC.py -- --partitioner=ahp_graph
 
 $(LIB):
 	make -C $(APPS) all

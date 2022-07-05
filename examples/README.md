@@ -1,1 +1,1 @@
-examples of how to use AHPGraph
+examples of how to use ahp_graph

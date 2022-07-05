@@ -1,6 +1,6 @@
-"""Collection of AHPGraph Devices for testing."""
+"""Collection of ahp_graph Devices for testing."""
 
-from AHPGraph import *
+from ahp_graph import *
 
 
 class LibraryTestDevice(Device):

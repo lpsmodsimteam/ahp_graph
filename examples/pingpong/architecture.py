@@ -1,6 +1,6 @@
-"""AHPGraph architecture describing PingPong."""
+"""ahp_graph architecture describing PingPong."""
 
-from AHPGraph import *
+from ahp_graph import *
 
 
 class Ping(Device):

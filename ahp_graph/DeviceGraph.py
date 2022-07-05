@@ -115,7 +115,7 @@ class DeviceGraph:
         """
         Add a Device to the graph.
 
-        The Device must be a AHPGraph Device. The name must be unique.
+        The Device must be a ahp_graph Device. The name must be unique.
         If the Device has submodules, then we add those, as well.
         Do NOT add submodules to a Device after you have added it using
         this function, they will not be included in the DeviceGraph.

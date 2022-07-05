@@ -3,6 +3,7 @@
 from typing import Optional, Any
 import os
 import orjson
+from .Device import *
 from .DeviceGraph import *
 
 
@@ -29,7 +30,7 @@ class SSTGraph(DeviceGraph):
 
         Return a dictionary of component names to SST component objects.
         If you have an extremely large graph, it is recommended that you use
-        AHPGraph to do the graph partitioning instead of letting SST do it. You
+        ahp_graph to do the graph partitioning instead of letting SST do it. You
         can do this by using the Device.set_partition() function and then
         setting nranks in this function to the total number of ranks used
         """
@@ -70,7 +71,7 @@ class SSTGraph(DeviceGraph):
         program options, such as timebase and stopAtCycle.
 
         If you have an extremely large graph, it is recommended that you use
-        AHPGraph to do the graph partitioning instead of letting SST do it. You
+        ahp_graph to do the graph partitioning instead of letting SST do it. You
         can do this by using the Device.set_partition() function and then
         setting nranks in this function to the total number of ranks used
         """

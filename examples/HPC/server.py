@@ -3,8 +3,8 @@ Server assembly.
 
 Constructed from Processors and main memory using a NoC.
 """
-from AHPGraph import *
-from processor import *
+from ahp_graph import *
+from .processor import *
 from typing import Union
 
 

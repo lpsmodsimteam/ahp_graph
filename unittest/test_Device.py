@@ -1,7 +1,7 @@
-"""Collection of Unit tests for AHPGraph Device."""
+"""Collection of Unit tests for ahp_graph Device."""
 
-from AHPGraph import *
-from Devices import *
+from ahp_graph import *
+from .Devices import *
 
 
 def test_library():
