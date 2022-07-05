@@ -1,6 +1,22 @@
 [build-system]
-requires = [
-    "setuptools>=54",
-    "wheel"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ahp_graph"
+version = "0.0.2"
+authors = [
+  { name="lpsmodsim", email="modsim@lps.umd.edu" },
 ]
-build-backend = "setuptools.build_meta"
+description = "Attributed Hierarchical Port Graph"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/lpsmodsim/ahp_graph"
