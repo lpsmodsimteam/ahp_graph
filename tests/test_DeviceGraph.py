@@ -1,17 +1,18 @@
 """Collection of Unit tests for ahp_graph DeviceGraph."""
 
-from ahp_graph import *
-from .Devices import *
+from ahp_graph.Device import *
+from ahp_graph.DeviceGraph import *
+from Devices import *
 
 
-def test_attribute():
+def test_attribute() -> None:
     """Test of DeviceGraph with attributes."""
     attr = {'a1': 1, 'a2': 'blue', 'a3': False}
     graph = DeviceGraph(attr)
     assert graph.attr == attr, 'attr'
 
 
-def test_addDevice():
+def test_addDevice() -> None:
     """Test of adding Devices to a DeviceGraph."""
     graph = DeviceGraph()
 
@@ -44,7 +45,7 @@ def test_addDevice():
     assert sameName, 'same name'
 
 
-def test_countDevices():
+def test_countDevices() -> None:
     """Test of counting Devices in a DeviceGraph."""
     graph = DeviceGraph()
 
@@ -62,7 +63,7 @@ def test_countDevices():
     assert c[devs['mtd0.0'].get_category()] == 3, 'device count length'
 
 
-def test_checkPartition():
+def test_checkPartition() -> None:
     """Test of checking partition info in a DeviceGraph."""
     graph = DeviceGraph()
 
@@ -92,7 +93,7 @@ def test_checkPartition():
     assert partitionIncluded, 'missing partitioning'
 
 
-def test_link():
+def test_link() -> None:
     """Test of linking Devices in a DeviceGraph."""
     graph = DeviceGraph()
 
@@ -138,7 +139,7 @@ def test_link():
     assert graph.links[frozenset({ptd0.limit(0), ptd1.limit(0)})] == '123ns', 'latency'  # type: ignore[operator]
 
 
-def test_verifyLinks():
+def test_verifyLinks() -> None:
     """Test of verifying links in a DeviceGraph."""
     graph = DeviceGraph()
 
@@ -172,7 +173,7 @@ def test_verifyLinks():
     assert verified, 'verified all required ports have at least 1 connection'
 
 
-def test_followLinks():
+def test_followLinks() -> None:
     """Test of following links by rank in a DeviceGraph."""
     graph = DeviceGraph()
     levels = 2
@@ -205,7 +206,7 @@ def test_followLinks():
             assert dev.library is not None, 'library set'
 
 
-def test_flatten():
+def test_flatten() -> None:
     """Test of flattening a DeviceGraph."""
     levels = 6
 

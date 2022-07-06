@@ -6,8 +6,10 @@ out of small components.
 This example utilizes sst-elements to start with a processor and memory
 and then build all the way up to a cluster.
 """
-from ahp_graph import *
-from .server import *
+from ahp_graph.Device import *
+from ahp_graph.DeviceGraph import *
+from ahp_graph.SSTGraph import *
+from server import *
 from typing import Union
 
 

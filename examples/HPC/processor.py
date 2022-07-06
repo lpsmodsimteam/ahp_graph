@@ -4,7 +4,8 @@ Vanadis Processor assembly.
 Constructed from Vanadis components along with various L1 Caches.
 Processor connects via a memHierarchy Bus.
 """
-from ahp_graph import *
+from ahp_graph.Device import *
+from ahp_graph.DeviceGraph import *
 import os
 
 

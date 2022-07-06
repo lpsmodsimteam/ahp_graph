@@ -1,7 +1,8 @@
 """Simple example of two Python functions playing pingpong with messages."""
 
-from ahp_graph import *
-from ..architecture import architecture  # type: ignore[import]
+from ahp_graph.DeviceGraph import *
+from ahp_graph.SSTGraph import *
+from architecture import architecture
 from typing import Callable, Optional
 
 

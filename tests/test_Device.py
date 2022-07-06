@@ -1,16 +1,16 @@
 """Collection of Unit tests for ahp_graph Device."""
 
-from ahp_graph import *
-from .Devices import *
+from ahp_graph.Device import *
+from Devices import *
 
 
-def test_library():
+def test_library() -> None:
     """Test of Device with Library."""
     ltd = LibraryTestDevice().library
     assert ltd == 'ElementLibrary.Component', ltd
 
 
-def test_port():
+def test_port() -> None:
     """Test of Device with various ports."""
     ptd = PortTestDevice()
 
@@ -59,7 +59,7 @@ def test_port():
     assert ptd.port('port').name == 'port', 'port named port'
 
 
-def test_assembly():
+def test_assembly() -> None:
     """Test of Device that is an assembly."""
     ratd = RecursiveAssemblyTestDevice(0).library is None
     assert ratd, 'assembly'
@@ -80,7 +80,7 @@ def test_assembly():
     assert results, 'no expand method'
 
 
-def test_model():
+def test_model() -> None:
     """Test of device with model."""
     mtd = ModelTestDevice('model0')
     ltd = LibraryTestDevice()
@@ -88,7 +88,7 @@ def test_model():
     assert ltd.model is None, 'None model'
 
 
-def test_attribute():
+def test_attribute() -> None:
     """Test of Device with attributes."""
     attr1 = {'a1': 1, 'a2': 'blue', 'a3': False}
     atd1 = AttributeTestDevice({})
@@ -99,7 +99,7 @@ def test_attribute():
     assert atd1.attr == attr1, 'class attr unchanged'
 
 
-def test_partition():
+def test_partition() -> None:
     """Test of partitioning a device."""
     ratd = RecursiveAssemblyTestDevice(0)
     ratd.set_partition(1)
@@ -110,7 +110,7 @@ def test_partition():
     assert ratd.partition[1] == 3, 'thread'  # type: ignore[index]
 
 
-def test_category():
+def test_category() -> None:
     """Test of device category output."""
     ltd = LibraryTestDevice()
     mtd = ModelTestDevice('model')
@@ -118,7 +118,7 @@ def test_category():
     assert mtd.get_category() == f'{mtd.name}_{mtd.model}', 'model'
 
 
-def test_submodule():
+def test_submodule() -> None:
     """Test for adding a submodule to a device."""
     ltd0 = LibraryTestDevice()
     ltd1 = LibraryTestDevice()

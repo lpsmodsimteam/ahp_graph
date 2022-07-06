@@ -1,6 +1,7 @@
 """ahp_graph architecture describing PingPong."""
 
-from ahp_graph import *
+from ahp_graph.Device import *
+from ahp_graph.DeviceGraph import *
 
 
 class Ping(Device):

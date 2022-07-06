@@ -2,9 +2,9 @@
 
 export MYPYPATH=$MYPYPATH:$(pwd)/..
 SourceFiles=(
-    'src/Device.py'
-    'src/DeviceGraph.py'
-    'src/SSTGraph.py'
+    'src/ahp_graph/Device.py'
+    'src/ahp_graph/DeviceGraph.py'
+    'src/ahp_graph/SSTGraph.py'
 )
 UnitTestFiles=(
     'tests/Devices.py'
@@ -12,7 +12,7 @@ UnitTestFiles=(
     'tests/test_DeviceGraph.py'
 )
 ExampleFiles=(
-    'examples/pingpong/architecture.py'
+    'examples/pingpong/python/architecture.py'
     'examples/pingpong/python/pingpong.py'
     'examples/pingpong/sst/pingpong.py'
     'examples/HPC/processor.py'
