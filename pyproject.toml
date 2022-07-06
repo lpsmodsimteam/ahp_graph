@@ -9,7 +9,7 @@ authors = [{ name="lpsmodsim", email="modsim@lps.umd.edu" }]
 description = "Attributed Hierarchical Port Graph"
 readme = "README.md"
 license = { file="LICENSE" }
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "pygraphviz",
     "orjson",

@@ -1,19 +1,8 @@
 # ahp_graph - Python Attributed Hierarchical Port Graph
 AHP Graphs - https://arxiv.org/pdf/1802.06492.pdf
 
-!!! Requires Python3.7 at a minimum !!!
+!!! Requires Python3.9 at a minimum !!!
 
-In order to use ahp_graph you will need to add to the python path so
-that the files can be located
-
-put something like the following in your ~/.bashrc or ~/.bash_profile:
-```Bash
-export PYTHONPATH=$PYTHONPATH:<path to where you downloaded ahp_graph>
-```
-don't include /ahp_graph at the end, so that you can in Python do
-```Python
-from ahp_graph import *
-```
 ### Ubuntu apt packages:
 ```Bash
 apt install graphviz libgraphviz-dev
