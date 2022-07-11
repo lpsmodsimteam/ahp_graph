@@ -2,7 +2,9 @@ This directory implements a simple Ping Pong message passing simulation by utili
 
 In this case, Ping is the initiator of the "ping pong" message bouncing back and forth
 
-Looking at architecture.py, you can see some basic imports and environment setup at the top.
+architecture.py is defined in the python directory and simply linked to in the sst
+directory. This is to show the same graph can be used for multiple different output
+types. In architecture.py you can see some basic imports and environment setup at the top.
 This is followed by the ahp_graph definitions of Ping and Pong. Both are simple with a
 input and output port. The class pingpong describes an assembly that we are
 creating. In this example, pingpong takes one optional argument to describe the number
