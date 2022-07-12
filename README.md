@@ -1,7 +1,7 @@
 # ahp_graph - Python Attributed Hierarchical Port Graph
 AHP Graphs - https://arxiv.org/pdf/1802.06492.pdf
 
-!!! Requires Python3.9 at a minimum !!!
+!!! Requires Python3.6 at a minimum !!!
 
 ### Ubuntu apt packages:
 ```Bash
