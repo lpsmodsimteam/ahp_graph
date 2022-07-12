@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ahp_graph"
-version = "0.0.2"
+version = "1.0.0"
 authors = [{ name="lpsmodsim", email="modsim@lps.umd.edu" }]
 description = "Attributed Hierarchical Port Graph"
 readme = "README.md"
