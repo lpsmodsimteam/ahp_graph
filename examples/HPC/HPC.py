@@ -1,12 +1,14 @@
 """
 Abstract HPC cluster.
 
-This demonstrates how assemblies in AHPGraph can be used to build systems
+This demonstrates how assemblies in ahp_graph can be used to build systems
 out of small components.
 This example utilizes sst-elements to start with a processor and memory
 and then build all the way up to a cluster.
 """
-from AHPGraph import *
+from ahp_graph.Device import *
+from ahp_graph.DeviceGraph import *
+from ahp_graph.SSTGraph import *
 from server import *
 
 
@@ -121,7 +123,7 @@ if __name__ == "__main__":
     parser.add_argument('--cores', type=int, default=1,
                         help='optional number of cores per server')
     parser.add_argument('--partitioner', type=str, default='sst',
-                        help='which partitioner to use: ahpgraph, sst')
+                        help='which partitioner to use: ahp_graph, sst')
     args = parser.parse_args()
 
     dims = [int(x) for x in args.shape.split('x')]
@@ -140,10 +142,10 @@ if __name__ == "__main__":
         if args.partitioner.lower() == 'sst':
             sstgraph.build()
 
-        # MPI mode with AHPGraph graph partitioning. Specifying nranks tells
+        # MPI mode with ahp_graph graph partitioning. Specifying nranks tells
         # BuildSST that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
-        elif args.partitioner.lower() == 'ahpgraph':
+        elif args.partitioner.lower() == 'ahp_graph':
             sstgraph.build(racks)
 
     else:

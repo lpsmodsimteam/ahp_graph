@@ -1,7 +1,8 @@
 """Simple example of two SST components playing pingpong with messages."""
 
-from AHPGraph import *
-from AHPGraph.examples.pingpong.architecture import architecture
+from ahp_graph.DeviceGraph import *
+from ahp_graph.SSTGraph import *
+from architecture import architecture
 
 
 if __name__ == "__main__":
@@ -22,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument('--repeats', type=int, default=5,
                         help='how many message volleys to run')
     parser.add_argument('--partitioner', type=str, default='sst',
-                        help='which partitioner to use: ahpgraph, sst')
+                        help='which partitioner to use: ahp_graph, sst')
     args = parser.parse_args()
 
     # Construct a DeviceGraph with the specified architecture
@@ -38,10 +39,10 @@ if __name__ == "__main__":
         if args.partitioner.lower() == 'sst':
             sstgraph.build()
 
-        # MPI mode with AHPGraph graph partitioning. Specifying nranks tells
-        # AHPGraph that it is doing the partitioning, not SST
+        # MPI mode with ahp_graph graph partitioning. Specifying nranks tells
+        # ahp_graph that it is doing the partitioning, not SST
         # For this to work you need to pass --parallel-load=SINGLE to sst
-        elif args.partitioner.lower() == 'ahpgraph':
+        elif args.partitioner.lower() == 'ahp_graph':
             sstgraph.build(args.num)
 
     else:

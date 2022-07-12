@@ -49,7 +49,7 @@ mpi-sst: install
 # In this case each pingpong assembly is placed on a rank meaning there
 # will be a Ping AND Pong on each rank
 mpi-ahpgraph: install
-	mpirun -np 8 sst --parallel-load=SINGLE pingpong.py -- --num=4 --partitioner=ahpgraph
+	mpirun -np 8 sst --parallel-load=SINGLE pingpong.py -- --num=4 --partitioner=ahp_graph
 
 # Unregister the model with SST
 uninstall:
@@ -57,4 +57,4 @@ uninstall:
 
 # Remove the build files and the library
 clean: uninstall
-	rm -rf ../__pycache__ .build *.so output
+	rm -rf __pycache__ .build *.so output

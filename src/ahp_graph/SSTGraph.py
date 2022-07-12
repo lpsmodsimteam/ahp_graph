@@ -1,7 +1,8 @@
-"""This module extends a DeviceGraph to enables SST Simulation output."""
+"""This module extends a DeviceGraph to enable SST Simulation output."""
 
 import os
 import orjson
+from .Device import *
 from .DeviceGraph import *
 
 
@@ -28,7 +29,7 @@ class SSTGraph(DeviceGraph):
 
         Return a dictionary of component names to SST component objects.
         If you have an extremely large graph, it is recommended that you use
-        AHPGraph to do the graph partitioning instead of letting SST do it. You
+        ahp_graph to do the graph partitioning instead of letting SST do it. You
         can do this by using the Device.set_partition() function and then
         setting nranks in this function to the total number of ranks used
         """
@@ -65,12 +66,11 @@ class SSTGraph(DeviceGraph):
         Generate the JSON and write it to the specified filename.
 
         All output will be stored in a folder called output
-
         The program_options dictionary provides a way to pass SST
         program options, such as timebase and stopAtCycle.
 
         If you have an extremely large graph, it is recommended that you use
-        AHPGraph to do the graph partitioning instead of letting SST do it. You
+        ahp_graph to do the graph partitioning instead of letting SST do it. You
         can do this by using the Device.set_partition() function and then
         setting nranks in this function to the total number of ranks used
         """

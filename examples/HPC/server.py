@@ -3,7 +3,8 @@ Server assembly.
 
 Constructed from Processors and main memory using a NoC.
 """
-from AHPGraph import *
+from ahp_graph.Device import *
+from ahp_graph.DeviceGraph import *
 from processor import *
 
 

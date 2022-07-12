@@ -1,6 +1,7 @@
-"""AHPGraph architecture describing PingPong."""
+"""ahp_graph architecture describing PingPong."""
 
-from AHPGraph import *
+from ahp_graph.Device import *
+from ahp_graph.DeviceGraph import *
 
 
 class Ping(Device):
@@ -22,7 +23,7 @@ class Pong(Device):
 
 
 class pingpong(Device):
-    """Assembly of a ping and pong device with connections outside."""
+    """Assembly of a Ping and Pong device with connections outside."""
 
     portinfo = PortInfo()
     portinfo.add('input', 'String')

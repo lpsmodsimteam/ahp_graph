@@ -1,7 +1,8 @@
 """Simple example of two Python functions playing pingpong with messages."""
 
-from AHPGraph import *
-from AHPGraph.examples.pingpong.architecture import architecture
+from ahp_graph.DeviceGraph import *
+from ahp_graph.SSTGraph import *
+from architecture import architecture
 
 
 class Ping():
@@ -47,7 +48,7 @@ def buildPython(graph: DeviceGraph) -> None:
     """
     Run the example 'simulation' using the two classes.
 
-    Need to manually build the graph since AHPGraph doesn't support this.
+    Need to manually build the graph since ahp_graph doesn't support this.
     """
     devs = dict()
     # instantiate all the devices in the graph
