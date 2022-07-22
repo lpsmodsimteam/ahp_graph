@@ -186,8 +186,8 @@ class SSTGraph(DeviceGraph):
                     c1 = comp.setSubComponent(n1, d1.library)
                 else:
                     c1 = comp.setSubComponent(n1, d1.library, s1)
-                c1.addParams(self.__encode(
-                    {'type': d1.type, 'model': d1.model} | d1.attr))
+                d1.attr.update({'type': d1.type, 'model': d1.model})
+                c1.addParams(self.__encode(d1.attr))
                 n2c[d1.name] = c1
                 for key in global_params:
                     c1.addGlobalParamSet(key)
@@ -199,8 +199,8 @@ class SSTGraph(DeviceGraph):
         for d0 in self.devices:
             if d0.subOwner is None and d0.library is not None:
                 c0 = sst.Component(d0.name, d0.library)
-                c0.addParams(self.__encode(
-                    {'type': d0.type, 'model': d0.model} | d0.attr))
+                d0.attr.update({'type': d0.type, 'model': d0.model})
+                c0.addParams(self.__encode(d0.attr))
                 # Set the component partition if we are self-partitioning
                 if self_partition:
                     thread = (0 if d0.partition[1] is None
@@ -258,14 +258,13 @@ class SSTGraph(DeviceGraph):
             for (d1, n1, s1) in dev.subs:
                 if d1.library is None:
                     raise RuntimeError(f"No library: {d1.name}")
-
+                
+                d1.attr.update({'type': d1.type, 'model': d1.model})
                 item = {
                         "slot_name": n1,
                         "type": d1.library,
                         "slot_number": s1,
-                        "params": self.__encode(
-                            {'type': d1.type, 'model': d1.model} | d1.attr,
-                            True),
+                        "params": self.__encode(d1.attr, True),
                         "params_global_sets": global_set,
                     }
                 if len(d1.subs) > 0:
@@ -278,12 +277,11 @@ class SSTGraph(DeviceGraph):
         components = list()
         for d0 in devices:
             if d0.subOwner is None and d0.library is not None:
+                d0.attr.update({'type': d0.type, 'model': d0.model})
                 component = {
                     "name": d0.name,
                     "type": d0.library,
-                    "params": self.__encode(
-                        {'type': d0.type, 'model': d0.model} | d0.attr,
-                        True),
+                    "params": self.__encode(d0.attr, True),
                     "params_global_sets": global_set,
                 }
                 if nranks > 1:
