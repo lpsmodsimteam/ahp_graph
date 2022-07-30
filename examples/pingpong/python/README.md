@@ -15,6 +15,19 @@ to build the graph manually in the buildPython function. Another catch with this
 devices are 'running' and we are just chaining function calls.
 
 When you look at the output of pingpong, each line of output will start with
-something like: 'PingPong#.Ping:'. The number after PingPong represents which
+something like: `PingPong#.Ping:`. The number after PingPong represents which
 instance of the PingPong assembly the device is coming from. You can then see
 where messages are sent from and where they are received.
+
+
+```bash
+$ make test
+python3 pingpong.py
+PingPong0.Ping: Sending Ping
+PingPong0.Pong: Received PingPong0.Ping: Ping
+PingPong0.Pong: Sending Pong
+PingPong1.Ping: Received PingPong0.Pong: Pong
+PingPong1.Ping: Sending Ping
+PingPong1.Pong: Received PingPong1.Ping: Ping
+PingPong1.Pong: Sending Pong
+```
