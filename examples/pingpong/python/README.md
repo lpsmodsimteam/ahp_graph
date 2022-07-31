@@ -31,3 +31,35 @@ PingPong1.Ping: Sending Ping
 PingPong1.Pong: Received PingPong1.Ping: Ping
 PingPong1.Pong: Sending Pong
 ```
+Help is available
+```bash
+$ python3 pingpong.py -h
+usage: pingpong.py [-h] [--num NUM] [--repeats REPEATS]
+
+PingPong
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --num NUM          how many pingpongs to include
+  --repeats REPEATS  how many message volleys to run
+```
+Using the command-line arguments,
+```bash
+$ python3 pingpong.py --num 3 --repeats 2
+PingPong1.Ping: Sending Ping
+PingPong1.Pong: Received PingPong1.Ping: Ping
+PingPong1.Pong: Sending Pong
+PingPong2.Ping: Received PingPong1.Pong: Pong
+PingPong2.Ping: Sending Ping
+PingPong2.Pong: Received PingPong2.Ping: Ping
+PingPong2.Pong: Sending Pong
+PingPong0.Ping: Received PingPong2.Pong: Pong
+PingPong0.Ping: Sending Ping
+PingPong0.Pong: Received PingPong0.Ping: Ping
+PingPong0.Pong: Sending Pong
+PingPong1.Ping: Received PingPong0.Pong: Pong
+PingPong1.Ping: Sending Ping
+PingPong1.Pong: Received PingPong1.Ping: Ping
+PingPong1.Pong: Sending Pong
+PingPong2.Ping: Received PingPong1.Pong: Pong
+```
