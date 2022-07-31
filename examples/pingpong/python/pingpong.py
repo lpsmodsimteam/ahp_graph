@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Simple example of two Python functions playing pingpong with messages."""
 
 from ahp_graph.DeviceGraph import *
