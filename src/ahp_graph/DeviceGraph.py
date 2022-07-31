@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 This module implements support for AHP (Attributed Hierarchical Port) graphs.
 
