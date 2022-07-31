@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """ahp_graph architecture describing PingPong."""
 
 from ahp_graph.Device import *
