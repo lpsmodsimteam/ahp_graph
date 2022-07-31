@@ -9,7 +9,7 @@ from ahp_graph.DeviceGraph import *
 class Ping(Device):
     """Ping Device: has a Name and a Model type."""
 
-    library = 'pingpong.Ping'
+    library = 'pingpong.Ping' # this is set in the respective .h file using SST_ELI_REGISTER_COMPONENT
     portinfo = PortInfo()
     portinfo.add('input', 'String')
     portinfo.add('output', 'String')
@@ -18,7 +18,7 @@ class Ping(Device):
 class Pong(Device):
     """Pong Device."""
 
-    library = 'pingpong.Pong'
+    library = 'pingpong.Pong' # this is set in the respective .h file using SST_ELI_REGISTER_COMPONENT
     portinfo = PortInfo()
     portinfo.add('input', 'String')
     portinfo.add('output', 'String')
