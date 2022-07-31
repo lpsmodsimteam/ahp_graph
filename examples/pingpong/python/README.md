@@ -63,3 +63,6 @@ PingPong1.Pong: Received PingPong1.Ping: Ping
 PingPong1.Pong: Sending Pong
 PingPong2.Ping: Received PingPong1.Pong: Pong
 ```
+
+When the command `python3 pingpong.py --num 2 --repeats 2` is run, there is an image produced: `output/pingpong.svg`. 
+That SVG contains two nodes: `PingPong0` and `PingPong1`. If you've opened the SVG using Firefox, the nodes are hyperlinked so that you can click on them. Each `PingPong` is an assembly that is expended to components with ports and links that are internal to the assembly.
