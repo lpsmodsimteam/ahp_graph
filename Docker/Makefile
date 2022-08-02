@@ -1,7 +1,7 @@
 tag_ahp=ahp
-tag_ahp_noTyping=ahp_noTyping
+tag_ahp_noTyping=ahp_notyping
 tag_sst=sst12
-tag_sst_noTyping=sst12_noTyping
+tag_sst_noTyping=sst12_notyping
 
 #
 .PHONY: help clean 
