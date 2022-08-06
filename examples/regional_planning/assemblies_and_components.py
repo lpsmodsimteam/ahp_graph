@@ -3,6 +3,9 @@
 from ahp_graph.Device import *
 from ahp_graph.DeviceGraph import *
 
+# each class is either a an assembly of SST components or an SST component.
+# which of those two is the case depends on whether "library" is a variable declared within the class.
+# The presence of "def expand" within a class does not imply the assembly should be expanded by AHP_graph
 class House(Device):
     """
 	driveway0     +-------+    driveway1
@@ -11,6 +14,7 @@ class House(Device):
 
     https://asciiflow.com/
     """
+    # "library" is a keyword in AHP_graph that indicates that a corresponding SST component exists. 
     library = 'house.HouseComponent'  # this is set in the respective .hpp file using SST_ELI_REGISTER_COMPONENT
     portinfo = PortInfo()
     portinfo.add('driveway0', 'String') # this corresponds to SST_ELI_DOCUMENT_PORTS in .hpp and configureLink in .cpp 
@@ -22,6 +26,9 @@ class neighborhood(Device):
 	  ---------+ neighborhood +---------
 	           +--------------+
     """
+    # "library" is a keyword in AHP_graph that indicates that a corresponding SST component exists. 
+    # if the "library" keyword is present in a class, 
+    # then the assembly does not get expanded into components (even though "def expand" is present in this class.)
     library = 'neighborhood.NeighborhoodComponent' # this is set in the respective .h file using SST_ELI_REGISTER_COMPONENT
     portinfo = PortInfo()
     portinfo.add('road0', 'String')
@@ -29,7 +36,7 @@ class neighborhood(Device):
 
     def expand(self, graph: DeviceGraph) -> None:
         """
-        Expand the overall architecture into its components.
+        How to expand the assembly into components.
 
 	+--------------------------------------------------------------------------------------------+
 	|                     driveway0      +--------+    driveway1                                 |   road0
@@ -68,6 +75,9 @@ class city(Device):
 
     https://asciiflow.com/
     """
+    # "library" is a keyword in AHP_graph that indicates that a corresponding SST component exists. 
+    # if the "library" keyword is present in a class, 
+    # then the assembly does not get expanded into components (even though "def expand" is present in this class.)
     library = 'city.CityComponent' # this is set in the respective .h file using SST_ELI_REGISTER_COMPONENT
     portinfo = PortInfo()
     portinfo.add('highway0', 'String')
@@ -75,7 +85,7 @@ class city(Device):
 
     def expand(self, graph: DeviceGraph) -> None:
         """
-        Expand the overall architecture into its components.
+        How to expand the assembly into components.
 
         +----------------------------------------------------------------------------------------------------+
         |                          road0      +---------------+    road1                                     |   highway0
