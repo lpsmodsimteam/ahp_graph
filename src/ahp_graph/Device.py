@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 This module represents a Device.
 
@@ -11,14 +9,10 @@ constructed of other Devices. This combined with the DeviceGraph allows for
 hierarchical representations of a graph.
 """
 
-from __future__ import annotations
-from typing import Optional, Union, Callable, Any, ClassVar
 import collections
 
-portInfoType = tuple[Optional[int], Optional[str], bool, str]
 
-
-class PortInfo(dict[str, portInfoType]):
+class PortInfo(dict):
     """
     PortInfo is a dictionary describing what ports a Device can have.
 
@@ -29,7 +23,7 @@ class PortInfo(dict[str, portInfoType]):
     a port on a Device.
     """
 
-    def add(self, name: str, ptype: str = None, limit: Optional[int] = 1,
+    def add(self, name: str, ptype: str = None, limit: int = 1,
             required: bool = True, format: str = '.#') -> None:
         """Add a port definition to the dictionary."""
         self[name] = (limit, ptype, required, format)
@@ -44,13 +38,13 @@ class DevicePort:
     It can also reference the other DevicePort that it is linked to.
     """
 
-    def __init__(self, device: Device, name: str,
+    def __init__(self, device: 'Device', name: str,
                  number: int = None) -> None:
         """Initialize the device, name, port number."""
-        self.device: Device = device
-        self.name: str = name
-        self.number: Optional[int] = number
-        self.link: Optional[DevicePort] = None
+        self.device = device
+        self.name = name
+        self.number = number
+        self.link = None
 
     def get_name(self) -> str:
         """Return a string representation of the port name and number."""
@@ -86,31 +80,30 @@ class Device:
     added to the class attributes on specific instances of the Device.
     """
 
-    library: ClassVar[Optional[str]] = None
-    portinfo: ClassVar[PortInfo] = PortInfo()
-    attr: dict[str, Any] = dict()
+    library = None
+    portinfo = PortInfo()
+    attr = dict()
 
     def __init__(self, name: str, model: str = None,
-                 attr: dict[str, Any] = None) -> None:
+                 attr: dict = None) -> None:
         """
         Initialize the Device.
 
         Initialize with the unique name, model, and optional
         dictionary of attributes which are used as model parameters.
         """
-        self.name: str = name
+        self.name = name
         if self.attr:
             if attr is not None:
                 self.attr = {**self.attr, **attr}
         elif attr is not None:
             self.attr = attr
-        portType = dict[str, dict[int, DevicePort]]
-        self.ports: portType = collections.defaultdict(dict)
-        self.subs: set[tuple[Device, str, Optional[int]]] = set()
-        self.subOwner: Optional[Device] = None
-        self.partition: Optional[tuple[int, Optional[int]]] = None
-        self.type: str = self.__class__.__name__
-        self.model: Optional[str] = model
+        self.ports = collections.defaultdict(dict)
+        self.subs = set()
+        self.subOwner = None
+        self.partition = None
+        self.type = self.__class__.__name__
+        self.model = model
         if self.library is None and not hasattr(self, "expand"):
             raise RuntimeError(f"Assemblies must define expand(): {self.type}")
 
@@ -118,7 +111,7 @@ class Device:
         """Assign a rank and optional thread to this device."""
         self.partition = (rank, thread)
 
-    def add_submodule(self, device: Device, slotName: str,
+    def add_submodule(self, device: 'Device', slotName: str,
                       slotIndex: int = None) -> None:
         """
         Add a submodule to this Device.
@@ -133,8 +126,7 @@ class Device:
         device.subOwner = self
         self.subs.add((device, slotName, slotIndex))
 
-    def __getattr__(self, port: str) -> Union[DevicePort,
-                                              Callable[[Optional[int]], DevicePort]]:
+    def __getattr__(self, port: str) -> 'DevicePort':
         """
         Enable ports to be treated as variables.
 
@@ -142,7 +134,7 @@ class Device:
         class (e.g., Device.Input instead of Device.port("Input").
         If the port is not defined, then we thrown an exception.
         """
-        info: Optional[portInfoType] = self.portinfo.get(port)
+        info = self.portinfo.get(port)
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
 
@@ -151,7 +143,7 @@ class Device:
         else:
             return lambda x: self.port(port, x)
 
-    def port(self, port: str, number: int = None) -> DevicePort:
+    def port(self, port: str, number: int = None) -> 'DevicePort':
         """
         Return a DevicePort object representing the port on this Device.
 
@@ -163,7 +155,7 @@ class Device:
         list.  Make sure we do not create too many connections if limited.
         Finally, if the port has not already been defined, then create it.
         """
-        info: Optional[portInfoType] = self.portinfo.get(port)
+        info = self.portinfo.get(port)
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
 
@@ -205,7 +197,7 @@ class Device:
 
     def __repr__(self) -> str:
         """Return a description of the Device."""
-        lines: list[str] = list()
+        lines = list()
         lines.append(f"Device = {self.type}")
         lines.append(f"\tname = {self.name}")
         if self.model:

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 This module implements support for AHP (Attributed Hierarchical Port) graphs.
 
@@ -9,10 +7,9 @@ hierarchical graph (aka an assembly).
 All links are bidirectional.
 """
 
-from typing import Optional, Union, Any
 import os
 import collections
-import pygraphviz  # type: ignore[import]
+import pygraphviz
 from .Device import *
 
 
@@ -24,7 +21,7 @@ class DeviceGraph:
     This implements an AHP (Attributed Hierarchical Port) graph.
     """
 
-    def __init__(self, attr: dict[str, Any] = None) -> None:
+    def __init__(self, attr: dict = None) -> None:
         """
         Define an empty DeviceGraph.
 
@@ -33,16 +30,16 @@ class DeviceGraph:
         not intemediate graphs (e.g., assemblies).
         The dictionary of links uses a frozenset of DevicePorts as the key
         """
-        self.expanding: Optional[Device] = None
-        self.attr: dict[str, Any] = attr if attr is not None else dict()
-        self.devices: set[Device] = set()
-        self.names: set[str] = set()
-        self.links: dict[frozenset[DevicePort], str] = dict()
-        self.ports: set[DevicePort] = set()
+        self.expanding = None
+        self.attr = attr if attr is not None else dict()
+        self.devices = set()
+        self.names = set()
+        self.links = dict()
+        self.ports = set()
 
     def __repr__(self) -> str:
         """Pretty print a DeviceGraph with Devices followed by links."""
-        lines: list[str] = list()
+        lines = list()
         for device in self.devices:
             lines.append(str(device))
         for p0, p1 in self.links:
@@ -79,7 +76,7 @@ class DeviceGraph:
                 p1.link = p2
                 self.ports.discard(p0)
                 self.ports.add(p1)
-                latency: str = self.links.pop(frozenset({p0, p2}))
+                latency = self.links.pop(frozenset({p0, p2}))
                 # add the other device to the graph
                 self.add(p1.device)
                 self.links[frozenset({p1, p2})] = latency
@@ -146,14 +143,14 @@ class DeviceGraph:
         for (dev, _, _) in device.subs:
             self.add(dev, True)
 
-    def count_devices(self) -> dict[str, int]:
+    def count_devices(self) -> dict:
         """
         Count the Devices in a graph.
 
         Return a map of Devices to integer counts. The keys are of the
         form "CLASS_MODEL".
         """
-        counter: dict[str, int] = collections.defaultdict(int)
+        counter = collections.defaultdict(int)
         for device in self.devices:
             counter[device.get_category()] += 1
         return counter
@@ -161,14 +158,14 @@ class DeviceGraph:
     @staticmethod
     def check_port_types(p0: DevicePort, p1: DevicePort) -> bool:
         """Check that the port types for the two ports match."""
-        t0: Optional[str] = p0.device.portinfo[p0.name][1]
-        t1: Optional[str] = p1.device.portinfo[p1.name][1]
+        t0 = p0.device.portinfo[p0.name][1]
+        t1 = p1.device.portinfo[p1.name][1]
         return t0 == t1
 
     def verify_links(self) -> None:
         """Verify that all required ports are linked up."""
         # Create a map of Devices to all ports linked on those Devices.
-        d2ports: dict[Device, set[str]] = collections.defaultdict(set)
+        d2ports = collections.defaultdict(set)
         for p0, p1 in self.links:
             d2ports[p0.device].add(p0.name)
             d2ports[p1.device].add(p1.name)
@@ -197,13 +194,13 @@ class DeviceGraph:
         """
         self.check_partition()
         while True:
-            devices: set[Device] = set()
-            linksToRemove: list[frozenset[DevicePort]] = list()
+            devices = set()
+            linksToRemove = list()
             for p0, p1 in self.links:
                 # One of the Devices is on the rank that we are
                 # following links on
-                if (p0.device.partition[0] == rank  # type: ignore[index]
-                        or p1.device.partition[0] == rank):  # type: ignore[index]
+                if (p0.device.partition[0] == rank
+                        or p1.device.partition[0] == rank):
                     for p in [p0, p1]:
                         if p.device.library is None:
                             devices.add(p.device)
@@ -228,7 +225,7 @@ class DeviceGraph:
                 break
 
     def flatten(self, levels: int = None, name: str = None,
-                rank: int = None, expand: set[Device] = None) -> None:
+                rank: int = None, expand: set = None) -> None:
         """
         Recursively flatten the graph by the specified number of levels.
 
@@ -252,7 +249,7 @@ class DeviceGraph:
         if levels == 0:
             return
 
-        assemblies: set[Device] = set()
+        assemblies = set()
         if name is not None:
             splitName = name.split(".")
 
@@ -263,7 +260,7 @@ class DeviceGraph:
             devs = self.devices
 
         for dev in devs:
-            assembly: bool = dev.library is None
+            assembly = dev.library is None
             if not assembly:
                 continue
 
@@ -272,7 +269,7 @@ class DeviceGraph:
                 assembly &= splitName == dev.name.split(".")[0: len(splitName)]
             # rank to check
             if rank is not None:
-                assembly &= rank == dev.partition[0]  # type: ignore[index]
+                assembly &= rank == dev.partition[0]
 
             if assembly:
                 assemblies.add(dev)
@@ -283,7 +280,7 @@ class DeviceGraph:
         # Expand the required Devices
         for device in assemblies:
             self.expanding = device
-            device.expand(self)  # type: ignore[operator, arg-type]
+            device.expand(self)
             self.names.discard(device.name)
             self.devices.discard(device)
         self.expanding = None
@@ -316,7 +313,7 @@ class DeviceGraph:
 
     def __write_dot_hierarchy(self, name: str, draw: bool = False,
                               ports: bool = False, assembly: str = None,
-                              types: set[str] = None) -> set[str]:
+                              types: set = None) -> set:
         """
         Take a DeviceGraph and write dot files for each assembly.
 
@@ -325,7 +322,7 @@ class DeviceGraph:
         assembly and types should NOT be specified by the user, they are
         soley used for recursion of this function
         """
-        graph: pygraphviz.AGraph = self.__format_graph(name, ports)
+        graph = self.__format_graph(name, ports)
         if types is None:
             types = set()
 
@@ -338,11 +335,11 @@ class DeviceGraph:
         # Expand all unique assembly types and write separate graphviz files
         for dev in self.devices:
             if dev.library is None:
-                category: str = dev.get_category()
+                category = dev.get_category()
                 if category not in types:
                     types.add(category)
                     expanded = DeviceGraph()
-                    dev.expand(expanded)  # type: ignore[operator, arg-type]
+                    dev.expand(expanded)
                     types = expanded.__write_dot_hierarchy(category, draw,
                                                            ports, dev.name,
                                                            types)
@@ -407,7 +404,7 @@ class DeviceGraph:
 
         It is suggested that you use write_dot_hierarchy for large graphs
         """
-        graph: pygraphviz.AGraph = self.__format_graph(name, ports)
+        graph = self.__format_graph(name, ports)
 
         for dev in self.devices:
             label = dev.name
@@ -443,7 +440,7 @@ class DeviceGraph:
             with open('output/highlightStyle.css', 'w') as f:
                 f.write(h)
 
-        graph: pygraphviz.AGraph = pygraphviz.AGraph(strict=False, name=name)
+        graph = pygraphviz.AGraph(strict=False, name=name)
         graph.graph_attr['stylesheet'] = 'highlightStyle.css'
         graph.node_attr['style'] = 'filled'
         graph.node_attr['fillcolor'] = '#EEEEEE'  # light gray fill
@@ -454,11 +451,11 @@ class DeviceGraph:
 
         return graph
 
-    def __dot_add_links(self, graph: pygraphviz.AGraph, ports: bool = False,
-                        assembly: str = None, splitName: list[str] = None,
+    def __dot_add_links(self, graph, ports: bool = False,
+                        assembly: str = None, splitName: list = None,
                         splitNameLen: int = None) -> None:
         """Add edges to the graph with a label for the number of edges."""
-        def port2Node(port: DevicePort) -> Union[str, tuple[str, str]]:
+        def port2Node(port: DevicePort) -> str:
             """Return a node name given a DevicePort."""
             node = port.device.name
             if node == assembly:
@@ -472,8 +469,7 @@ class DeviceGraph:
                 return node
 
         # Create a list of all of the links
-        nodeType = Union[str, tuple[str, str]]
-        links: list[tuple[nodeType, nodeType]] = list()
+        links = list()
         for p0, p1 in self.links:
             links.append((port2Node(p0), port2Node(p1)))
 
