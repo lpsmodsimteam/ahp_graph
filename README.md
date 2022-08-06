@@ -1,7 +1,7 @@
 # ahp_graph - Python Attributed Hierarchical Port Graph
 AHP Graphs - https://arxiv.org/pdf/1802.06492.pdf
 
-Requires Python3.9 at a minimum. There is a "noTyping" branch which works with older versions of Python (like 3.6)
+This "noTyping" branch works with older versions of Python (like 3.6)
 
 ### Ubuntu apt packages:
 ```Bash
