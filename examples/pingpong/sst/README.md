@@ -26,3 +26,19 @@ instance of the PingPong assembly the device is coming from. The number followin
 Ping or Pong represents the mpi rank that the device is running on. Similarly, in
 the messages Ping and Pong are followed by a number again representing the rank
 that the device was running on.
+
+
+```bash
+$ python3 pingpong.py -h
+usage: pingpong.py [-h] [--num NUM] [--repeats REPEATS]
+                   [--partitioner PARTITIONER]
+
+PingPong
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --num NUM             how many pingpongs to include
+  --repeats REPEATS     how many message volleys to run
+  --partitioner PARTITIONER
+                        which partitioner to use: ahp_graph, sst
+```
