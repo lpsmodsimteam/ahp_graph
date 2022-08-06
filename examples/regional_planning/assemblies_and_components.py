@@ -6,7 +6,8 @@ from ahp_graph.DeviceGraph import *
 # each class is either a an assembly of SST components or an SST component.
 # which of those two is the case depends on whether "library" is a variable declared within the class.
 # The presence of "def expand" within a class does not imply the assembly should be expanded by AHP_graph
-class House(Device):
+class House        (Device):
+    # ^class name  #^ inherits from object
     """
 	driveway0     +-------+    driveway1
         	------+ house +-----
