@@ -1,8 +1,11 @@
+#!/usr/bin/env python3
+
 """Simple example of two Python functions playing pingpong with messages."""
 
 from ahp_graph.DeviceGraph import *
 from ahp_graph.SSTGraph import *
 from architecture import architecture
+from typing import Callable, Optional
 
 
 class Ping():
@@ -10,15 +13,15 @@ class Ping():
 
     def __init__(self, name: str, repeats: int) -> None:
         """Init."""
-        self.name = name
-        self.max = repeats
-        self.repeats = 0
-        self.output = None
+        self.name: str = name
+        self.max: int = repeats
+        self.repeats: int = 0
+        self.output: Optional[Callable[[str], None]] = None
 
     def start(self) -> None:
         """Start the pingpong off by sending ping."""
         print(f'{self.name}: Sending Ping')
-        self.output(f'{self.name}: Ping')
+        self.output(f'{self.name}: Ping')  # type: ignore[misc]
 
     def input(self, string: str) -> None:
         """Print input and then send ping if we have more repeats left."""
@@ -26,7 +29,7 @@ class Ping():
         self.repeats += 1
         if self.repeats < self.max:
             print(f'{self.name}: Sending Ping')
-            self.output(f'{self.name}: Ping')
+            self.output(f'{self.name}: Ping')  # type: ignore[misc]
 
 
 class Pong():
@@ -34,14 +37,14 @@ class Pong():
 
     def __init__(self, name: str) -> None:
         """Init."""
-        self.name = name
-        self.output = None
+        self.name: str = name
+        self.output: Optional[Callable[[str], None]] = None
 
     def input(self, string: str) -> None:
         """Print input and then send pong."""
         print(f'{self.name}: Received {string}')
         print(f'{self.name}: Sending Pong')
-        self.output(f'{self.name}: Pong')
+        self.output(f'{self.name}: Pong')  # type: ignore[misc]
 
 
 def buildPython(graph: DeviceGraph) -> None:
@@ -50,14 +53,14 @@ def buildPython(graph: DeviceGraph) -> None:
 
     Need to manually build the graph since ahp_graph doesn't support this.
     """
-    devs = dict()
+    devs: dict[str, Union[Ping, Pong]] = dict()
     # instantiate all the devices in the graph
     for device in graph.devices:
         if device.type == 'Ping':
-            devs[device.name] = eval(f'{device.library.split(".")[1]}('
+            devs[device.name] = eval(f'{device.library.split(".")[1]}('  # type: ignore[union-attr]
                                      f'"{device.name}", {args.repeats})')
         elif device.type == 'Pong':
-            devs[device.name] = eval(f'{device.library.split(".")[1]}('
+            devs[device.name] = eval(f'{device.library.split(".")[1]}('  # type: ignore[union-attr]
                                      f'"{device.name}")')
         else:
             print('ERROR, should only have Ping or Pong Devices')
@@ -70,7 +73,7 @@ def buildPython(graph: DeviceGraph) -> None:
         pi.output = lambda x: po.input(x)
         po.output = lambda x: pi.input(x)
     else:
-        def wrapper(dev):
+        def wrapper(dev: Union[Ping, Pong]) -> Callable[[str], None]:
             """Need to wrap the lambda function to protect the device scope."""
             return lambda x: dev.input(x)
 
@@ -109,7 +112,7 @@ def buildPython(graph: DeviceGraph) -> None:
     # find the first Ping device and start the 'simulation'
     for device in graph.devices:
         if device.type == 'Ping':
-            devs[device.name].start()
+            devs[device.name].start()  # type: ignore[union-attr]
             break
 
 

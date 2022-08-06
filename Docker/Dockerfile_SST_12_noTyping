@@ -1,0 +1,59 @@
+# https://hub.docker.com/_/centos?tab=tags
+FROM ahp_noTyping:latest 
+
+MAINTAINER LPSmodsim 
+
+LABEL remarks="AHP graph with SST"
+
+RUN yum -y install valgrind \
+                   doxygen \
+                   automake \
+                   time \
+                   wget
+# not clear why these don't get detected by sst
+                   #openmpi-devel \
+                   #openmpi \
+                   #mpich-3
+
+
+WORKDIR /opt/
+
+# installation of OpenMPI 
+ENV PATH=${PATH}:/opt/SST/12.0.1/bin:/opt/OpenMPI/4.0.5/bin
+RUN mkdir -p /opt/OpenMPI/4.0.5/src
+WORKDIR /opt/OpenMPI/4.0.5/src
+RUN wget https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.5.tar.gz
+RUN tar --no-same-owner -xzvf openmpi-4.0.5.tar.gz
+WORKDIR /opt/OpenMPI/4.0.5/src/openmpi-4.0.5
+RUN ./configure --prefix=/opt/OpenMPI/4.0.5
+RUN make -j4; make install
+
+# Setup Environment for SST
+ARG dir=/home/sst/build
+RUN mkdir -p $dir
+ARG SST_CORE_HOME=/home/sst/sst-core
+ENV SST_CORE_HOME=/home/sst/sst-core
+ENV PATH="$PATH:$SST_CORE_HOME/bin"
+
+# Clone the repos from GitHub
+#RUN git clone https://github.com/sstsimulator/sst-core.git $dir/sst-core
+
+WORKDIR $dir
+
+# from https://github.com/sstsimulator/sst-core/releases/tag/v10.0.0_Final
+COPY sstcore-12.0.1.tar.gz .
+RUN tar zxvf sstcore-12.0.1.tar.gz
+RUN mv sstcore-12.0.1 sst-core
+
+# Build SST Core
+RUN cd $dir/sst-core && ./autogen.sh && \
+	./configure --prefix=$SST_CORE_HOME && \
+	make all install
+
+WORKDIR /home/sst/
+
+# the following file needs to be writable to register components
+RUN chmod g+rwx /home/sst/sst-core/etc/sst/sstsimulator.conf
+RUN chmod o+rwx /home/sst/sst-core/etc/sst/sstsimulator.conf
+
+
