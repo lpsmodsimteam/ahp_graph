@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """This module extends a DeviceGraph to enable SST Simulation output."""
 
 import os
