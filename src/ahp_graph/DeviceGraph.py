@@ -473,7 +473,7 @@ class DeviceGraph:
 
         # Create a list of all of the links
         nodeType = Union[str, tuple[str, str]]
-        links: list[tuple[nodeType, nodeType]] = list()
+        links: list[frozenset[nodeType]] = list()
         for p0, p1 in self.links:
             links.append(frozenset({port2Node(p0), port2Node(p1)}))
 
