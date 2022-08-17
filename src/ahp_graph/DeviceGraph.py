@@ -475,7 +475,7 @@ class DeviceGraph:
         nodeType = Union[str, tuple[str, str]]
         links: list[tuple[nodeType, nodeType]] = list()
         for p0, p1 in self.links:
-            links.append((port2Node(p0), port2Node(p1)))
+            links.append(frozenset({port2Node(p0), port2Node(p1)}))
 
         # Setup a counter so we can check for duplicates
         duplicates = collections.Counter(links)
@@ -484,12 +484,15 @@ class DeviceGraph:
             if duplicates[key] > 1:
                 label = str(duplicates[key])
 
-            graphNodes = [key[0], key[1]]
+            key0, key1 = key
+            graphNodes = [key0, key1]
             graphPorts = ['', '']
-            for i in range(2):
-                if type(key[i]) is tuple:
-                    graphNodes[i] = key[i][0]
-                    graphPorts[i] = key[i][1]
+            if type(key0) is tuple:
+                graphNodes[0] = key0[0]
+                graphPorts[0] = key0[1]
+            if type(key1) is tuple:
+                graphNodes[1] = key1[0]
+                graphPorts[1] = key1[1]
             # Add edges using the number of links as a label
             graph.add_edge(graphNodes[0], graphNodes[1], label=label,
                            tailport=graphPorts[0], headport=graphPorts[1])
