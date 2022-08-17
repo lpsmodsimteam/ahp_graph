@@ -79,5 +79,3 @@ if __name__ == "__main__":
 
     else:
         graph.write_dot('reproducer', draw=True, ports=True, hierarchy=True)
-
-
