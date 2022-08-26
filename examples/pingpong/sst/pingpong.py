@@ -48,9 +48,9 @@ if __name__ == "__main__":
     else:
         # generate a graphviz dot file including the hierarchy
         graph.write_dot('pingpong', draw=True, ports=True)
-        sstgraph.write_json('pingpong.json', nranks=args.num)
+        sstgraph.write_json('pingpong', nranks=args.num)
 
         # generate a flat graphviz dot file and json output for demonstration
         graph.flatten()
         graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
-        sstgraph.write_json('pingpongFlat.json')
+        sstgraph.write_json('pingpongFlat')

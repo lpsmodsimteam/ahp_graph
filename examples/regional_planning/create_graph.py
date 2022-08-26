@@ -46,11 +46,11 @@ if __name__ == "__main__":
     else:
         # generate a graphviz dot file including the hierarchy
         graph.write_dot('the_regional_plan', draw=True, ports=True)
-        sstgraph.write_json('the_regional_plan.json', nranks=args.num)
+        sstgraph.write_json('the_regional_plan', nranks=args.num)
 
         # generate a flat graphviz dot file and json output for demonstration
         graph.flatten()
         graph.write_dot('the_regional_plan_flat', draw=True, ports=True, hierarchy=False)
-        sstgraph.write_json('the_regional_plan_flat.json')
+        sstgraph.write_json('the_regional_plan_flat')
 
 #EOF
