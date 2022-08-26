@@ -17,7 +17,7 @@ def test_port() -> None:
     assert ptd.portinfo['default'][0] == 1, 'default limit'
     assert ptd.portinfo['default'][1] is None, 'default type'
     assert ptd.portinfo['default'][2] is True, 'default required'
-    assert ptd.portinfo['default'][3] == '.#', 'default format'
+    assert ptd.portinfo['default'][3] == '.p#', 'default format'
 
     assert ptd.portinfo['no_limit'][0] is None, 'No limit'
     assert ptd.portinfo['limit'][0] == 2, 'limit'
