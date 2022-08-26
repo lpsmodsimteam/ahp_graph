@@ -151,4 +151,4 @@ if __name__ == "__main__":
     else:
         # generate a graphviz dot file and json output for demonstration
         graph.write_dot('cluster', draw=True, ports=True)
-        sstgraph.write_json('cluster.json', racks)
+        sstgraph.write_json('cluster', racks)

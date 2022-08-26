@@ -292,11 +292,11 @@ class DeviceGraph:
             self.flatten(None if levels is None else levels-1, name, rank)
 
     def write_dot(self, name: str, draw: bool = False, ports: bool = False,
-                  hierarchy: bool = True) -> None:
+                  hierarchy: bool = True, directory: str = 'output') -> None:
         """
         Take a DeviceGraph and write it as a graphviz dot graph.
 
-        All output will be stored in a folder called output
+        All output will be stored in a folder specified by the directory parameter
         The draw parameter will automatically generate SVGs if set to True
         The ports parameter will display ports on the graph if set to True
 
@@ -305,16 +305,17 @@ class DeviceGraph:
         view of the graph as it is.
         hierarchy is True by default, and highly recommended for large graphs
         """
-        if not os.path.exists('output'):
-            os.makedirs('output')
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
         if hierarchy:
-            self.__write_dot_hierarchy(name, draw, ports)
+            self.__write_dot_hierarchy(name, draw, ports, directory)
         else:
-            self.__write_dot_flat(name, draw, ports)
+            self.__write_dot_flat(name, draw, ports, directory)
 
     def __write_dot_hierarchy(self, name: str, draw: bool = False,
-                              ports: bool = False, assembly: str = None,
+                              ports: bool = False, directory: str = 'output',
+                              assembly: str = None,
                               types: set = None) -> set:
         """
         Take a DeviceGraph and write dot files for each assembly.
@@ -324,7 +325,7 @@ class DeviceGraph:
         assembly and types should NOT be specified by the user, they are
         soley used for recursion of this function
         """
-        graph = self.__format_graph(name, ports)
+        graph = self.__format_graph(name, ports, directory)
         if types is None:
             types = set()
 
@@ -343,8 +344,8 @@ class DeviceGraph:
                     expanded = DeviceGraph()
                     dev.expand(expanded)
                     types = expanded.__write_dot_hierarchy(category, draw,
-                                                           ports, dev.name,
-                                                           types)
+                                                           ports, directory,
+                                                           dev.name, types)
 
         # Need to check if the provided assembly name is in the graph
         # and if so make that our cluster
@@ -393,21 +394,20 @@ class DeviceGraph:
 
         self.__dot_add_links(graph, ports, assembly, splitName, splitNameLen)
 
-        graph.write(f"output/{name}.dot")
+        graph.write(f"{directory}/{name}.dot")
         if draw:
-            graph.draw(f"output/{name}.svg", format='svg', prog='dot')
+            graph.draw(f"{directory}/{name}.svg", format='svg', prog='dot')
 
         return types
 
     def __write_dot_flat(self, name: str, draw: bool = False,
-                         ports: bool = False) -> None:
+                         ports: bool = False, directory: str = 'output') -> None:
         """
         Write the DeviceGraph as a DOT file.
 
         It is suggested that you use write_dot_hierarchy for large graphs
         """
-        graph = self.__format_graph(name, ports)
-
+        graph = self.__format_graph(name, ports, directory)
         for dev in self.devices:
             label = dev.name
             if dev.model is not None:
@@ -424,12 +424,13 @@ class DeviceGraph:
 
         self.__dot_add_links(graph, ports)
 
-        graph.write(f"output/{name}.dot")
+        graph.write(f"{directory}/{name}.dot")
         if draw:
-            graph.draw(f"output/{name}.svg", format='svg', prog='dot')
+            graph.draw(f"{directory}/{name}.svg", format='svg', prog='dot')
 
     @staticmethod
-    def __format_graph(name: str, record: bool = False) -> pygraphviz.AGraph:
+    def __format_graph(name: str, record: bool = False,
+                       directory: str = 'output') -> pygraphviz.AGraph:
         """Format a new graph."""
         h = ('.edge:hover text {\n'
              '\tfill: red;\n'
@@ -438,8 +439,8 @@ class DeviceGraph:
              '\tstroke: red;\n'
              '\tstroke-width: 10;\n'
              '}')
-        if not os.path.exists('output/highlightStyle.css'):
-            with open('output/highlightStyle.css', 'w') as f:
+        if not os.path.exists(f"{directory}/highlightStyle.css"):
+            with open(f"{directory}/highlightStyle.css", 'w') as f:
                 f.write(h)
 
         graph = pygraphviz.AGraph(strict=False, name=name)

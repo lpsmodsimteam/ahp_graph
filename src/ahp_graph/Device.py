@@ -26,7 +26,7 @@ class PortInfo(dict):
     """
 
     def add(self, name: str, ptype: str = None, limit: int = 1,
-            required: bool = True, format: str = '.#') -> None:
+            required: bool = True, format: str = '.p#') -> None:
         """Add a port definition to the dictionary."""
         self[name] = (limit, ptype, required, format)
 

@@ -62,12 +62,13 @@ class SSTGraph(DeviceGraph):
             self.follow_links(rank, True)
             return self.__build_model(True)
 
-    def write_json(self, filename: str, nranks: int = 1,
+    def write_json(self, name: str, nranks: int = 1,
+                   directory: str = 'output',
                    program_options: dict = None) -> None:
         """
         Generate the JSON and write it to the specified filename.
 
-        All output will be stored in a folder called output
+        All output will be stored in a folder specified by the directory parameter
         The program_options dictionary provides a way to pass SST
         program options, such as timebase and stopAtCycle.
 
@@ -76,8 +77,8 @@ class SSTGraph(DeviceGraph):
         can do this by using the Device.set_partition() function and then
         setting nranks in this function to the total number of ranks used
         """
-        if not os.path.exists('output'):
-            os.makedirs('output')
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
         self.flatten()
         self.verify_links()
@@ -85,16 +86,15 @@ class SSTGraph(DeviceGraph):
         # If this is serial or sst is doing the partitioning,
         # just write the whole thing
         if nranks == 1:
-            self.__write_model(f"output/{filename}", nranks,
+            self.__write_model(f"{directory}/{name}.json", nranks,
                                self.devices, self.links, program_options)
 
         # Write a JSON file for each rank
         else:
-            (base, ext) = os.path.splitext(f"output/{filename}")
             self.check_partition()
             partition = self.__partition_graph(nranks)
             for rank in range(nranks):
-                self.__write_model(base + str(rank) + ext, nranks,
+                self.__write_model(f"{directory}/{name}{rank}.json", nranks,
                                    partition[rank][0], partition[rank][1],
                                    program_options)
 
@@ -159,10 +159,9 @@ class SSTGraph(DeviceGraph):
             else:
                 try:
                     # serialize the value to json bytes,
-                    # then deserialize into a python dict
-                    params[key] = orjson.loads(
-                        orjson.dumps(val, option=orjson.OPT_INDENT_2)
-                    )
+                    # then decode to a string
+                    b = orjson.dumps(val, option=orjson.OPT_INDENT_2)
+                    params[key] = b.decode('utf-8')
                 except Exception:
                     pass
 
