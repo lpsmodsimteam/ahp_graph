@@ -18,8 +18,10 @@ if __name__ == "__main__":
         SST = False
 
     parser = argparse.ArgumentParser(description='PingPong')
-    parser.add_argument('--num', type=int, default=2,
+    parser.add_argument('--num', type=int, default=3,
                         help='how many pingpongs to include')
+    parser.add_argument('--rank', type=int, default=0,
+                        help='which rank to generate the JSON file for')
     parser.add_argument('--repeats', type=int, default=5,
                         help='how many message volleys to run')
     parser.add_argument('--partitioner', type=str, default='sst',
@@ -46,11 +48,16 @@ if __name__ == "__main__":
             sstgraph.build(args.num)
 
     else:
-        # generate a graphviz dot file including the hierarchy
-        graph.write_dot('pingpong', draw=True, ports=True)
-        sstgraph.write_json('pingpong', nranks=args.num)
+        # SST partitioner
+        # This will generate a flat dot graph and a single JSON file
+        if args.partitioner.lower() == 'sst':
+            graph.flatten()
+            graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
+            sstgraph.write_json('pingpongFlat')
 
-        # generate a flat graphviz dot file and json output for demonstration
-        graph.flatten()
-        graph.write_dot('pingpongFlat', draw=True, ports=True, hierarchy=False)
-        sstgraph.write_json('pingpongFlat')
+        # If ahp_graph is partitioning, we generate a hierarchical DOT graph
+        # and a JSON file for the rank that is specified from the command line
+        elif args.partitioner.lower() == 'ahp_graph':
+            if args.rank == 0:
+                graph.write_dot('pingpong', draw=True, ports=True)
+            sstgraph.write_json('pingpong', nranks=args.num, rank=args.rank)

@@ -5,10 +5,17 @@ APPS=$(SST_ELEMENTS_HOME)/src/sst/elements/rdmaNic/tests/app/rdma
 LIB=$(APPS)/librdma.a
 
 # Simply typing "make" calls this by default
-all: test
+all: test testRank%
 
-test:
-	python3 HPC.py #--shape=3x3 --nodes=16 --cores=8
+test: testRank0 testRank1 testRank2 testRank3
+
+# The testRank% target allows for either sequential or parallel runs of
+# these targets. If you run 'make test' then a JSON file for each rank will
+# be generated sequentially, saving memory. If you run 'make test -j' then
+# all the targets will run in separate threads allowing all JSON files to
+# be generated at the same time, improving speed but taking more memory
+testRank%:
+	python3 HPC.py --rank=$*
 
 # arguments after '-- ' are passed to the sst model instead of taken by sst
 sst: $(LIB)

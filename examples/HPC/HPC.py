@@ -123,6 +123,8 @@ if __name__ == "__main__":
                         help='optional number of nodes per rack')
     parser.add_argument('--cores', type=int, default=1,
                         help='optional number of cores per server')
+    parser.add_argument('--rank', type=int, default=0,
+                        help='which rank to generate the JSON file for')
     parser.add_argument('--partitioner', type=str, default='sst',
                         help='which partitioner to use: ahp_graph, sst')
     args = parser.parse_args()
@@ -151,5 +153,6 @@ if __name__ == "__main__":
 
     else:
         # generate a graphviz dot file and json output for demonstration
-        graph.write_dot('cluster', draw=True, ports=True)
-        sstgraph.write_json('cluster', racks)
+        if args.rank == 0:
+            graph.write_dot('cluster', draw=True, ports=True)
+        sstgraph.write_json('cluster', racks, rank=args.rank)

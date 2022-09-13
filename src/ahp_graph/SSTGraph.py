@@ -63,7 +63,7 @@ class SSTGraph(DeviceGraph):
             self.follow_links(rank, True)
             return self.__build_model(True)
 
-    def write_json(self, name: str, nranks: int = 1,
+    def write_json(self, name: str, nranks: int = 1, rank: int = 0,
                    directory: str = 'output',
                    program_options: dict[str, Any] = None) -> None:
         """
@@ -77,61 +77,34 @@ class SSTGraph(DeviceGraph):
         ahp_graph to do the graph partitioning instead of letting SST do it. You
         can do this by using the Device.set_partition() function and then
         setting nranks in this function to the total number of ranks used
+
+        If generating separate JSON files you MUST generate one at a time
+        since the graph is being modified in place!
         """
         if not os.path.exists(directory):
             os.makedirs(directory)
-
-        self.flatten()
-        self.verify_links()
-
+        
         # If this is serial or sst is doing the partitioning,
-        # just write the whole thing
+        # write the entire graph
         if nranks == 1:
+            self.flatten()
+            self.verify_links()
             self.__write_model(f"{directory}/{name}.json", nranks,
-                               self.devices, self.links, program_options)
+                               program_options)
 
-        # Write a JSON file for each rank
-        else:
+        # Write a JSON file for this rank
+        elif rank < nranks:
             self.check_partition()
-            partition = self.__partition_graph(nranks)
-            for rank in range(nranks):
-                self.__write_model(f"{directory}/{name}{rank}.json", nranks,
-                                   partition[rank][0], partition[rank][1],
-                                   program_options)
+            self.flatten(rank=rank)
+            # need to verify before we follow links because pruning
+            # may make the overall graph invalid
+            # (it will be valid for the current rank)
+            self.verify_links()
+            self.follow_links(rank, True)
+            self.__write_model(f"{directory}/{name}{rank}.json", nranks,
+                               program_options)
 
     pType = list[tuple[set[Device], dict[frozenset, str]]]
-
-    def __partition_graph(self, nranks: int) -> pType:
-        """
-        Store all the devices and links for a given rank.
-
-        Return a list of pairs of the form (Device-set, link-dict),
-        where each list entry corresponds to a particular processor rank.
-        It is faster to partition the graph once rather than search it
-        O(p) times.
-        """
-        partition: SSTGraph.pType = [(set(), dict()) for p in range(nranks)]
-
-        for p0, p1 in self.links:
-            link = frozenset({p0, p1})
-            t = self.links[link]
-            d0 = p0.device
-            d1 = p1.device
-            while d0.subOwner is not None:
-                d0 = d0.subOwner
-            while d1.subOwner is not None:
-                d1 = d1.subOwner
-            r0 = d0.partition[0]  # type: ignore[index]
-            r1 = d1.partition[0]  # type: ignore[index]
-
-            partition[r0][0].add(d0)
-            partition[r0][0].add(d1)
-            partition[r0][1][link] = t
-            if r0 != r1:
-                partition[r1][0].add(d0)
-                partition[r1][0].add(d1)
-                partition[r1][1][link] = t
-        return partition
 
     @staticmethod
     def __encode(attr: dict[str, Any],
@@ -234,8 +207,7 @@ class SSTGraph(DeviceGraph):
         # Return a map of component names to components.
         return n2c
 
-    def __write_model(self, filename: str, nranks: int, devices: set[Device],
-                      links: dict[frozenset[DevicePort], str],
+    def __write_model(self, filename: str, nranks: int,
                       program_options: dict[str, Any] = None) -> None:
         """Write this DeviceGraph out as JSON."""
         model: dict[str, Any] = dict()
@@ -281,7 +253,7 @@ class SSTGraph(DeviceGraph):
         # Define all the components. We define the name, type, parameters,
         # and global parameters. Ignore Devices that have no library defined
         components = list()
-        for d0 in devices:
+        for d0 in self.devices:
             if d0.subOwner is None and d0.library is not None:
                 component = {
                     "name": d0.name,
@@ -307,9 +279,9 @@ class SSTGraph(DeviceGraph):
 
         # Now define the links between components.
         linksJSON = list()
-        for p0, p1 in links:
+        for p0, p1 in self.links:
             if p0.device.library is not None and p1.device.library is not None:
-                t = links[frozenset({p0, p1})]
+                t = self.links[frozenset({p0, p1})]
                 latency = t if t != '0s' else '1ps'
                 if str(p0) < str(p1):
                     name = f'{p0}__{t}__{p1}'
