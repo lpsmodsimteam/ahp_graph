@@ -20,6 +20,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='regional planning')
     parser.add_argument('--num', type=int, default=2,
                         help='number of neighborhoods')
+    parser.add_argument('--rank', type=int, default=0,
+                        help='which rank to generate the JSON file for')
     parser.add_argument('--partitioner', type=str, default='sst',
                         help='which partitioner to use: ahp_graph, sst')
     args = parser.parse_args()
@@ -44,13 +46,18 @@ if __name__ == "__main__":
             sstgraph.build(args.num)
 
     else:
-        # generate a graphviz dot file including the hierarchy
-        graph.write_dot('the_regional_plan', draw=True, ports=True)
-        sstgraph.write_json('the_regional_plan', nranks=args.num)
+        # SST partitioner
+        # This will generate a flat dot graph and a single JSON file
+        if args.partitioner.lower() == 'sst':
+            graph.flatten()
+            graph.write_dot('the_regional_plan_flat', draw=True, ports=True, hierarchy=False)
+            sstgraph.write_json('the_regional_plan_flat')
 
-        # generate a flat graphviz dot file and json output for demonstration
-        graph.flatten()
-        graph.write_dot('the_regional_plan_flat', draw=True, ports=True, hierarchy=False)
-        sstgraph.write_json('the_regional_plan_flat')
+        # If ahp_graph is partitioning, we generate a hierarchical DOT graph
+        # and a JSON file for the rank that is specified from the command line
+        elif args.partitioner.lower() == 'ahp_graph':
+            if args.rank == 0:
+                graph.write_dot('the_regional_plan', draw=True, ports=True)
+            sstgraph.write_json('the_regional_plan', nranks=args.num, rank=args.rank)
 
 #EOF

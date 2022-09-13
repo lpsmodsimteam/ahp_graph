@@ -196,7 +196,8 @@ class DeviceGraph:
         """
         self.check_partition()
         while True:
-            devices = set()
+            expand = set()
+            keep = set()
             linksToRemove = list()
             for p0, p1 in self.links:
                 # One of the Devices is on the rank that we are
@@ -205,10 +206,10 @@ class DeviceGraph:
                         or p1.device.partition[0] == rank):
                     for p in [p0, p1]:
                         if p.device.library is None:
-                            devices.add(p.device)
+                            expand.add(p.device)
+                        if prune:
+                            keep.add(p.device)
                 # This link is not used on our rank, remove it
-                # Devices will not be inserted into the graph if they
-                # aren't linked to
                 elif prune:
                     linksToRemove.append(frozenset({p0, p1}))
 
@@ -220,9 +221,14 @@ class DeviceGraph:
                 p0.link = None
                 p1.link = None
                 self.ports -= {p0, p1}
+            
+            # Remove devices that haven't been marked for keeping
+            if prune:
+                self.devices = keep
+                self.names = {dev.name for dev in keep}
 
-            if devices:
-                self.flatten(expand=devices)
+            if expand:
+                self.flatten(expand=expand)
             else:
                 break
 

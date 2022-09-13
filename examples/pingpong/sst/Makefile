@@ -9,7 +9,7 @@ OBJ = $(SRC:%.cpp=.build/%.o)
 DEP = $(OBJ:%.o=%.d)
 
 # Tell Make that these are NOT files, just targets
-.PHONY: all install uninstall clean test sst mpi-sst mpi-ahpgraph
+.PHONY: all install uninstall clean test testRank% sst mpi-sst mpi-ahpgraph
 
 # Simply typing "make" calls this by default, so everything gets build and installed
 all: install
@@ -28,8 +28,19 @@ libpingpong.so: $(OBJ)
 install: libpingpong.so
 	sst-register pingpong pingpong_LIBDIR=$(CURDIR)
 
-test:
+# Testing two ways, the testRank% will be described below
+# Test will run pingpong.py with python and generate a flattened
+# JSON file and DOT graph file
+test: testRank0 testRank1 testRank2
 	python3 pingpong.py
+
+# The testRank% target allows for either sequential or parallel runs of
+# these targets. If you run 'make test' then a JSON file for each rank will
+# be generated sequentially, saving memory. If you run 'make test -j' then
+# all the targets will run in separate threads allowing all JSON files to
+# be generated at the same time, improving speed but taking more memory
+testRank%:
+	python3 pingpong.py --num=3 --rank=$* --partitioner=ahp_graph
 
 sst: install
 	sst pingpong.py
