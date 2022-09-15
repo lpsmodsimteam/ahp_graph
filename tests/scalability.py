@@ -1,38 +1,37 @@
-"""Generate a large graph using a recursive binary tree method."""
+"""Generate a large graph using a recursive tree method."""
 
-from ahp_graph.Device import *
 from ahp_graph.DeviceGraph import *
+from ahp_graph.SSTGraph import *
 from Devices import *
 
 
-def generateGraph(levels: int) -> DeviceGraph:
+def generateGraph(levels: int, assemblies: int = 2) -> DeviceGraph:
     """
     Generate a DeviceGraph using a psuedo - Binary Tree.
 
     The number of components in the fully flattened graph will be
-    2 + 2 ** (levels + 2)
+    assemblies + ( (2 ** (levels + 1)) * assemblies )
     """
     graph = DeviceGraph()
 
-    ratd0 = RecursiveAssemblyTestDevice(levels, 0)
-    ratd1 = RecursiveAssemblyTestDevice(levels, 1)
-    lptd0 = LibraryPortTestDevice(0)
-    lptd1 = LibraryPortTestDevice(1)
+    ratd = list()
+    lptd = list()
+    for i in range(assemblies):
+        ratd.append(RecursiveAssemblyTestDevice(levels, i))
+        lptd.append(LibraryPortTestDevice(i))
 
-    # complete the rings
-    graph.link(ratd0.input, ratd0.output)
-    graph.link(ratd1.input, ratd1.output)
+    # connect everything
+    for i in range(assemblies):
+        graph.link(ratd[(i+1)%assemblies].input, ratd[i].output)
+        graph.link(lptd[(i+1)%assemblies].input, lptd[i].output)
 
-    graph.link(lptd0.input, lptd1.output)
-    graph.link(lptd1.input, lptd0.output)
-    for i in range(2 ** (levels+1)):
-        graph.link(lptd0.optional(None), ratd0.optional(None))
-        graph.link(lptd1.optional(None), ratd1.optional(None))
+        for j in range(2 ** (levels+1)):
+            graph.link(lptd[i].optional(None), ratd[i].optional(None))
 
-    ratd0.set_partition(0)
-    ratd1.set_partition(1)
-    lptd0.set_partition(2)
-    lptd1.set_partition(2)
+    # set partitions
+    for i in range(assemblies):
+        ratd[i].set_partition(i)
+        lptd[i].set_partition(assemblies)
 
     return graph
 
@@ -41,9 +40,14 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
         description='AHPGraph DeviceGraph unittests')
-    parser.add_argument('-l', '--levels', type=int,
+    parser.add_argument('-l', '--levels', type=int, default=0,
                         help='how many levels to recurse')
+    parser.add_argument('-a', '--assemblies', type=int, default=2,
+                        help='how many ratd assemblies to include')
     args = parser.parse_args()
 
-    graph = generateGraph(args.levels)
-    graph.flatten()
+    graph = generateGraph(args.levels, args.assemblies)
+
+    # Various tests to run
+    #graph.flatten()
+    graph.follow_links(0, True)
