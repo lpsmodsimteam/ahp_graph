@@ -1,35 +1,109 @@
-#!/usr/bin/env python3
-
 """
 This module represents a Device.
-
-There are decorators for annotating which library the device can be found
-in along with port labels.
 
 The most important feature is that a Device can be an assembly, meaning it is
 constructed of other Devices. This combined with the DeviceGraph allows for
 hierarchical representations of a graph.
 """
 
-from __future__ import annotations
-from typing import Optional, Union, Callable, Any, ClassVar
-import collections
+class SmallDeviceAttr(list):
+    """
+    Implement a low-memory attribute dictionary
 
-portInfoType = tuple[Optional[int], Optional[str], bool, str]
+    This class mocks up a dict API using a list for the underlying
+    storage.  While is can save a significant amount of memory, it
+    does so at the cost of O(n) inserts and lookups.
+
+    The list stores keys at even indices and values at odd indices.
+    """
+    __slots__ = ()
+
+    def __init__(self, vals=None):
+        super().__init__()
+        if vals is not None:
+            self.update(vals)
+
+    def __setitem__(self, key, val):
+        for i in range(0, super().__len__(), 2):
+            if super().__getitem__(i) == key:
+                super().__setitem__(i+1, val)
+                return val
+
+        self.append(key)
+        self.append(val)
+        return val
+
+    def __getitem__(self, key):
+        for i in range(0, super().__len__(), 2):
+            if super().__getitem__(i) == key:
+                return super().__getitem__(i+1)
+        raise KeyError(key)
+
+    def __delitem__(self, key):
+        raise NotImplemented
+
+    def pop(self, *args):
+        raise NotImplemented
+
+    def popitem(self, *args):
+        raise NotImplemented
+
+    def remove(self, *args):
+        raise NotImplemented
+
+    def get(self, key, default=None):
+        for i in range(0, super().__len__(), 2):
+            if super().__getitem__(i) == key:
+                return super().__getitem__(i+1)
+        return default
+
+    def __len__(self):
+        return super().__len__() // 2
+
+    def __contains__(self, key):
+        return any(_ == key for _ in self.__reversed__())
+
+    def __iter__(self):
+        return iter(super().__getitem__(slice(0, None, 2)))
+
+    def __reversed__(self):
+        return iter(super().__getitem__(slice(super().__len__()-2, None, -2)))
+
+    def keys(self):
+        return super().__getitem__(slice(0, None, 2))
+
+    def values(self):
+        return super().__getitem__(slice(1, None, 2))
+
+    def items(self):
+        it = super().__iter__()
+        return zip(it, it)
+
+    def update(self, vals=None, **kwds):
+        if vals is not None:
+            if type(vals) is dict:
+                vals = vals.items()
+            for key, val in vals:
+                self.append(key)
+                self.append(val)
+        for key, val in kwds.items():
+            self.append(key)
+            self.append(val)
 
 
-class PortInfo(dict[str, portInfoType]):
+class PortInfo(dict):
     """
     PortInfo is a dictionary describing what ports a Device can have.
 
-    PortInfo contains information such as port type, limit on the number of
-    connections, whether the port is required, and formatting info.
-    PortInfo is a class variable which defines the available ports for all
-    instances of a specific Device. DevicePort represents an actual instance of
-    a port on a Device.
+    PortInfo contains information such as port type, limit on the number
+    of connections, whether the port is required, and formatting data.
+    PortInfo is a class variable which defines the available ports for
+    all instances of a specific Device. DevicePort represents an actual
+    instance of a port on a Device.
     """
+    __slots__ = ()
 
-    def add(self, name: str, ptype: str = None, limit: Optional[int] = 1,
+    def add(self, name: str, ptype: str = None, limit: int = 1,
             required: bool = True, format: str = '.p#') -> None:
         """Add a port definition to the dictionary."""
         self[name] = (limit, ptype, required, format)
@@ -40,17 +114,19 @@ class DevicePort:
     A DevicePort represents an instance of a port on a Device.
 
     DevicePort contains a Device reference, a port name, and an
-    optional port number.
-    It can also reference the other DevicePort that it is linked to.
+    optional port number.  It can also reference the other DevicePort
+    to which it is linked.  We use __slots__ to minimize the amount
+    of memory used by each instance; it can save maybe 10% or so.
     """
+    __slots__ = ('device', 'name', 'number', 'link')
 
-    def __init__(self, device: Device, name: str,
+    def __init__(self, device: 'Device', name: str,
                  number: int = None) -> None:
         """Initialize the device, name, port number."""
-        self.device: Device = device
-        self.name: str = name
-        self.number: Optional[int] = number
-        self.link: Optional[DevicePort] = None
+        self.device = device
+        self.name = name
+        self.number = number
+        self.link = None
 
     def get_name(self) -> str:
         """Return a string representation of the port name and number."""
@@ -71,54 +147,59 @@ class Device:
 
     A Device may be represented by an model or may be an assembly
     of other Devices. If an assembly, then the Device must define
-    an expand() method that returns a DeviceGraph that implements the Device.
+    an expand() method that returns a DeviceGraph that implements
+    the Device.
 
     Devices may contain submodules which allow for parameterization of
-    functionality similar to a lambda function (ex. SST subcomponents). This
-    is done by creating a Device to represent the submodule and then adding
-    it into another Device.
+    functionality similar to a lambda function (ex. SST subcomponents).
+    This is done by creating a Device to represent the submodule and
+    then adding it into another Device.
 
-    The variables library and portinfo are class variables that can be set on
-    the definition of a new Device class. The variable attr is a dictionary of
-    attributes that can be used as both a class variable and an instance
-    variable. Attributes that are common among all instances of a Device can
-    be set in the definition of that Device and instance attributes can be
-    added to the class attributes on specific instances of the Device.
+    The variables library and portinfo are class variables that can be
+    set on the definition of a new Device class. The variable attr is a
+    dictionary of attributes.
     """
-
-    library: ClassVar[Optional[str]] = None
-    portinfo: ClassVar[PortInfo] = PortInfo()
-    attr: dict[str, Any] = dict()
+    __slots__ = (
+        'name', 'attr', 'ports', 'subs', 'subOwner',
+        'partition', 'type', 'model'
+    )
+    library = None
+    portinfo = PortInfo()
 
     def __init__(self, name: str, model: str = None,
-                 attr: dict[str, Any] = None) -> None:
+                 attr: dict = None) -> None:
         """
         Initialize the Device.
 
         Initialize with the unique name, model, and optional
         dictionary of attributes which are used as model parameters.
         """
-        self.name: str = name
-        if self.attr:
-            if attr is not None:
-                self.attr = {**self.attr, **attr}
-        elif attr is not None:
-            self.attr = attr
-        portType = dict[str, dict[int, DevicePort]]
-        self.ports: portType = collections.defaultdict(dict)
-        self.subs: set[tuple[Device, str, Optional[int]]] = set()
-        self.subOwner: Optional[Device] = None
-        self.partition: Optional[tuple[int, Optional[int]]] = None
-        self.type: str = self.__class__.__name__
-        self.model: Optional[str] = model
+        self.name = name
+        self.attr = SmallDeviceAttr(attr)
+        self.ports = {}
+        self.subs = None
+        self.subOwner = None
+        self.partition = None
+        self.type = self.__class__.__name__
+        self.model = model
         if self.library is None and not hasattr(self, "expand"):
-            raise RuntimeError(f"Assemblies must define expand(): {self.type}")
+            raise RuntimeError(f"Assemblies must define expand: {self.type}")
+
+    def dealloc(self):
+        """
+        Deallocate the device.  This clears ports and other references.
+        """
+        self.ports.clear()
+        self.subs = None
+        self.subOwner = None
 
     def set_partition(self, rank: int, thread: int = None) -> None:
-        """Assign a rank and optional thread to this device."""
+        """
+        Assign a rank and optional thread to this device.
+        """
         self.partition = (rank, thread)
 
-    def add_submodule(self, device: Device, slotName: str,
+    def add_submodule(self, device: 'Device', slotName: str,
                       slotIndex: int = None) -> None:
         """
         Add a submodule to this Device.
@@ -131,10 +212,11 @@ class Device:
             raise RuntimeError(f"Submodule and parent must have libraries:"
                                f" {device.name}, {self.name}")
         device.subOwner = self
-        self.subs.add((device, slotName, slotIndex))
+        if not self.subs:
+            self.subs = []
+        self.subs.append((device, slotName, slotIndex))
 
-    def __getattr__(self, port: str) -> Union[DevicePort,
-                                              Callable[[Optional[int]], DevicePort]]:
+    def __getattr__(self, port: str) -> 'DevicePort':
         """
         Enable ports to be treated as variables.
 
@@ -142,7 +224,7 @@ class Device:
         class (e.g., Device.Input instead of Device.port("Input").
         If the port is not defined, then we thrown an exception.
         """
-        info: Optional[portInfoType] = self.portinfo.get(port)
+        info = self.portinfo.get(port)
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
 
@@ -151,7 +233,7 @@ class Device:
         else:
             return lambda x: self.port(port, x)
 
-    def port(self, port: str, number: int = None) -> DevicePort:
+    def port(self, port: str, number: int = None) -> 'DevicePort':
         """
         Return a DevicePort object representing the port on this Device.
 
@@ -163,30 +245,36 @@ class Device:
         list.  Make sure we do not create too many connections if limited.
         Finally, if the port has not already been defined, then create it.
         """
-        info: Optional[portInfoType] = self.portinfo.get(port)
+        info = self.portinfo.get(port)
         if info is None:
             raise RuntimeError(f"Unknown port in {self.name}: {port}")
 
-        elif info[0] == 1:
+        if info[0] == 1:
             # Single Port, don't use port numbers
             if number is not None:
                 print(f"WARNING! Single port ({port}) being provided a port"
                       f" number ({number})")
-            if port not in self.ports:
-                self.ports[port][-1] = DevicePort(self, port)
-            return self.ports[port][-1]
 
         else:
+            #
             # Multi Port, use port numbers and check the provided limit
+            #
+            # As a hack, we store the port count in the same dict as we
+            # store the port pairs.  We need to be careful to filter it
+            # out when we access the ports.
+            #
             if number is None:
-                number = len(self.ports[port])
+                number = self.ports.get(port, 0)
             if info[0] is not None:
                 if number >= info[0]:
                     raise RuntimeError(f"Too many connections ({number}):"
                                        f" {port} (limit {info[0]})")
-            if number not in self.ports[port]:
-                self.ports[port][number] = DevicePort(self, port, number)
-            return self.ports[port][number]
+            self.ports[port] = max(number+1, self.ports.get(port, 1))
+            
+        key = (port, number)
+        if key not in self.ports:
+            self.ports[key] = DevicePort(self, port, number)
+        return self.ports[key]
 
     def get_category(self) -> str:
         """Return the category for this Device (type, model)."""
@@ -197,15 +285,20 @@ class Device:
     def label_ports(self) -> str:
         """Return the port labels for a graphviz record style node."""
         if len(self.ports) == 0:
-            return ''
+            return ""
+
+        port_names = set([ 
+            p[0] for p in self.ports.keys() if isinstance(p, tuple)
+        ])
+
         label = '{'
-        for port in self.ports:
+        for port in port_names:
             label += f"<{port}> {port}|"
         return label[:-1] + '}'
 
     def __repr__(self) -> str:
         """Return a description of the Device."""
-        lines: list[str] = list()
+        lines = list()
         lines.append(f"Device = {self.type}")
         lines.append(f"\tname = {self.name}")
         if self.model:
@@ -225,8 +318,8 @@ class Device:
                 lines.append(f"\t\t{port} = {self.portinfo[port]}")
         if self.attr:
             lines.append(f"\tAttributes:")
-            for key in sorted(self.attr):
-                lines.append(f"\t\t{key} = {self.attr[key]}")
+            for key, val in sorted(self.attr.items()):
+                lines.append(f"\t\t{key} = {val}")
         if self.subs:
             lines.append(f"\tSubmodules:")
             for sub in sorted(self.subs, key=lambda x: (x[1], x[2])):
