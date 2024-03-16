@@ -249,8 +249,17 @@ class DeviceGraph:
             if d0.partition[0] == rank or d1.partition[0] == rank:
                 devices_to_keep.add(d0)
                 devices_to_keep.add(d1)
-                devices_to_keep.add(d0.subOwner)
-                devices_to_keep.add(d1.subOwner)
+
+                d0_so = d0.subOwner
+                while d0_so:
+                    devices_to_keep.add(d0_so)
+                    d0_so=d0_so.subOwner
+            
+                d1_so = d1.subOwner
+                while d1_so:
+                    devices_to_keep.add(d1_so)
+                    d1_so=d1_so.subOwner
+
                 if d0.subs:
                     for s0 in d0.subs:
                         devices_to_keep.add(s0)
