@@ -13,7 +13,7 @@ This model demonstrates the relation of assemblies and components.
 
 # (components and assemblies) versus (subcomponents and components)
 
-
+```
 +--------------------+
 | assembly           |
 |                    |
@@ -52,11 +52,11 @@ This model demonstrates the relation of assemblies and components.
 |  +---------------+ |
 |                    |
 +--------------------+
-
+```
 
 versus
 
-
+```
              +------------------+
              |      component   |
              |                  |
@@ -95,7 +95,7 @@ versus
       +------+--------+         |
              |                  |
              +------------------+
-
+```
 
 
 
