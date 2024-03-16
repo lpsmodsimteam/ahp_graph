@@ -297,8 +297,12 @@ class SSTGraph(DeviceGraph):
         #
         links = list()
         for ((p0,p1),t) in self.links.items():
-            assert p0.device.library is not None
-            assert p1.device.library is not None
+            #assert p0.device.library is not None
+            #assert p1.device.library is not None
+            if p0.device.library is None:
+                raise RuntimeError(f"No SST library: {p0.device.name}")
+            if p1.device.library is None:
+                raise RuntimeError(f"No SST library: {p1.device.name}")
 
             latency = t if t != '0s' else '1ps'
             if str(p0) < str(p1):
