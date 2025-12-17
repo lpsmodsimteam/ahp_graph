@@ -276,8 +276,8 @@ class DeviceGraph:
             del self.links[(p0, p1)]
             p0.link = None
             p1.link = None
-            self.ports.remove(p0)
-            self.ports.remove(p1)
+            self.ports.discard(p0)
+            self.ports.discard(p1)
 
         #
         # Remove all devices we do not need to keep
@@ -382,8 +382,8 @@ class DeviceGraph:
                             del self.links[(p0, p1)]
                             p0.link = None
                             p1.link = None
-                            self.ports.remove(p0)
-                            self.ports.remove(p1)
+                            self.ports.discard(p0)
+                            self.ports.discard(p1)
 
                     for device in self.expand_new_devices:
                         del self.devices[device.name]
