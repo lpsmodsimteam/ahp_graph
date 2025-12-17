@@ -98,12 +98,14 @@ class SSTGraph(DeviceGraph):
             self.__write_model(
                 f"{output}/{filename}",
                 nranks,
+                rank,
                 program_options)
         else:
             (base, ext) = os.path.splitext(f"{output}/{filename}")
             self.__write_model(
                 base + str(rank) + ext,
                 nranks,
+                rank,
                 program_options)
 
     @staticmethod
@@ -213,6 +215,7 @@ class SSTGraph(DeviceGraph):
     def __write_model(self,
                       filename: str,
                       nranks: int,
+                      rank: int,
                       program_options: dict = None) -> None:
         """
         Write this DeviceGraph out as JSON.
@@ -228,10 +231,10 @@ class SSTGraph(DeviceGraph):
             model["program_options"] = dict(program_options)
 
         #
-        # If running in parallel, then set up the SST SELF partitioner.
+        # If running in parallel, then set up the SST LINEAR partitioner.
         #
         if nranks > 1:
-            model["program_options"]["partitioner"] = "sst.self"
+            model["program_options"]["partitioner"] = "sst.linear"
 
         #
         # Set up global parameters.
@@ -251,13 +254,16 @@ class SSTGraph(DeviceGraph):
                 if d1.library is None:
                     raise RuntimeError(f"No library: {d1.name}")
                 
-                d1.attr.update(type=d1.type, model=d1.model)
                 item = {
                     "slot_name" : n1,
                     "type" : d1.library,
                     "slot_number" : s1,
-                    "params" : self.__encode(d1.attr, True),
-                    "params_global_sets" : global_set,
+                    # omit internal metadata like type/model from params
+                    "params" : self.__encode({
+                        k: v for (k, v) in d1.attr.items()
+                        if k not in ("type", "model")
+                    }, True),
+                    # "params_global_sets" : global_set,
                 }
                 if d1.subs:
                     item["subcomponents"] = recurseSubcomponents(d1)
@@ -271,12 +277,19 @@ class SSTGraph(DeviceGraph):
         components = list()
         for d0 in self.devices.values():
             if d0.subOwner is None and d0.library is not None:
-                d0.attr.update(type=d0.type, model=d0.model)
+                # In multi-rank output, only emit components local to this rank
+                if nranks > 1:
+                    if d0.partition is None or d0.partition[0] != rank:
+                        continue
                 component = {
                     "name" : d0.name,
                     "type" : d0.library,
-                    "params" : self.__encode(d0.attr, True),
-                    "params_global_sets" : global_set,
+                    # omit internal metadata like type/model from params
+                    "params" : self.__encode({
+                        k: v for (k, v) in d0.attr.items()
+                        if k not in ("type", "model")
+                    }, True),
+                    # "params_global_sets" : global_set,
                 }
                 if d0.partition is not None:
                     component["partition"] = {
@@ -309,19 +322,57 @@ class SSTGraph(DeviceGraph):
                 name = f'{p0}__{t}__{p1}'
             else:
                 name = f'{p1}__{t}__{p0}'
-            links.append({
-                "name" : name,
-                "left" : {
-                    "component" : p0.device.name,
-                    "port" : p0.get_name(),
-                    "latency" : latency
-                },
-                "right" : {
-                    "component" : p1.device.name,
-                    "port" : p1.get_name(),
-                    "latency" : latency
-                },
-            })
+
+            d0 = p0.device
+            d1 = p1.device
+            r0, t0 = (d0.partition or (0, None))
+            r1, t1 = (d1.partition or (0, None))
+            t0 = 0 if t0 is None else t0
+            t1 = 0 if t1 is None else t1
+
+            # Determine if link is inter-rank relative to this file's rank
+            is_nonlocal = nranks > 1 and r0 != r1
+
+            if is_nonlocal:
+                # Ensure left side is the local endpoint for this rank
+                if r0 == rank:
+                    left = {"component": d0.name, "port": p0.get_name(), "latency": latency}
+                    right = {"rank": r1, "thread": t1}
+                elif r1 == rank:
+                    left = {"component": d1.name, "port": p1.get_name(), "latency": latency}
+                    right = {"rank": r0, "thread": t0}
+                else:
+                    # Neither endpoint is local to this rank; skip emitting
+                    # (should not occur after prune, but guard just in case)
+                    continue
+
+                links.append({
+                    "name": name,
+                    "noCut": False,
+                    "nonlocal": True,
+                    "left": left,
+                    "right": right,
+                })
+            else:
+                # Local link (same-rank or single-rank output): keep both endpoints
+                # If multi-rank, only keep links where both endpoints are on this rank
+                if nranks > 1 and not (r0 == rank and r1 == rank):
+                    continue
+                links.append({
+                    "name": name,
+                    "noCut": False,
+                    "nonlocal": False,
+                    "left": {
+                        "component": d0.name,
+                        "port": p0.get_name(),
+                        "latency": latency,
+                    },
+                    "right": {
+                        "component": d1.name,
+                        "port": p1.get_name(),
+                        "latency": latency,
+                    },
+                })
 
         model["links"] = links
 
