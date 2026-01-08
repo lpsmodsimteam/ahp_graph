@@ -172,7 +172,10 @@ class SSTGraph(DeviceGraph):
                     c1 = comp.setSubComponent(n1, d1.library)
                 else:
                     c1 = comp.setSubComponent(n1, d1.library, s1)
-                d1.attr.update(type=d1.type, model=d1.model)
+                if d1.type is not None:
+                    d1.attr['type'] = d1.type
+                if d1.model is not None:
+                    d1.attr['model'] = d1.model
                 c1.addParams(self.__encode(d1.attr))
                 n2c[d1.name] = c1
                 for key in global_params:
@@ -185,7 +188,10 @@ class SSTGraph(DeviceGraph):
         for d0 in self.devices.values():
             if d0.subOwner is None and d0.library is not None:
                 c0 = sst.Component(d0.name, d0.library)
-                d0.attr.update(type=d0.type, model=d0.model)
+                if d0.type is not None:
+                    d0.attr['type'] = d0.type
+                if d0.model is not None:
+                    d0.attr['model'] = d0.model
                 c0.addParams(self.__encode(d0.attr))
                 # Set the component partition if we are self-partitioning
                 if self_partition:
@@ -254,15 +260,17 @@ class SSTGraph(DeviceGraph):
                 if d1.library is None:
                     raise RuntimeError(f"No library: {d1.name}")
                 
+                params_dict = {k: v for (k, v) in d1.attr.items()}
+                if d1.type is not None:
+                    params_dict['type'] = d1.type
+                if d1.model is not None:
+                    params_dict['model'] = d1.model
+                
                 item = {
                     "slot_name" : n1,
                     "type" : d1.library,
                     "slot_number" : s1,
-                    # omit internal metadata like type/model from params
-                    "params" : self.__encode({
-                        k: v for (k, v) in d1.attr.items()
-                        if k not in ("type", "model")
-                    }, True),
+                    "params" : self.__encode(params_dict, True),
                     # "params_global_sets" : global_set,
                 }
                 if d1.subs:
@@ -281,14 +289,16 @@ class SSTGraph(DeviceGraph):
                 if nranks > 1:
                     if d0.partition is None or d0.partition[0] != rank:
                         continue
+                params_dict = {k: v for (k, v) in d0.attr.items()}
+                if d0.type is not None:
+                    params_dict['type'] = d0.type
+                if d0.model is not None:
+                    params_dict['model'] = d0.model
+                
                 component = {
                     "name" : d0.name,
                     "type" : d0.library,
-                    # omit internal metadata like type/model from params
-                    "params" : self.__encode({
-                        k: v for (k, v) in d0.attr.items()
-                        if k not in ("type", "model")
-                    }, True),
+                    "params" : self.__encode(params_dict, True),
                     # "params_global_sets" : global_set,
                 }
                 if d0.partition is not None:
