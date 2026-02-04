@@ -245,11 +245,13 @@ class SSTGraph(DeviceGraph):
         #
         # Set up global parameters.
         #
-        global_params = self.__encode(self.attr, True)
-        model["global_params"] = dict()
-        for (key, val) in global_params.items():
-            model["global_params"][key] = dict({key: val})
-        global_set = list(global_params.keys())
+        # TODO: Revert if needed, but is causing parsing issue with
+        #       SST 15.1+
+        # global_params = self.__encode(self.attr, True)
+        # model["global_params"] = dict()
+        # for (key, val) in global_params.items():
+        #     model["global_params"][key] = dict({key: val})
+        # global_set = list(global_params.keys())
 
         def recurseSubcomponents(dev: Device) -> list:
             """Add subcomponents to the Device."""
@@ -260,17 +262,18 @@ class SSTGraph(DeviceGraph):
                 if d1.library is None:
                     raise RuntimeError(f"No library: {d1.name}")
                 
-                params_dict = {k: v for (k, v) in d1.attr.items()}
-                if d1.type is not None:
-                    params_dict['type'] = d1.type
-                if d1.model is not None:
-                    params_dict['model'] = d1.model
+                # TODO: Extra type is causing SST 15.1+ duplication error.
+                # d1.attr.update(type=d1.type, model=d1.model)
+                d1.attr.update(model=d1.model)
                 
                 item = {
                     "slot_name" : n1,
                     "type" : d1.library,
                     "slot_number" : s1,
-                    "params" : self.__encode(params_dict, True),
+                    "params" : self.__encode(d1.attr, True),
+                    
+                    # TODO: Revert if needed, but is causing parsing issue with
+                    #       SST 15.1+
                     # "params_global_sets" : global_set,
                 }
                 if d1.subs:
@@ -285,20 +288,18 @@ class SSTGraph(DeviceGraph):
         components = list()
         for d0 in self.devices.values():
             if d0.subOwner is None and d0.library is not None:
-                # In multi-rank output, only emit components local to this rank
-                if nranks > 1:
-                    if d0.partition is None or d0.partition[0] != rank:
-                        continue
-                params_dict = {k: v for (k, v) in d0.attr.items()}
-                if d0.type is not None:
-                    params_dict['type'] = d0.type
-                if d0.model is not None:
-                    params_dict['model'] = d0.model
+                
+                # TODO: Extra type is causing SST 15.1+ duplication error.
+                # d0.attr.update(type=d0.type, model=d0.model)
+                d0.attr.update(model=d0.model)
                 
                 component = {
                     "name" : d0.name,
                     "type" : d0.library,
-                    "params" : self.__encode(params_dict, True),
+                    "params" : self.__encode(d0.attr, True),
+                    
+                    # TODO: Revert if needed, but is causing parsing issue with
+                    #       SST 15.1+
                     # "params_global_sets" : global_set,
                 }
                 if d0.partition is not None:
@@ -352,8 +353,8 @@ class SSTGraph(DeviceGraph):
                     left = {"component": d1.name, "port": p1.get_name(), "latency": latency}
                     right = {"rank": r0, "thread": t0}
                 else:
-                    # Neither endpoint is local to this rank; skip emitting
-                    # (should not occur after prune, but guard just in case)
+                    # Neither endpoint is local to this rank, skip emitting
+                    # This shouldn't really happen, but added as a safeguard.
                     continue
 
                 links.append({
