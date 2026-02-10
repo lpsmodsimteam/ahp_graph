@@ -262,10 +262,7 @@ class SSTGraph(DeviceGraph):
                 if d1.library is None:
                     raise RuntimeError(f"No library: {d1.name}")
                 
-                # TODO: Extra type is causing SST 15.1+ duplication error.
-                # d1.attr.update(type=d1.type, model=d1.model)
-                d1.attr.update(model=d1.model)
-                
+                d1.attr.update(type=d1.type, model=d1.model)
                 item = {
                     "slot_name" : n1,
                     "type" : d1.library,
@@ -288,11 +285,7 @@ class SSTGraph(DeviceGraph):
         components = list()
         for d0 in self.devices.values():
             if d0.subOwner is None and d0.library is not None:
-                
-                # TODO: Extra type is causing SST 15.1+ duplication error.
-                # d0.attr.update(type=d0.type, model=d0.model)
-                d0.attr.update(model=d0.model)
-                
+                d0.attr.update(type=d0.type, model=d0.model)
                 component = {
                     "name" : d0.name,
                     "type" : d0.library,
@@ -321,8 +314,6 @@ class SSTGraph(DeviceGraph):
         #
         links = list()
         for ((p0,p1),t) in self.links.items():
-            #assert p0.device.library is not None
-            #assert p1.device.library is not None
             if p0.device.library is None:
                 raise RuntimeError(f"No SST library: {p0.device.name}")
             if p1.device.library is None:
