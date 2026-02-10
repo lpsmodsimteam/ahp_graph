@@ -172,10 +172,7 @@ class SSTGraph(DeviceGraph):
                     c1 = comp.setSubComponent(n1, d1.library)
                 else:
                     c1 = comp.setSubComponent(n1, d1.library, s1)
-                if d1.type is not None:
-                    d1.attr['type'] = d1.type
-                if d1.model is not None:
-                    d1.attr['model'] = d1.model
+                d1.attr.update(type=d1.type, model=d1.model)
                 c1.addParams(self.__encode(d1.attr))
                 n2c[d1.name] = c1
                 for key in global_params:
@@ -188,10 +185,7 @@ class SSTGraph(DeviceGraph):
         for d0 in self.devices.values():
             if d0.subOwner is None and d0.library is not None:
                 c0 = sst.Component(d0.name, d0.library)
-                if d0.type is not None:
-                    d0.attr['type'] = d0.type
-                if d0.model is not None:
-                    d0.attr['model'] = d0.model
+                d0.attr.update(type=d0.type, model=d0.model)
                 c0.addParams(self.__encode(d0.attr))
                 # Set the component partition if we are self-partitioning
                 if self_partition:
