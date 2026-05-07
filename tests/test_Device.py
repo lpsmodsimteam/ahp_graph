@@ -128,3 +128,18 @@ def test_submodule() -> None:
     assert pop[0] == ltd1, 'subs'
     assert pop[1] == 'slotName', 'slotName'
     assert pop[2] is None, 'slotIndex'
+
+
+def test_empty_model() -> None:
+    """Test that empty model name is not included in category (and not suffixed with '_')"""
+    device = AssemblyTestDevice("Name", "model")
+    assert device.get_category() == "AssemblyTestDevice_model"
+
+    device = AssemblyTestDevice("Name", " ")
+    assert device.get_category() == "AssemblyTestDevice"
+
+    device = AssemblyTestDevice("Name", "")
+    assert device.get_category() == "AssemblyTestDevice"
+
+    device = AssemblyTestDevice("Name")
+    assert device.get_category() == "AssemblyTestDevice"

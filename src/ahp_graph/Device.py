@@ -278,7 +278,7 @@ class Device:
 
     def get_category(self) -> str:
         """Return the category for this Device (type, model)."""
-        if self.model is not None:
+        if self.model is not None and self.model.strip():
             return f"{self.type}_{self.model}"
         return self.type
 
