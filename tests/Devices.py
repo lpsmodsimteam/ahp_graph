@@ -1,5 +1,7 @@
 """Collection of ahp_graph Devices for testing."""
 
+from typing import Any
+
 from ahp_graph.Device import *
 from ahp_graph.DeviceGraph import *
 
@@ -104,3 +106,8 @@ class AttributeTestDevice(Device):
     def __init__(self, attr: dict[str, Any], name: str = '') -> None:
         """Test Device with attributes."""
         super().__init__(f'{self.__class__.__name__}{name}', attr=attr)
+
+
+class AssemblyTestDevice(Device):
+    def expand(self, grpah: DeviceGraph) -> None:
+        pass
