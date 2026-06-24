@@ -76,7 +76,9 @@ class DeviceGraph:
         for device in self.devices.values():
             lines.append(str(device))
         for p0, p1 in self.links:
-            lines.append(f"{p0} <--{self.links[(p0, p1)]}--> {p1}")
+            attr = self.links[(p0, p1)]
+            attr_str = ', '.join(f"{k}={v}" for k, v in sorted(attr.items()))
+            lines.append(f"{p0} <--[{attr_str}]--> {p1}")
         return "\n".join(lines)
 
     def _link_other_port(self, p0: DevicePort, p1: DevicePort) -> None:
@@ -91,27 +93,47 @@ class DeviceGraph:
             p1.link = p2
             self.ports.remove(p0)
             self.ports.add(p1)
-            latency = self.links.pop(_orderedtuple(p0, p2))
+            attr = self.links.pop(_orderedtuple(p0, p2))
             # add the other device to the graph
             if p1.device.name not in self.devices:
                 self.add(p1.device)
-            self.links[_orderedtuple(p1, p2)] = latency
+            self.links[_orderedtuple(p1, p2)] = attr
             if self.expand_new_links is not None:
                 self.expand_new_links.append((p1,p2))
 
     def link(self, p0: DevicePort, p1: DevicePort,
-             latency: str = '0s') -> None:
+             latency: str = None, attr: dict = None) -> None:
         """
-        Link two DevicePorts with latency if provided.
+        Link two DevicePorts with optional attributes.
 
         Links are bidirectional and the key is a frozenset of the two
         DevicePorts. Duplicate links (links between the same DevicePorts)
         are not permitted. Keep in mind that a unique DevicePort is created
         for each port number in a multi-port style port. If the link
         types to not match, then throw an exception. Devices that are linked
-        to will be added to the graph automatically.  Latency is expressed
-        as a string with time units (ps, ns, us...)
+        to will be added to the graph automatically.
+
+        Args:
+            p0: First DevicePort to link
+            p1: Second DevicePort to link
+            latency: Optional latency string (e.g., '0s', '10ns'). If provided,
+                     added to attr as 'latency' key. For backward compatibility.
+            attr: Optional dictionary of link attributes. If not provided,
+                  defaults to {'latency': '0s'} or {'latency': latency} if
+                  latency is specified.
         """
+        # Process attributes
+        if attr is None:
+            attr = {}
+        else:
+            attr = dict(attr)  # Make a copy to avoid modifying caller's dict
+
+        # Handle backward compatibility: if latency is provided, add it to attr
+        if latency is not None:
+            attr['latency'] = latency
+        elif 'latency' not in attr:
+            attr['latency'] = '0s'
+
         if callable(p0) or callable(p1):
             raise RuntimeError(f"{p0} or {p1} is callable. This probably means"
                                f" you have a multi port and didn't pick a port"
@@ -150,7 +172,7 @@ class DeviceGraph:
             p0.link = p1
             p1.link = p0
         key = _orderedtuple(p0, p1)
-        self.links[key] = latency
+        self.links[key] = attr
         if self.expand_new_links is not None:
             self.expand_new_links.append(key)
 

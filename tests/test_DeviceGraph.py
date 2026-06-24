@@ -106,7 +106,11 @@ def test_link() -> None:
     graph.link(lptd.input, ptd0.optional)  # type: ignore[arg-type]
     assert len(graph.devices) == 3, 'linking add submodule parent'
     assert ltd in graph.devices, 'submodule parent included'
-    assert graph.links[frozenset({lptd.input, ptd0.optional})] == '0s', 'default latency'  # type: ignore[arg-type]
+    # Find the link key (links are keyed by ordered tuples)
+    link_key = [k for k in graph.links.keys() if lptd.input in k and ptd0.optional in k][0]
+    link_attr = graph.links[link_key]
+    assert isinstance(link_attr, dict), 'link attributes are dict'
+    assert link_attr['latency'] == '0s', 'default latency'
     linkAgain = None
     try:
         graph.link(ptd0.optional, lptd.input)  # type: ignore[arg-type]
@@ -136,7 +140,42 @@ def test_link() -> None:
         changeSinglePortLink = True
     assert changeSinglePortLink, 'linking from a single port again'
     graph.link(ptd0.limit(0), ptd1.limit(0), '123ns')  # type: ignore[operator]
-    assert graph.links[frozenset({ptd0.limit(0), ptd1.limit(0)})] == '123ns', 'latency'  # type: ignore[operator]
+    # Find the link key (links are keyed by ordered tuples)
+    link_key = [k for k in graph.links.keys() if ptd0.limit(0) in k and ptd1.limit(0) in k][0]
+    link_attr = graph.links[link_key]
+    assert link_attr['latency'] == '123ns', 'latency from positional param'
+
+
+def test_link_attributes() -> None:
+    """Test of arbitrary link attributes in a DeviceGraph."""
+    graph = DeviceGraph()
+
+    ptd0 = PortTestDevice('0')
+    ptd1 = PortTestDevice('1')
+
+    # Test link with attr dict including latency
+    graph.link(ptd0.default, ptd1.default, attr={'latency': '10ns', 'bandwidth': '100GB/s'})  # type: ignore[arg-type]
+    # Find the link key (links are keyed by ordered tuples of ports)
+    link_key = [k for k in graph.links.keys() if ptd0.default in k and ptd1.default in k][0]
+    link_attr = graph.links[link_key]
+    assert link_attr['latency'] == '10ns', 'latency in attr dict'
+    assert link_attr['bandwidth'] == '100GB/s', 'custom attribute'
+
+    # Test link with latency param and additional attr
+    graph.link(ptd0.ptype, ptd1.ptype, latency='5ns', attr={'bandwidth': '50GB/s', 'protocol': 'PCIe'})  # type: ignore[arg-type]
+    link_key = [k for k in graph.links.keys() if ptd0.ptype in k and ptd1.ptype in k][0]
+    link_attr = graph.links[link_key]
+    assert link_attr['latency'] == '5ns', 'latency param overrides attr dict'
+    assert link_attr['bandwidth'] == '50GB/s', 'custom attribute with latency param'
+    assert link_attr['protocol'] == 'PCIe', 'multiple custom attributes'
+
+    # Test link with only custom attributes (no latency specified)
+    graph.link(ptd0.no_limit(0), ptd1.no_limit(0), attr={'bandwidth': '200GB/s', 'protocol': 'NVLink'})  # type: ignore[operator]
+    link_key = [k for k in graph.links.keys() if ptd0.no_limit(0) in k and ptd1.no_limit(0) in k][0]
+    link_attr = graph.links[link_key]
+    assert link_attr['latency'] == '0s', 'default latency when not in attr'
+    assert link_attr['bandwidth'] == '200GB/s', 'custom attribute without latency'
+    assert link_attr['protocol'] == 'NVLink', 'protocol attribute'
 
 
 def test_verifyLinks() -> None:
