@@ -198,18 +198,19 @@ class SSTGraph(DeviceGraph):
                 recurseSubcomponents(d0, c0)
 
         # Second, link the component ports using graph links
-        for ((p0,p1),t) in self.links.items():
+        for ((p0,p1),attr) in self.links.items():
             if p0.device.library is not None \
                     and p1.device.library is not None:
                 c0 = n2c[p0.device.name]
                 c1 = n2c[p1.device.name]
                 s0 = p0.get_name()
                 s1 = p1.get_name()
+                latency_str = attr.get('latency', '0s')
                 if str(p0) < str(p1):
-                    link = sst.Link(f'{p0}__{t}__{p1}')
+                    link = sst.Link(f'{p0}__{latency_str}__{p1}')
                 else:
-                    link = sst.Link(f'{p1}__{t}__{p0}')
-                latency = t if t != '0s' else '1ps'
+                    link = sst.Link(f'{p1}__{latency_str}__{p0}')
+                latency = latency_str if latency_str != '0s' else '1ps'
                 link.connect((c0, s0, latency), (c1, s1, latency))
 
     def __write_model(self,
@@ -307,17 +308,18 @@ class SSTGraph(DeviceGraph):
         # Now define the links between components.
         #
         links = list()
-        for ((p0,p1),t) in self.links.items():
+        for ((p0,p1),attr) in self.links.items():
             if p0.device.library is None:
                 raise RuntimeError(f"No SST library: {p0.device.name}")
             if p1.device.library is None:
                 raise RuntimeError(f"No SST library: {p1.device.name}")
 
-            latency = t if t != '0s' else '1ps'
+            latency_str = attr.get('latency', '0s')
+            latency = latency_str if latency_str != '0s' else '1ps'
             if str(p0) < str(p1):
-                name = f'{p0}__{t}__{p1}'
+                name = f'{p0}__{latency_str}__{p1}'
             else:
-                name = f'{p1}__{t}__{p0}'
+                name = f'{p1}__{latency_str}__{p0}'
 
             d0 = p0.device
             d1 = p1.device
