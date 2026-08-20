@@ -8,8 +8,13 @@ bidirectional.
 """
 
 import os
+import glob
 import collections
 import pygraphviz
+try:
+    import networkx
+except ImportError:
+    networkx = None
 from .Device import *
 
 def _orderedtuple(p0, p1):
@@ -710,3 +715,640 @@ class DeviceGraph:
             if dev.subOwner is not None:
                 graph.add_edge(device2Node(dev), device2Node(dev.subOwner),
                                color='purple', style='dashed')
+
+    def write_networkx(self,
+                       name: str,
+                       output: str = "output",
+                       draw: bool = False,
+                       ports: bool = False,
+                       hierarchy: bool = True,
+                       save_graph: str = None,
+                       color_by_partition: bool = False,
+                       highlight_inter_rank: bool = False,
+                       self_links: bool = True,
+                       full_labels: bool = False,
+                       layout=None,
+                       node_label=None) -> None:
+        """
+        Take a DeviceGraph and render it as an image using NetworkX.
+
+        This is the NetworkX/matplotlib analog of write_dot.  Instead of
+        writing graphviz DOT/SVG files, it builds a networkx graph and
+        renders a PNG image using matplotlib.
+
+        All output will be stored in a folder called output
+        The draw parameter will additionally display the figure
+        interactively if set to True
+        The ports parameter is accepted for API symmetry with write_dot,
+        but ports are not rendered in the NetworkX output
+
+        The hierarchy parameter specifies whether you would like to view the
+        graph as a hierarchy of assemblies (one image per unique assembly
+        type) or if you would like to get a flat view of the graph as it is.
+        hierarchy is True by default, and highly recommended for large graphs
+
+        The save_graph parameter, if provided, saves the underlying networkx
+        graph object to a file in addition to rendering the image.  The file
+        format is chosen from the file extension: '.pickle'/'.pkl'/'.gpickle'
+        write a Python pickle, '.graphml' writes GraphML, and '.gexf' writes
+        GEXF.  A bare filename (no directory) is written into the output
+        folder.
+
+        The color_by_partition parameter colors each node according to its
+        partition (rank).  This is useful when rendering a flat image of the
+        global partition so that you can see how Devices are distributed
+        across ranks.
+
+        The highlight_inter_rank parameter highlights links that cross a rank
+        boundary (i.e., connect Devices assigned to different partitions).
+
+        The self_links parameter controls whether self-links (a Device linked
+        to itself) are drawn.  Self-links are drawn by default; set this to
+        False to remove them from the rendering.
+
+        The full_labels parameter draws each node using its full name (e.g.,
+        'SubGrid0.comp_0_0'), matching the labels produced by write_dot.  When
+        full_labels is False, the node_label callback (if provided) is used to
+        compute a compact display label for each node.
+
+        The layout parameter lets the caller control node placement.  It may
+        be a callable that takes the networkx graph and returns a dict mapping
+        node -> (x, y) position.  If it is None (or returns nothing), nodes
+        that carry an explicit 'pos' attribute are placed accordingly,
+        otherwise a graphviz (and finally spring) layout is used.  This keeps
+        domain-specific placement (e.g., laying a mesh out on a grid) in the
+        caller instead of hard-coding it in the graph library.
+
+        The node_label parameter is a callable that takes a node name and
+        returns a compact display label (or None to fall back to the full
+        label).  It is only consulted when full_labels is False.
+        """
+        if networkx is None:
+            raise ImportError(
+                "networkx is required for write_networkx; "
+                "install it with 'pip install networkx matplotlib'"
+            )
+
+        if not os.path.exists(output):
+            os.makedirs(output)
+
+        if hierarchy:
+            self.__write_networkx_hierarchy(
+                name, output, draw, ports,
+                save_graph=save_graph,
+                color_by_partition=color_by_partition,
+                highlight_inter_rank=highlight_inter_rank,
+                self_links=self_links,
+                full_labels=full_labels,
+                layout=layout,
+                node_label=node_label,
+            )
+        else:
+            self.__write_networkx_flat(
+                name, output, draw, ports,
+                save_graph=save_graph,
+                color_by_partition=color_by_partition,
+                highlight_inter_rank=highlight_inter_rank,
+                self_links=self_links,
+                full_labels=full_labels,
+                layout=layout,
+                node_label=node_label,
+            )
+
+    def __write_networkx_hierarchy(self,
+                                   name: str,
+                                   output: str,
+                                   draw: bool = False,
+                                   ports: bool = False, assembly: str = None,
+                                   types: set = None,
+                                   save_graph: str = None,
+                                   color_by_partition: bool = False,
+                                   highlight_inter_rank: bool = False,
+                                   self_links: bool = True,
+                                   full_labels: bool = False,
+                                   layout=None,
+                                   node_label=None) -> set:
+        """
+        Take a DeviceGraph and render an image for each assembly.
+
+        Render a NetworkX image for each unique assembly (type, model) in the
+        graph.
+        assembly and types should NOT be specified by the user, they are
+        soley used for recursion of this function
+        """
+        graph = networkx.Graph()
+        if types is None:
+            types = set()
+
+        splitName = None
+        splitNameLen = None
+        if assembly is not None:
+            splitName = assembly.split('.')
+            splitNameLen = len(splitName)
+
+        # Expand all unique assembly types and render separate images
+        for dev in self.devices.values():
+            if dev.library is None:
+                category = dev.get_category()
+                if category not in types:
+                    types.add(category)
+                    expanded = DeviceGraph()
+                    dev.expand(expanded)
+                    types = expanded.__write_networkx_hierarchy(
+                        category, output, draw, ports, dev.name, types,
+                        save_graph=None,
+                        color_by_partition=color_by_partition,
+                        highlight_inter_rank=highlight_inter_rank,
+                        self_links=self_links,
+                        full_labels=full_labels,
+                        layout=layout,
+                        node_label=node_label,
+                    )
+
+        # Loop through all Devices and add them to the networkx graph
+        for dev in self.devices.values():
+            if assembly != dev.name:
+                label = dev.name
+                nodeName = dev.name
+                if assembly is not None:
+                    if splitName == dev.name.split('.')[0:splitNameLen]:
+                        nodeName = '.'.join(dev.name.split('.')[splitNameLen:])
+                        label = nodeName
+                if dev.model is not None:
+                    label += f"\nmodel={dev.model}"
+
+                # Color by partition if requested, otherwise color assemblies
+                # blue and submodules purple
+                if color_by_partition:
+                    color = self.__partition_color(dev.partition)
+                elif dev.library is None:
+                    color = 'blue'
+                elif dev.subOwner is not None:
+                    color = 'purple'
+                else:
+                    color = 'lightblue'
+                display = label if full_labels else \
+                    self.__networkx_label(nodeName, label, node_label)
+                graph.add_node(nodeName, color=color, display=display)
+
+        self.__networkx_add_links(graph, assembly, splitName, splitNameLen,
+                                  highlight_inter_rank=highlight_inter_rank,
+                                  self_links=self_links,
+                                  full_labels=full_labels)
+        self.__render_networkx(graph, name, output, draw,
+                               save_graph=save_graph, layout=layout)
+
+        return types
+
+    def __write_networkx_flat(self,
+                              name: str,
+                              output: str,
+                              draw: bool = False,
+                              ports: bool = False,
+                              save_graph: str = None,
+                              color_by_partition: bool = False,
+                              highlight_inter_rank: bool = False,
+                              self_links: bool = True,
+                              full_labels: bool = False,
+                              layout=None,
+                              node_label=None) -> None:
+        """
+        Render the DeviceGraph as a flat NetworkX image.
+
+        It is suggested that you use the hierarchy view for large graphs
+        """
+        graph = networkx.Graph()
+
+        for dev in self.devices.values():
+            label = dev.name
+            if dev.model is not None:
+                label += f"\nmodel={dev.model}"
+            if color_by_partition:
+                color = self.__partition_color(dev.partition)
+            elif dev.subOwner is not None:
+                color = 'purple'
+            else:
+                color = 'lightblue'
+            display = label if full_labels else \
+                self.__networkx_label(dev.name, label, node_label)
+            graph.add_node(dev.name, color=color, display=display)
+
+        self.__networkx_add_links(graph,
+                                  highlight_inter_rank=highlight_inter_rank,
+                                  self_links=self_links,
+                                  full_labels=full_labels)
+        self.__render_networkx(graph, name, output, draw,
+                               save_graph=save_graph, layout=layout)
+
+    @staticmethod
+    def __networkx_label(nodeName: str, fallback: str = None,
+                         node_label=None) -> str:
+        """Return a short display label for a node.
+
+        If a node_label callable is provided, use its result (when it returns
+        a non-None value); otherwise fall back to the provided fallback or the
+        full node name.  This keeps domain-specific labeling in the caller
+        rather than hard-coding a naming scheme in the graph library.
+        """
+        if callable(node_label):
+            try:
+                result = node_label(nodeName)
+            except Exception:
+                result = None
+            if result is not None:
+                return str(result)
+        return fallback if fallback is not None else str(nodeName)
+
+    @staticmethod
+    def __partition_color(partition) -> str:
+        """Return a stable color for a Device partition (rank).
+
+        partition may be a (rank, thread) tuple, a bare rank, or None.
+        Devices with no partition are colored light gray.
+        """
+        if partition is None:
+            return '#cccccc'
+        if isinstance(partition, (tuple, list)):
+            rank = partition[0]
+        else:
+            rank = partition
+        if rank is None:
+            return '#cccccc'
+        # A qualitative palette that repeats for large rank counts.
+        palette = [
+            '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+            '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+        ]
+        return palette[int(rank) % len(palette)]
+
+    @staticmethod
+    def __networkx_layout(graph, layout=None) -> dict:
+        """Compute node positions for a networkx graph.
+
+        If a layout callable is provided, use its result (falling back to the
+        automatic layout when it returns nothing).  Otherwise, if every node
+        carries an explicit 'pos' attribute, use those coordinates; finally
+        fall back to a graphviz layout and then a spring layout.  Domain
+        specific placement (e.g. laying a mesh out on a grid) is supplied by
+        the caller instead of being hard-coded here.
+        """
+        if callable(layout):
+            try:
+                coords = layout(graph)
+            except Exception:
+                coords = None
+            if coords:
+                return coords
+
+        # Use explicit per-node 'pos' attributes if every node provides one.
+        coords = dict()
+        for node in graph.nodes():
+            pos = graph.nodes[node].get('pos')
+            if pos is None:
+                coords = None
+                break
+            coords[node] = tuple(pos)
+
+        if coords:
+            return coords
+
+        try:
+            return networkx.nx_agraph.graphviz_layout(graph, prog='dot')
+        except Exception:
+            return networkx.spring_layout(graph, seed=42)
+
+    def __networkx_add_links(self, graph, assembly: str = None,
+                             splitName: list = None,
+                             splitNameLen: int = None,
+                             highlight_inter_rank: bool = False,
+                             self_links: bool = True,
+                             full_labels: bool = False) -> None:
+        """Add edges to the graph with a label for the number of edges."""
+        def port2Node(port: DevicePort) -> str:
+            """Return a node name given a DevicePort."""
+            node = port.device.name
+            if node == assembly:
+                return f"{port.device.type}:{port.name}"
+            elif assembly is not None:
+                if splitName == node.split('.')[0:splitNameLen]:
+                    node = '.'.join(node.split('.')[splitNameLen:])
+            return node
+
+        # Create a list of all of the links.  Self-links are included by
+        # default and can be toggled off via self_links.
+        links = list()
+        inter_rank_keys = set()
+        for p0, p1 in self.links:
+            n0 = port2Node(p0)
+            n1 = port2Node(p1)
+            if not self_links and n0 == n1:
+                continue
+            key = tuple(sorted((n0, n1)))
+            links.append(key)
+            # Flag links that cross a rank boundary for highlighting.
+            if highlight_inter_rank:
+                pa0 = getattr(p0.device, 'partition', None)
+                pa1 = getattr(p1.device, 'partition', None)
+                if (pa0 is not None and pa1 is not None
+                        and pa0[0] != pa1[0]):
+                    inter_rank_keys.add(key)
+
+        # Setup a counter so we can check for duplicates
+        duplicates = collections.Counter(links)
+        for key in duplicates:
+            label = ''
+            if duplicates[key] > 1:
+                label = str(duplicates[key])
+
+            key0, key1 = key
+            for node in (key0, key1):
+                if node not in graph:
+                    display = node if full_labels else \
+                        self.__networkx_label(node, node)
+                    graph.add_node(node, color='lightblue', display=display)
+            # Add edges using the number of links as a label
+            graph.add_edge(key0, key1, label=label,
+                           inter_rank=key in inter_rank_keys)
+
+        def device2Node(dev: Device) -> str:
+            """Return a node name given a Device."""
+            node = dev.name
+            if assembly is not None:
+                if splitName == node.split('.')[0:splitNameLen]:
+                    node = '.'.join(node.split('.')[splitNameLen:])
+            return node
+
+        # Add "links" to submodules so they don't just float around
+        for dev in self.devices.values():
+            if dev.subOwner is not None:
+                graph.add_edge(device2Node(dev), device2Node(dev.subOwner),
+                               label='', submodule=True)
+
+    @staticmethod
+    def __render_networkx(graph, name: str, output: str,
+                          draw: bool = False, save_graph: str = None,
+                          layout=None) -> None:
+        """Render a networkx graph to a PNG image using matplotlib.
+
+        If save_graph is provided, the networkx graph object is also written
+        to disk (pickle/GraphML/GEXF, chosen by file extension).
+        """
+        if save_graph is not None:
+            DeviceGraph.__save_networkx_graph(graph, save_graph, output)
+
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError(
+                "matplotlib is required for rendering NetworkX images; "
+                "install it with 'pip install matplotlib'"
+            )
+
+        pos = DeviceGraph.__networkx_layout(graph, layout)
+
+        fig, ax = plt.subplots(figsize=(12, 10))
+
+        node_colors = [
+            graph.nodes[n].get('color', 'lightblue') for n in graph.nodes()
+        ]
+        networkx.draw_networkx_nodes(graph, pos, ax=ax,
+                                     node_color=node_colors,
+                                     node_size=500, alpha=0.9)
+
+        # Categorize edges: submodule (dashed purple), inter-rank
+        # (highlighted red), and normal (gray).
+        submodule_edges = [
+            (u, v) for u, v, d in graph.edges(data=True)
+            if d.get('submodule')
+        ]
+        inter_rank_edges = [
+            (u, v) for u, v, d in graph.edges(data=True)
+            if d.get('inter_rank') and not d.get('submodule')
+        ]
+        normal_edges = [
+            (u, v) for u, v, d in graph.edges(data=True)
+            if not d.get('submodule') and not d.get('inter_rank')
+        ]
+        networkx.draw_networkx_edges(graph, pos, ax=ax, edgelist=normal_edges,
+                                     edge_color='gray', alpha=0.5)
+        if inter_rank_edges:
+            networkx.draw_networkx_edges(graph, pos, ax=ax,
+                                         edgelist=inter_rank_edges,
+                                         edge_color='red', width=2.0,
+                                         alpha=0.8)
+        if submodule_edges:
+            networkx.draw_networkx_edges(graph, pos, ax=ax,
+                                         edgelist=submodule_edges,
+                                         edge_color='purple', style='dashed',
+                                         alpha=0.6)
+
+        labels = {n: graph.nodes[n].get('display', n) for n in graph.nodes()}
+        networkx.draw_networkx_labels(graph, pos, labels, ax=ax, font_size=8)
+
+        # Label parallel links with their count
+        edge_labels = {
+            (u, v): d['label'] for u, v, d in graph.edges(data=True)
+            if d.get('label')
+        }
+        if edge_labels:
+            networkx.draw_networkx_edge_labels(graph, pos,
+                                               edge_labels=edge_labels,
+                                               ax=ax, font_size=7)
+
+        ax.set_title(
+            f"{name}\nNodes: {graph.number_of_nodes()}, "
+            f"Edges: {graph.number_of_edges()}"
+        )
+        ax.axis('off')
+        fig.tight_layout()
+        fig.savefig(f"{output}/{name}.png", dpi=150, bbox_inches='tight')
+        if draw:
+            try:
+                plt.show()
+            except Exception:
+                pass
+        plt.close(fig)
+
+    @staticmethod
+    def render_networkx_graph(graph, name: str, output: str = "output",
+                              draw: bool = False,
+                              save_graph: str = None,
+                              layout=None,
+                              node_label=None) -> None:
+        """Render a standalone networkx graph object to a PNG image.
+
+        This is the public entry point for rendering a networkx graph that did
+        not come directly from a live DeviceGraph, such as one reloaded from a
+        pickle/GraphML/GEXF file saved via write_networkx(save_graph=...).  It
+        uses the same node colors and inter-rank/submodule edge styling as
+        write_networkx, reading each node's optional 'color' and 'display'
+        attributes and each edge's optional 'label', 'inter_rank', and
+        'submodule' attributes.
+
+        The layout parameter (a callable graph -> {node: (x, y)}) and the
+        node_label parameter (a callable node -> label) mirror the same
+        options on write_networkx, keeping any domain-specific placement or
+        labeling in the caller.  When node_label is provided it overrides each
+        node's stored 'display' attribute.
+        """
+        if networkx is None:
+            raise ImportError(
+                "networkx is required for render_networkx_graph; "
+                "install it with 'pip install networkx matplotlib'"
+            )
+        if not os.path.exists(output):
+            os.makedirs(output)
+        if callable(node_label):
+            for node in graph.nodes():
+                graph.nodes[node]['display'] = DeviceGraph.__networkx_label(
+                    node, graph.nodes[node].get('display', str(node)),
+                    node_label)
+        DeviceGraph.__render_networkx(graph, name, output, draw,
+                                      save_graph=save_graph, layout=layout)
+
+    @staticmethod
+    def __save_networkx_graph(graph, save_graph: str,
+                              output: str = None) -> None:
+        """Save a networkx graph object to disk.
+
+        The file format is chosen from the file extension of save_graph:
+        '.pickle'/'.pkl'/'.gpickle' write a Python pickle, '.graphml' writes
+        GraphML, and '.gexf' writes GEXF.  Any other (or missing) extension
+        defaults to a Python pickle.  A bare filename (no directory) is
+        written into the output folder when one is provided.
+        """
+        # Resolve the destination path, defaulting bare names to output/.
+        if output and not os.path.dirname(save_graph):
+            path = os.path.join(output, save_graph)
+        else:
+            path = save_graph
+        directory = os.path.dirname(path)
+        if directory and not os.path.exists(directory):
+            os.makedirs(directory)
+
+        ext = os.path.splitext(path)[1].lower()
+
+        if ext in ('.graphml', '.gexf'):
+            # GraphML/GEXF only support scalar attributes, so stringify any
+            # complex values (e.g., partition tuples) on a copy.
+            clean = graph.copy()
+            for _, data in clean.nodes(data=True):
+                for k, v in list(data.items()):
+                    if v is not None and not isinstance(
+                            v, (str, int, float, bool)):
+                        data[k] = str(v)
+            for _, _, data in clean.edges(data=True):
+                for k, v in list(data.items()):
+                    if v is not None and not isinstance(
+                            v, (str, int, float, bool)):
+                        data[k] = str(v)
+            if ext == '.graphml':
+                networkx.write_graphml(clean, path)
+            else:
+                networkx.write_gexf(clean, path)
+        else:
+            import pickle
+            with open(path, 'wb') as f:
+                pickle.dump(graph, f)
+
+    @staticmethod
+    def dot_to_networkx(paths, output: str = None, combine: bool = False,
+                        pattern: str = '*.dot', suffix: str = '_from_dot',
+                        combined_name: str = 'combined',
+                        layout=None, node_label=None) -> None:
+        """
+        Read graphviz DOT files and render them as NetworkX images.
+
+        This is the companion to write_dot/write_networkx: instead of building
+        images from a live DeviceGraph, it reads existing .dot files (such as
+        those produced by write_dot), converts each into a networkx graph, and
+        renders a PNG using the same styling.
+
+        paths may be a single path or a list of paths.  Each path can be a
+        directory (searched using pattern) or an individual .dot file.
+
+        If output is None, images are written alongside their source .dot
+        files; otherwise they are written into the output directory.  The
+        suffix is appended to each image filename to avoid overwriting any
+        existing PNGs.  When combine is True, all DOT files are merged into a
+        single image named combined_name + suffix.
+
+        The layout parameter (a callable graph -> {node: (x, y)}) and the
+        node_label parameter (a callable node -> label) mirror the same
+        options on write_networkx, keeping any domain-specific placement or
+        labeling in the caller instead of hard-coded in this library.
+        """
+        if networkx is None:
+            raise ImportError(
+                "networkx is required for dot_to_networkx; "
+                "install it with 'pip install networkx matplotlib'"
+            )
+
+        try:
+            from networkx.drawing.nx_agraph import read_dot as _read_dot
+        except ImportError:
+            try:
+                from networkx.drawing.nx_pydot import read_dot as _read_dot
+            except ImportError:
+                raise ImportError(
+                    "reading DOT files requires either pygraphviz or pydot; "
+                    "install one with 'pip install pygraphviz' or "
+                    "'pip install pydot'"
+                )
+
+        if isinstance(paths, str):
+            paths = [paths]
+
+        # Expand directories/files into a sorted list of .dot files.
+        dot_files = list()
+        for entry in paths:
+            if os.path.isdir(entry):
+                dot_files.extend(
+                    sorted(glob.glob(os.path.join(entry, pattern)))
+                )
+            elif entry.endswith('.dot') and os.path.isfile(entry):
+                dot_files.append(entry)
+            else:
+                print(f"Skipping {entry}: not a .dot file or directory")
+        if not dot_files:
+            raise SystemExit("No .dot files found.")
+
+        def _prepare(raw):
+            """Normalize a DOT-read graph for rendering."""
+            graph = networkx.Graph(raw)
+            # Drop self-loops for a cleaner visualization.
+            graph.remove_edges_from(networkx.selfloop_edges(graph))
+            # Compute compact display labels and clean node colors.
+            for node in graph.nodes():
+                graph.nodes[node]['display'] = \
+                    DeviceGraph.__networkx_label(node, str(node), node_label)
+                color = graph.nodes[node].get('color')
+                if color:
+                    graph.nodes[node]['color'] = str(color).strip().strip('"')
+            # Clean any edge count labels carried over from write_dot.
+            for _, _, data in graph.edges(data=True):
+                label = data.get('label')
+                if label is not None:
+                    data['label'] = str(label).strip().strip('"')
+            return graph
+
+        if combine:
+            merged = networkx.Graph()
+            for dot_file in dot_files:
+                merged = networkx.compose(merged, _prepare(_read_dot(dot_file)))
+            out_dir = output if output else (os.path.dirname(dot_files[0]) or '.')
+            if not os.path.exists(out_dir):
+                os.makedirs(out_dir)
+            DeviceGraph.__render_networkx(
+                merged, f"{combined_name}{suffix}", out_dir, False, layout=layout
+            )
+        else:
+            for dot_file in dot_files:
+                graph = _prepare(_read_dot(dot_file))
+                out_dir = output if output else (os.path.dirname(dot_file) or '.')
+                if not os.path.exists(out_dir):
+                    os.makedirs(out_dir)
+                stem = os.path.splitext(os.path.basename(dot_file))[0]
+                DeviceGraph.__render_networkx(
+                    graph, f"{stem}{suffix}", out_dir, False, layout=layout
+                )
